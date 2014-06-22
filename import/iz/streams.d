@@ -374,7 +374,7 @@ class izMemoryStream: izObject, izStream, izStreamPersist, izFilePersist8
 				scope(exit) CloseHandle(hdl); 
 				uint numRead;
 				SetFilePointer(hdl, 0, null, FILE_BEGIN);
-				WriteFile(hdl, fMemory, fSize, &numRead, null);
+				WriteFile(hdl, fMemory, cast(uint)fSize, &numRead, null);
 				
 				if (numRead != fSize)
 					throw new Error(format("stream exception: '%s' is 
@@ -404,7 +404,7 @@ class izMemoryStream: izObject, izStream, izStreamPersist, izFilePersist8
 				scope(exit) CloseHandle(hdl);
 				size( SetFilePointer(hdl, 0, null, FILE_END));
 				SetFilePointer(hdl, 0, null, FILE_BEGIN);
-				ReadFile(hdl, fMemory, fSize, &numRead, null);
+				ReadFile(hdl, fMemory, cast(uint)fSize, &numRead, null);
 				position = 0;
 				
 				if (numRead != fSize)

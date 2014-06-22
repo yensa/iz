@@ -195,7 +195,7 @@ class izIstNode(T): izPreIstNode if(isTypeSerializable!T)
 			}
 			aStream.write(&typeix, typeix.sizeof);
 			//name length
-			uint namelen = fDescriptor.name.length;
+			uint namelen = cast(uint) fDescriptor.name.length;
 			aStream.write(&namelen, namelen.sizeof);
 			// name...
 			char[] namecpy = fDescriptor.name.dup;
