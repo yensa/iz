@@ -2,8 +2,8 @@ object _1: TCEProject
   OptionsCollection = <  
     item
       name = 'release'
-      documentationOptions.generateDocumentation = True
-      documentationOptions.generateJSON = True
+      documentationOptions.generateDocumentation = False
+      documentationOptions.generateJSON = False
       documentationOptions.DocumentationDirectory = 'docs'
       documentationOptions.JSONFilename = 'docs\iz.json'
       debugingOptions.debug = False
@@ -25,7 +25,7 @@ object _1: TCEProject
       outputOptions.addMain = False
       outputOptions.release = True
       outputOptions.unittest = False
-      pathsOptions.outputFilename = 'lib/iz.lib'
+      pathsOptions.outputFilename = 'lib\iz.lib'
     end  
     item
       name = 'debug'
@@ -50,7 +50,7 @@ object _1: TCEProject
       outputOptions.addMain = False
       outputOptions.release = False
       outputOptions.unittest = False
-      pathsOptions.outputFilename = 'lib/iz.lib'
+      pathsOptions.outputFilename = 'lib\iz.lib'
     end  
     item
       name = 'unittest'
@@ -100,7 +100,7 @@ object _1: TCEProject
       outputOptions.addMain = False
       outputOptions.release = False
       outputOptions.unittest = False
-      pathsOptions.outputFilename = 'lib/iz.lib'
+      pathsOptions.outputFilename = 'lib\iz.lib'
     end>
   Sources.Strings = (
     'import\iz\types.d'

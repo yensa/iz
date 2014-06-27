@@ -298,6 +298,7 @@ class izPropertyBinder(T): izObject
 {
 	private
 	{
+        izDynamicList!(izPropDescriptor!T) fToFree;
 		izDynamicList!(izPropDescriptor!T) fItems;
 		izPropDescriptor!T *fSource;
 	}
@@ -306,22 +307,41 @@ class izPropertyBinder(T): izObject
 		this()
 		{
 			fItems = new izDynamicList!(izPropDescriptor!T);
+            fToFree = new izDynamicList!(izPropDescriptor!T);
 		}
 		~this()
 		{
+            for(auto i = 0; i < fToFree.count; i++)
+            {
+                auto descr = fToFree[i];
+                free(&descr);
+            }
 			delete fItems;
+            delete fToFree;
 		}
 		/**
 		 * Add a property to the list.
-		 * Note that this method is very slow on large lists
-		 * because the container used internally doesn't allow duplicated bindings.
-		 * The first version is designed to be called using a local descriptor as argument.
+         * If the binder is not local then aProp should neither be a stack allocated descriptor.
+         * Note: not tested.
 		 */
 		ptrdiff_t addBinding(ref izPropDescriptor!T aProp, bool isSource = false)
 		{
 			if (isSource) fSource = &aProp;
 			return fItems.add(aProp);
 		}
+
+        /**
+		 * Add a new property to the list.
+         * The binder handles its life-time.
+		 */
+        izPropDescriptor!T newBinding()
+        {
+            auto result = new izPropDescriptor!T;
+            fItems.add(*result);
+            fToFree.add(*result);
+            return *result;
+        }
+
 		/**
 		 * Remove the aIndex-nth property from the list.
 		 */

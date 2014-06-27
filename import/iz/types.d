@@ -118,7 +118,7 @@ class OOTester
 		delete o1;
 		delete o2;
 		
-		writeln("izAllocObject passed the test");
+		writeln("izAllocObject passed the tests");
 	}
 }
 

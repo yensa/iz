@@ -833,10 +833,7 @@ version(unittest)
 
 		ser.deserialize(Bar0,str);
 		ser.deserialize(Bar1,str);
-		
 
-		
-		
 		assert( Bar0.Alpha == 8);
 		assert( Bar0.Beta == 4);
 	}
