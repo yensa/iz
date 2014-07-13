@@ -122,3 +122,86 @@ class OOTester
 	}
 }
 
+/**
+ * Helper struct for reading data as ubyte array.
+ */
+struct ubyteArray
+{
+    private
+    {
+        izPtr fMemory;
+        size_t fSize;
+    }
+    public
+    {
+        @disable this();
+
+        this(izPtr someData, size_t aSize)
+        {
+            fMemory = someData;
+            fSize = aSize;
+        }
+
+        const(ubyte) opIndex(size_t index)
+        {
+            return *cast(ubyte*) (fMemory + index);
+        }
+
+        void opIndexAssign(ubyte aValue, size_t index)
+        {
+            *cast(ubyte*) (fMemory + index) = aValue;
+        }
+
+        int opApply(int delegate(ubyte aValue) dg)
+        {
+            int result = 0;
+			for (auto i = 0; i < fSize; i++)
+			{
+				result = dg(*cast(ubyte*)(fMemory + i));
+				if (result) break;
+			}
+			return result;
+        }
+
+        int opApplyReverse(int delegate(ubyte aValue) dg)
+        {
+            int result = 0;
+			for (ptrdiff_t i = fSize-1; i >= 0; i--)
+			{
+				result = dg(*cast(ubyte*)(fMemory + i));
+				if (result) break;
+			}
+			return result;
+        }
+
+        const(size_t) opDollar()
+        {
+            return fSize;
+        }
+
+        @property const kength()
+        {
+            return fSize;
+        }
+    }
+    unittest
+    {
+        auto a = "Sundy's rock";
+
+        auto r0 = ubyteArray( cast(void*)a.ptr, a.length);
+
+        assert(r0[0] == 'S');
+        assert(r0[$-1] == 'k');
+        auto r1 = getubyteArray(a);
+        assert(r1[0] == 'S');
+        assert(r1[$-1] == 'k');
+
+        writeln("ubyteArray passed the tests");
+    }
+}
+
+ubyteArray getubyteArray(T)(T t) if (isArray!T)
+{
+    return ubyteArray(cast(izPtr) t.ptr, t.length);
+}
+

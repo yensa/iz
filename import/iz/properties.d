@@ -298,23 +298,23 @@ class izPropertyBinder(T): izObject
 {
 	private
 	{
-        izDynamicList!(izPropDescriptor!T) fToFree;
-		izDynamicList!(izPropDescriptor!T) fItems;
+        izDynamicList!(izPropDescriptor!T *) fToFree;
+		izDynamicList!(izPropDescriptor!T *) fItems;
 		izPropDescriptor!T *fSource;
 	}
 	public
 	{
 		this()
 		{
-			fItems = new izDynamicList!(izPropDescriptor!T);
-            fToFree = new izDynamicList!(izPropDescriptor!T);
+			fItems = new izDynamicList!(izPropDescriptor!T *);
+            fToFree = new izDynamicList!(izPropDescriptor!T *);
 		}
 		~this()
 		{
             for(auto i = 0; i < fToFree.count; i++)
             {
                 auto descr = fToFree[i];
-                free(&descr);
+                free(descr);
             }
 			delete fItems;
             delete fToFree;
@@ -322,24 +322,23 @@ class izPropertyBinder(T): izObject
 		/**
 		 * Add a property to the list.
          * If the binder is not local then aProp should neither be a stack allocated descriptor.
-         * Note: not tested.
 		 */
 		ptrdiff_t addBinding(ref izPropDescriptor!T aProp, bool isSource = false)
 		{
 			if (isSource) fSource = &aProp;
-			return fItems.add(aProp);
+			return fItems.add(&aProp);
 		}
 
         /**
 		 * Add a new property to the list.
          * The binder handles its life-time.
 		 */
-        izPropDescriptor!T newBinding()
+        izPropDescriptor!T * newBinding()
         {
             auto result = new izPropDescriptor!T;
-            fItems.add(*result);
-            fToFree.add(*result);
-            return *result;
+            fItems.add(result);
+            fToFree.add(result);
+            return result;
         }
 
 		/**
@@ -347,7 +346,8 @@ class izPropertyBinder(T): izObject
 		 */
 		void removeBinding(size_t anIndex)
 		{
-			fItems.extract(anIndex);
+			auto itm = fItems.extract(anIndex);
+            fToFree.remove(*itm);
 		}
 		/**
 		 * Triggers the setter of each property.
@@ -359,7 +359,7 @@ class izPropertyBinder(T): izObject
 		 */
 		void change(T aValue)
 		{
-			foreach(izPropDescriptor!T item; fItems)
+			foreach(item; fItems)
 			{
 				if (item.access == izPropAccess.none) continue;
 				if (item.access == izPropAccess.ro) continue;
@@ -381,7 +381,7 @@ class izPropertyBinder(T): izObject
 		/**
 		 * access to the items for additional izList operations.
 		 */
-		@property izList!(izPropDescriptor!T) items()
+		@property izList!(izPropDescriptor!T *) items()
 		{
 			return fItems;
 		}	
@@ -545,4 +545,40 @@ private class izPropertyBinderTester
 
 		writeln("izPropertyBinder(T) passed the tests");
 	}
+}
+
+unittest
+{
+    auto strSync = new izPropertyBinder!int;
+
+    class a
+    {
+        private int fStr;
+        public @property str(int aValue){fStr = aValue;}
+        public @property int str(){return fStr;}
+    }
+
+    auto a0 = new a;
+    auto a1 = new a;
+    auto a2 = new a;
+
+    auto propa0str = strSync.newBinding;
+    propa0str.define(&a0.str,&a0.str);
+    auto propa1str = strSync.newBinding;
+    propa1str.define(&a1.str,&a1.str);
+    auto propa2str = strSync.newBinding;
+    propa2str.define(&a2.str,&a2.str);
+
+    strSync.change(8);
+
+    assert(a0.str == 8);
+    assert(a1.str == 8);
+    assert(a2.str == 8);
+
+    delete a0;
+    delete a1;
+    delete a2;
+    delete strSync;
+
+    writeln("izPropertyBinder(T) passed the newBinding() test");
 }

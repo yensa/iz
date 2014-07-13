@@ -2,11 +2,12 @@ object _1: TCEProject
   OptionsCollection = <  
     item
       name = 'release'
-      documentationOptions.generateDocumentation = False
-      documentationOptions.generateJSON = False
+      documentationOptions.generateDocumentation = True
+      documentationOptions.generateJSON = True
       documentationOptions.DocumentationDirectory = 'docs'
       documentationOptions.JSONFilename = 'docs\iz.json'
       debugingOptions.debug = False
+      debugingOptions.debugLevel = 0
       debugingOptions.addDInformations = False
       debugingOptions.addCInformations = False
       debugingOptions.generateMapFile = False
@@ -20,18 +21,26 @@ object _1: TCEProject
       outputOptions.binaryKind = staticlib
       outputOptions.inlining = True
       outputOptions.noBoundsCheck = True
+      outputOptions.boundsCheck = onAlways
       outputOptions.optimizations = True
       outputOptions.generateStackFrame = False
       outputOptions.addMain = False
       outputOptions.release = True
       outputOptions.unittest = False
       pathsOptions.outputFilename = 'lib\iz.lib'
+      preBuildProcess.options = []
+      preBuildProcess.showWindow = swoNone
+      postBuildProcess.options = []
+      postBuildProcess.showWindow = swoNone
+      runOptions.options = []
+      runOptions.showWindow = swoNone
     end  
     item
       name = 'debug'
       documentationOptions.generateDocumentation = False
       documentationOptions.generateJSON = False
       debugingOptions.debug = True
+      debugingOptions.debugLevel = 0
       debugingOptions.addDInformations = True
       debugingOptions.addCInformations = True
       debugingOptions.generateMapFile = True
@@ -45,18 +54,26 @@ object _1: TCEProject
       outputOptions.binaryKind = staticlib
       outputOptions.inlining = False
       outputOptions.noBoundsCheck = False
+      outputOptions.boundsCheck = onAlways
       outputOptions.optimizations = False
       outputOptions.generateStackFrame = False
       outputOptions.addMain = False
       outputOptions.release = False
       outputOptions.unittest = False
       pathsOptions.outputFilename = 'lib\iz.lib'
+      preBuildProcess.options = []
+      preBuildProcess.showWindow = swoNone
+      postBuildProcess.options = []
+      postBuildProcess.showWindow = swoNone
+      runOptions.options = []
+      runOptions.showWindow = swoNone
     end  
     item
       name = 'unittest'
       documentationOptions.generateDocumentation = False
       documentationOptions.generateJSON = False
       debugingOptions.debug = True
+      debugingOptions.debugLevel = 0
       debugingOptions.addDInformations = False
       debugingOptions.addCInformations = False
       debugingOptions.generateMapFile = False
@@ -70,18 +87,26 @@ object _1: TCEProject
       outputOptions.binaryKind = executable
       outputOptions.inlining = False
       outputOptions.noBoundsCheck = False
+      outputOptions.boundsCheck = onAlways
       outputOptions.optimizations = False
       outputOptions.generateStackFrame = False
       outputOptions.addMain = True
       outputOptions.release = False
       outputOptions.unittest = True
       pathsOptions.outputFilename = 'temp\iztests.exe'
+      preBuildProcess.options = []
+      preBuildProcess.showWindow = swoNone
+      postBuildProcess.options = []
+      postBuildProcess.showWindow = swoNone
+      runOptions.options = [poUsePipes, poStderrToOutPut]
+      runOptions.showWindow = swoNone
     end  
     item
       name = 'test64'
       documentationOptions.generateDocumentation = False
       documentationOptions.generateJSON = False
       debugingOptions.debug = True
+      debugingOptions.debugLevel = 0
       debugingOptions.addDInformations = True
       debugingOptions.addCInformations = True
       debugingOptions.generateMapFile = True
@@ -95,12 +120,19 @@ object _1: TCEProject
       outputOptions.binaryKind = staticlib
       outputOptions.inlining = False
       outputOptions.noBoundsCheck = False
+      outputOptions.boundsCheck = onAlways
       outputOptions.optimizations = False
       outputOptions.generateStackFrame = False
       outputOptions.addMain = False
       outputOptions.release = False
       outputOptions.unittest = False
       pathsOptions.outputFilename = 'lib\iz.lib'
+      preBuildProcess.options = []
+      preBuildProcess.showWindow = swoNone
+      postBuildProcess.options = []
+      postBuildProcess.showWindow = swoNone
+      runOptions.options = []
+      runOptions.showWindow = swoNone
     end>
   Sources.Strings = (
     'import\iz\types.d'

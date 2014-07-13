@@ -88,14 +88,6 @@ interface izStream
 	 * Resets the stream size to 0.
 	 */
 	void clear();
-    /**
-     * operators providing te array syntax.
-     * They Do not modify the stream position pointer.
-     */
-    ubyte opIndex(size_t index);
-    void opIndexAssign(ubyte aValue, size_t index);
-    int opApply(int delegate(ubyte aValue) dg);
-    int opApplyReverse(int delegate(ubyte aValue) dg);
 }
 
 
@@ -304,36 +296,10 @@ class izMemoryStream: izObject, izStream, izStreamPersist, izFilePersist8
 		}
 
 // operators -------------------------------
-        ubyte opIndex(size_t index)
-        {
-            return *cast(ubyte*) (fMemory + index);
-        }
 
-        void opIndexAssign(ubyte aValue, size_t index)
+        ubyteArray ubytes()
         {
-            *cast(ubyte*) (fMemory + index) = aValue;
-        }
-
-        int opApply(int delegate(ubyte aValue) dg)
-        {
-            int result = 0;
-			for (auto i = 0; i < fSize; i++)
-			{
-				result = dg(*cast(ubyte*)(fMemory + i));
-				if (result) break;
-			}
-			return result;
-        }
-
-        int opApplyReverse(int delegate(ubyte aValue) dg)
-        {
-            int result = 0;
-			for (ptrdiff_t i = fSize-1; i >= 0; i--)
-			{
-				result = dg(*cast(ubyte*)(fMemory + i));
-				if (result) break;
-			}
-			return result;
+            return ubyteArray(fMemory, fSize);
         }
 	
 // izStreamPersist -------------------------------
@@ -529,7 +495,7 @@ version(unittest)
 				str.clear;
 				str.loadFromFile("memstream.txt");
 				assert(str.size == strcpy.size);
-				remove("memstream.txt");
+				std.stdio.remove("memstream.txt");
 			}
 			
 			str.position = 0;
@@ -545,12 +511,15 @@ version(unittest)
 			md5_1 = md5Of(food1);
 			assert(md5_0 == md5_1);
 
-            str.clear;
-            for(ubyte i = 0; i < 100; i++) str.write(&i, 1);
-            for(ubyte i = 0; i < 100; i++) assert( str[i] == i );
-            for(ubyte i = 0; i < 100; i++) str[i] = cast(ubyte) (99 - i);
-            for(ubyte i = 0; i < 100; i++) assert( str[i] == 99 - i  );
-			
+            static if (is(T == izMemoryStream))
+			{
+              str.clear;
+              for(ubyte i = 0; i < 100; i++) str.write(&i, 1);
+              for(ubyte i = 0; i < 100; i++) assert( str.ubytes[i] == i );
+              for(ubyte i = 0; i < 100; i++) str.ubytes[i] = cast(ubyte) (99 - i);
+              for(ubyte i = 0; i < 100; i++) assert( str.ubytes[i] == 99 - i  );
+            }
+
 			writeln( T.stringof ~ "(T) passed the tests");
 		}
 	}

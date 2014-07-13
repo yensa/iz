@@ -3,7 +3,8 @@ module iz.serializer;
 import
 	std.stdio: writeln, writefln;
 import
-	core.exception, std.traits, std.conv, std.typetuple, std.string, std.array, std.algorithm,
+	core.exception, std.traits, std.conv, std.typetuple, std.string, std.array,
+    std.algorithm, std.c.stdlib, std.string,
 	iz.types, iz.containers, iz.properties, iz.streams;
 import
 	core.stdc.string: memcpy, memmove;
@@ -426,8 +427,8 @@ class izIstNode(T): izPreIstNode if(isTypeSerializable!T)
 				
 			uprop.name = propName;
 
-			static if (!is(T==izSerializable)) if (!uprop.isArray) 
-			writeln(uprop.name, " ", izSerTypesString[uprop.type], " ", *cast(T*)uprop.value.ptr );
+			//static if (!is(T==izSerializable)) if (!uprop.isArray) 
+			//writeln(uprop.name, " ", izSerTypesString[uprop.type], " ", *cast(T*)uprop.value.ptr );
 
 
 		}
@@ -826,7 +827,9 @@ version(unittest)
 		ser.serialize(Bar0,str);
 		ser.serialize(Bar1,str);
 		str.position = 0;
-		str.saveToFile("ser.bin");str.position = 0;
+		str.saveToFile("ser.bin");
+        scope(exit) std.stdio.remove("ser.bin");
+        str.position = 0;
 		Bar0.Alpha = 0;
 		Bar0.Beta = 0;
 		Bar0.Omega = "...".dup;
