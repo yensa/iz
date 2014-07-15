@@ -265,6 +265,20 @@ version(unittest)
 	}
 }
 
+
+package template genPropFromField(propType, string propName, string propField)
+{
+    string genPropFromField()
+    {
+        return
+            "@property void "~ propName ~ "(" ~ propType.stringof ~ " aValue)" ~
+            "{ " ~ propField ~ " = aValue;} " ~
+            "@property " ~ propType.stringof ~ " " ~ propName ~
+            "(){ return " ~ propField ~ ";}" ;
+    }
+}
+
+
 template genStandardPropDescriptors()
 {
 	char[] genStandardPropDescriptors()

@@ -4,7 +4,7 @@ object _1: TCEProject
       name = 'release'
       documentationOptions.generateDocumentation = True
       documentationOptions.generateJSON = True
-      documentationOptions.DocumentationDirectory = 'docs'
+      documentationOptions.DocumentationDirectory = 'doc'
       documentationOptions.JSONFilename = 'docs\iz.json'
       debugingOptions.debug = False
       debugingOptions.debugLevel = 0
@@ -139,6 +139,7 @@ object _1: TCEProject
     'import\iz\streams.d'
     'import\iz\containers.d'
     'import\iz\properties.d'
+    'import\iz\referencable.d'
     'import\iz\serializer.d'
   )
   ConfigurationIndex = 2

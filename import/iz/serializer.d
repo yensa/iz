@@ -5,11 +5,9 @@ import
 import
 	core.exception, std.traits, std.conv, std.typetuple, std.string, std.array,
     std.algorithm, std.c.stdlib, std.string,
-	iz.types, iz.containers, iz.properties, iz.streams;
+	iz.types, iz.containers, iz.properties, iz.streams, iz.referencable;
 import
 	core.stdc.string: memcpy, memmove;
-
-
 
 /**
  * Determines if T can be serialized.
@@ -40,6 +38,7 @@ unittest
 	{
 		void declareProperties(izMasterSerializer aSerializer){}
 		void getDescriptor(const unreadProperty infos, out izPtr aDescriptor){}
+        izSerializable* asSerializable(){return cast(izSerializable*) this;}
 	}
 	static assert(isTypeSerializable!byte);
 	static assert(isTypeSerializable!(byte[2]));
@@ -71,7 +70,59 @@ interface izSerializable
 	 * declarations have changed (new property name, new order, new type, ...)
 	 */
 	void getDescriptor(const unreadProperty infos, out izPtr aDescriptor);
+
+    izSerializable* asSerializable();
 }
+
+/**
+ * Turns a referenced variable of type RT as serializable.
+ * The source must be stored in the referenceMan.
+ */
+class izSerializableReference: izSerializable
+{
+    private
+    {
+        char[] fType;
+        ulong  fID;
+        izPropDescriptor!(char[]) fTypeDescr;
+        izPropDescriptor!ulong fIdDescr;
+    }
+    public
+    {
+
+        this()
+        {
+            fTypeDescr.define(&Type,&Type,"Type");
+            fIdDescr.define(&ID,&ID,"ID");
+        }
+
+        void storeReference(RT)(RT* aReferenced)
+        {
+            fType = RT.stringof.dup;
+            fID = referenceMan.referenceID!RT(aReferenced);
+        }
+
+        /**
+         * Returns the referenced RT linked to this instance.
+         * Usually called after the deserialization.
+         */
+        void restoreReference(RT)(out RT* aReferenced)
+        {
+            aReferenced = referenceMan.reference!RT(fID);
+        }
+
+        mixin(genPropFromField!(char[],"Type","fType"));
+        mixin(genPropFromField!(ulong,"ID","fID"));
+        void getDescriptor(const unreadProperty infos, out izPtr aDescriptor){}
+        void declareProperties(izMasterSerializer aSerializer)
+        {
+            aSerializer.addProperty(fTypeDescr);
+            aSerializer.addProperty(fIdDescr);
+        }
+    }
+    izSerializable* asSerializable(){return cast(izSerializable*) this;}
+}
+
 
 enum fixedSerializableTypes
 {
@@ -306,7 +357,10 @@ class izIstNode(T): izPreIstNode if(isTypeSerializable!T)
 			// value
 			static if (!is(T == izSerializable))
 			{
-				data = to!string( fDescriptor.getter()() ).dup;
+                // http://forum.dlang.org/thread/ipepszxjboblskllwvlv@forum.dlang.org
+                auto val = fDescriptor.getter()();
+
+				data = to!(string)( val ).dup;
 				if (is(T==char[])) data = tabstring(data);
 				aStream.write(data.ptr,data.length);
 			}
@@ -316,6 +370,7 @@ class izIstNode(T): izPreIstNode if(isTypeSerializable!T)
 			aStream.write(data.ptr,data.length);
 		}
 
+        // read from [] not implemented !
 		void readText(izStream aStream)
 		{
 			// removes the TAB added for the document readability
@@ -414,16 +469,25 @@ class izIstNode(T): izPreIstNode if(isTypeSerializable!T)
 				
 			T value;
 			static if (!is(T==izSerializable))
-				if (!uprop.isArray) 
-					value = to!T(propValue);
-			//else
-				//value = to!T(propValue);
+			    value = to!T(propValue);
+
 			static if (!is(T==izSerializable))
-			if (!uprop.isArray)			
-			{
-				uprop.value.length = izSerTypesLen[uprop.type];	
-				*cast(T*) uprop.value.ptr = value;
-			}
+            {
+			    static if (!isArray!T) //if (!uprop.isArray)
+			    {
+				    uprop.value.length = izSerTypesLen[uprop.type];
+				    *cast(T*) uprop.value.ptr = value;
+			    }
+                else static if (isArray!T)
+                {
+                    if (value.length > 0)
+                    {
+                        uprop.value.length = value.length * value[0].sizeof;
+                        memmove(uprop.value.ptr, value.ptr, uprop.value.length);
+                    }
+                    else uprop.value.length = 0;
+                }
+            }
 				
 			uprop.name = propName;
 
@@ -438,6 +502,7 @@ class izIstNode(T): izPreIstNode if(isTypeSerializable!T)
 		override void write(izStream aStream, izSerializationFormat aFormat)
 		{
 			fIsRead = false;
+            assert(writeFormat[aFormat],"forgot to set the array entry !");
 			writeFormat[aFormat](aStream);
 			if ( is(T == izSerializable))
 			{
@@ -457,6 +522,7 @@ class izIstNode(T): izPreIstNode if(isTypeSerializable!T)
 		}
 		override void read(izStream aStream, izSerializationFormat aFormat)
 		{
+            assert(readFormat[aFormat],"forgot to set the array entry !");
 			readFormat[aFormat](aStream);
 			if ( is(T == izSerializable))
 			{
@@ -475,7 +541,6 @@ class izIstNode(T): izPreIstNode if(isTypeSerializable!T)
 				}
 			}
 		}
-
 		override void restore()
 		{
 			fIsRead = false;
@@ -522,9 +587,9 @@ class izIstNode(T): izPreIstNode if(isTypeSerializable!T)
 		 */
 		void setSource(izSerializable aSerializable, ref izPropDescriptor!T aDescriptor)
 		in
-		{
-			assert(aSerializable);
-		}
+        {
+            assert(aSerializable);
+        }
 		body
 		{
 			fDescriptor = aDescriptor;
@@ -534,26 +599,17 @@ class izIstNode(T): izPreIstNode if(isTypeSerializable!T)
 		/**
 		 * Returns the property descriptor linked to this tree item.
 		 */
-		@property izPropDescriptor!T descriptor()
-		{
-			return fDescriptor;
-		}
+		@property izPropDescriptor!T descriptor(){return fDescriptor;}
 
 		/**
 		 * Returns the izSerializable Object which declared descriptor.
 		 */
-		@property izSerializable parentObject()
-		{
-			return fDeclarator;
-		}
+		@property izSerializable parentObject(){ return fDeclarator; }
 
 		/**
 		 * Returns true if the items has been read.
 		 */
-		@property const(bool) isRead()
-		{
-			return fIsRead;
-		}
+		@property const(bool) isRead(){ return fIsRead; }
 	}
 }
 
@@ -569,9 +625,12 @@ enum izSerializationState
 {
 	none, 		/// the izMasterSerializer does nothing.
 	reading,	/// the izMasterSerializer is reading from an izSerializable
-	writing		/// the izMasterSerializer is restoring to an izSerializable
+	writing		/// the izMasterSerializer is writing to an izSerializable
 };
 
+/**
+ * Handles the de/serialization of tree of izSerializable objects.
+ */
 class izMasterSerializer: izObject
 {
 	private
@@ -607,6 +666,7 @@ class izMasterSerializer: izObject
 		}
 		body
 		{
+            fFormat = aFormat;
 			fState = izSerializationState.reading;
 			scope(exit) fState = izSerializationState.none;
 
@@ -671,6 +731,7 @@ class izMasterSerializer: izObject
 		{
 			fState = izSerializationState.writing;
 			scope(exit) fState = izSerializationState.none;
+            // TODO
 		}
 
 		/**
@@ -707,10 +768,12 @@ class izMasterSerializer: izObject
 		/**
 		 * Informs about the serialization state.
 		 */
-		@property const(izSerializationState) state()
-		{
-			return fState;
-		}
+		@property const(izSerializationState) state(){return fState;}
+
+        /**
+		 * Access to the IST.
+		 */
+        @property izIstObjectNode serializationTree() {return fRoot;}
 	}
 }
 
@@ -720,124 +783,160 @@ version(unittest)
 	class foo: izSerializable
 	{
 		private:
-			int fAlpha, fBeta;
-			char[] fOmega;
-			ubyte[4] fZeta;
+			int fa, fb;
+			char[] fc;
+            ubyte[] fd;
+            ubyte[4] fe;
 			izPropDescriptor!int ADescr,BDescr;
-			izPropDescriptor!(char[]) ODescr;
-			izPropDescriptor!(ubyte[4]) ZDescr;
+			izPropDescriptor!(char[]) CDescr;
+            izPropDescriptor!(ubyte[]) DDescr;
+            izPropDescriptor!(ubyte[4]) EDescr;
 		public:
-			@property void Alpha(int value){fAlpha = value;}
-			@property int Alpha(){return fAlpha;}
-			@property void Beta(int value){fBeta = value;}
-			@property int Beta(){return fBeta;}
-			@property void Omega(char[] value){fOmega = value;}
-			@property char[] Omega(){return fOmega;}
-			@property void Zeta(ubyte[4] value){fZeta = value;}
-			@property ubyte[4] Zeta(){return fZeta;}
+            mixin(genPropFromField!(int,"A","fa"));
+            mixin(genPropFromField!(int,"B","fb"));
+            mixin(genPropFromField!(char[],"C","fc"));
+            mixin(genPropFromField!(ubyte[],"D","fd"));
+			mixin(genPropFromField!(ubyte[4],"E","fe"));
 			//
 			this()
 			{
-				ADescr.define(&Alpha,&Alpha,"Alpha");
-				BDescr.define(&Beta,&Beta,"Beta");
-				ODescr.define(&Omega,&Omega,"Omega");
-				ZDescr.define(&Zeta,&Zeta,"Zeta");
+				ADescr.define(&A,&A,"A");
+				BDescr.define(&B,&B,"B");
+				CDescr.define(&C,&C,"C");
+                DDescr.define(&D,&D,"D");
+                EDescr.define(&E,&E,"E");
 			}
+
+            void initPublishedMembers()
+            {
+                A = 0;
+		        B = 0;
+                C = [];
+                D = [];
+                E = [0,0,0,0];
+            }
+
 			void declareProperties(izMasterSerializer aSerializer)
 			{
 				aSerializer.addProperty!int(ADescr);
 				aSerializer.addProperty!int(BDescr);
-				aSerializer.addProperty!(char[])(ODescr);
-				//aSerializer.addProperty!(ubyte[4])(ZDescr);
+                aSerializer.addProperty!(char[])(CDescr);
+                aSerializer.addProperty!(ubyte[])(DDescr);
+				aSerializer.addProperty!(ubyte[4])(EDescr);
 			}
 			void getDescriptor(const unreadProperty infos, out izPtr aDescriptor)
 			{
 			}
+            izSerializable* asSerializable(){return cast(izSerializable*) this;}
 	}
 	class bar: foo
 	{
 		private:
-			foo fGamma;
+            class baz{}
+            baz fb0, fb1;
+            baz* fx;
+			foo fg;
+            izSerializableReference bazRef;
+            //izSerializable ffG; // object.breakpoint error if put as local
 			izPropDescriptor!izSerializable GDescr;
-			izSerializable ffG;
+            izPropDescriptor!izSerializable XDescr;
 		public:
-			@property void Gamma(izSerializable value){/*fGamma = value;*/}
-			@property izSerializable Gamma(){return fGamma;}
+			@property void NullObjSetter(izSerializable value){}
+			@property izSerializable G(){return fg;}
+            @property izSerializable X(){return bazRef;}
 			this()
 			{
-				fGamma = new foo;
+				fg = new foo;
+                fb0 = new baz;
+                fb1 = new baz;
 
-				// must be cast before getting the addr.
-				ffG = cast(izSerializable) fGamma;
+                referenceMan.storeType!baz;
+                referenceMan.storeReference!(baz)(&fb0,498754UL);
+                referenceMan.storeReference!(baz)(&fb1,127856UL);
+                bazRef = new izSerializableReference;
 
-				GDescr.define(cast(izSerializable*)&ffG,"Gamma");
+                // using a direct variable: " -syntactically heavy- "
+				//ffG = cast(izSerializable) fg;
+				//GDescr.define(cast(izSerializable*)&ffG,"G");
 
-				assert( cast(izSerializable) (&fGamma) );
+                GDescr.define(&NullObjSetter,&G,"G");
+                XDescr.define(&NullObjSetter,&X,"X");
 
 			}
 			~this()
 			{
-				delete fGamma;
+				delete fg;
+                delete fb0;
+                delete fb1;
 			}
 			override void declareProperties(izMasterSerializer aSerializer)
 			{
+                // grab current reference: current value to bazref
+                if (aSerializer.state == izSerializationState.reading)
+                    bazRef.storeReference!baz(fx);
+
 				super.declareProperties(aSerializer);
 				aSerializer.addProperty!izSerializable(GDescr);
+                aSerializer.addProperty!izSerializable(XDescr);
+
+                // restore reference: bazref to current value
+                if (aSerializer.state == izSerializationState.writing)
+                    bazRef.restoreReference!baz(fx);
 			}
 	}
 
 	unittest
 	{
 
-		auto Bar0 = new bar;
-		auto Bar1 = new bar;
+		auto Bar = new bar;
 		auto str = new izMemoryStream;
 		auto ser = new izMasterSerializer;
 
-		Bar0.Omega = "whoosh".dup;
-		Bar0.Alpha = 8;
-		Bar0.Beta = 4;
-		Bar0.Zeta = [1,2,3,4];
-		Bar0.fGamma.Omega = "whoosh whoosh whoosh".dup;
-		Bar0.fGamma.Alpha = 88;
-		Bar0.fGamma.Beta = 44;
-		Bar0.fGamma.Zeta = [11,22,33,44];
+		Bar.A = 8;
+		Bar.B = 4;
+        Bar.C = "bla".dup;
+        Bar.D = [1,2,3];
+		Bar.E = [1,2,3,4];
+        Bar.fx = &Bar.fb0;
 
-		Bar1.Omega = "blah".dup;
-		Bar1.Alpha = 9;
-		Bar1.Beta = 3;
-		Bar1.Zeta = [5,6,7,8];
-		Bar1.fGamma.Omega = "blah blah blah blah blah blah blah blah
-			blah blah blah blah blah blah blah blah blah blah blah
-			blah blah blah blah blah blah blah blah blah blah blah
-			blah blah blah blah blah blah blah blah blah blah blah
-			blah blah blah blah blah blah blah blah blah blah blah".dup;
-		Bar1.fGamma.Alpha = 99;
-		Bar1.fGamma.Beta = 33;
+		Bar.fg.A = 88;
+		Bar.fg.B = 44;
+        Bar.fg.C = "bla bla".dup;
+        Bar.fg.D = [11,22,33];
+		Bar.fg.E = [11,22,33,44];
 
 		scope(exit)
 		{
-			delete Bar0;
-			delete Bar1;
+			delete Bar;
 			delete ser;
 			delete str;
 		}
 
-		ser.fFormat = izSerializationFormat.text;
-		ser.serialize(Bar0,str);
-		ser.serialize(Bar1,str);
+		ser.serialize(Bar, str, izSerializationFormat.text);
 		str.position = 0;
-		str.saveToFile("ser.bin");
-        scope(exit) std.stdio.remove("ser.bin");
+
+		str.saveToFile("ser.txt");
+        //scope(exit) std.stdio.remove("ser.txt");
+
         str.position = 0;
-		Bar0.Alpha = 0;
-		Bar0.Beta = 0;
-		Bar0.Omega = "...".dup;
+		Bar.initPublishedMembers;
+        Bar.fg.initPublishedMembers;
+        Bar.fx = null;
 
-		ser.deserialize(Bar0,str);
-		ser.deserialize(Bar1,str);
 
-		assert( Bar0.Alpha == 8);
-		assert( Bar0.Beta == 4);
-	}
+		ser.deserialize(Bar,str);
+
+		assert( Bar.A == 8);
+		assert( Bar.B == 4);
+        assert( Bar.C == "bla");
+        assert( Bar.D == [1,2,3]);
+        assert( Bar.E == [1,2,3,4]);
+        assert( Bar.fx == &Bar.fb0);
+
+        assert( Bar.fg.A == 88);
+		assert( Bar.fg.B == 44);
+        assert( Bar.fg.C == "bla bla");
+        assert( Bar.fg.D == [11,22,33]);
+        assert( Bar.fg.E == [11,22,33,44]);
+    }
 }

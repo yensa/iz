@@ -186,9 +186,9 @@ struct ubyteArray
     }
     unittest
     {
-        auto a = "Sundy's rock";
+        auto a = "Sundy's rock".dup;
 
-        auto r0 = ubyteArray( cast(void*)a.ptr, a.length);
+        auto r0 = ubyteArray( a.ptr, a.length);
 
         assert(r0[0] == 'S');
         assert(r0[$-1] == 'k');

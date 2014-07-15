@@ -5,7 +5,7 @@ import std.stdio, std.c.stdlib: malloc, free, realloc;
 import core.stdc.string: memcpy, memmove;
 import std.string: format, strip;
 import std.traits, std.conv: to;
-import iz.types;
+import iz.types, iz.streams;
 
 /**
  * Parameterized, GC-free array.
@@ -1396,10 +1396,6 @@ version(unittest)
  * izTreeItem interface allows to turn its implementer into a tree item.
  * Most of the methods are pre-implemented so that an interfacer just needs
  * to override the payload accessors.
- *
- * TODO:
- * - add izFilePersist to inheritance list, and a nodeToText() method (by default typeid(this).tostring ~ index)
- * 	so that the tree or a branch can be saved in a simple text format, for debugging purpose...
  */
 interface izTreeItem
 {
@@ -1982,6 +1978,27 @@ interface izTreeItem
 		}
 		firstChild = null;
 	}
+
+// other --------------------------
+
+    final char[] nodeToTextNative()
+    {
+        char[] result;
+        for (auto i = 0; i < level; i++) result ~= '\t';
+        result ~= format( "Index: %.4d - NodeType: %s", siblingIndex, typeof(this).stringof);
+        return result;
+    }
+
+    final void saveToStream(izStream aStream)
+    {
+        auto rn = "\r\n".dup;
+        auto txt = nodeToTextNative;
+        aStream.write( txt.ptr, txt.length );
+        aStream.write( rn.ptr, rn.length );
+        for (auto i = 0; i < childrenCount; i++)
+            children[i].saveToStream(aStream);
+    }
+
 }
 
 /**
@@ -2274,6 +2291,11 @@ private class foo: izObject, izTreeItem
 		assert(Root.children[1].childrenCount == 4);
 		assert(Root.children[1].children[3].childrenCount == 3);
 		assert(Root.children[1].children[3].children[0].level == 3);
+
+        auto str = new izMemoryStream;
+        Root.saveToStream(str);
+        //str.saveToFile(r"C:\izTreeNodes.txt");
+        delete str;
 
 		Root.deleteChildren;
 
