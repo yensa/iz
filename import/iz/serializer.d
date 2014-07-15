@@ -4,7 +4,7 @@ import
 	std.stdio: writeln, writefln;
 import
 	core.exception, std.traits, std.conv, std.typetuple, std.string, std.array,
-    std.algorithm, std.c.stdlib, std.string,
+    std.algorithm, std.c.stdlib, std.string, std.exception,
 	iz.types, iz.containers, iz.properties, iz.streams, iz.referencable;
 import
 	core.stdc.string: memcpy, memmove;
@@ -38,7 +38,6 @@ unittest
 	{
 		void declareProperties(izMasterSerializer aSerializer){}
 		void getDescriptor(const unreadProperty infos, out izPtr aDescriptor){}
-        izSerializable* asSerializable(){return cast(izSerializable*) this;}
 	}
 	static assert(isTypeSerializable!byte);
 	static assert(isTypeSerializable!(byte[2]));
@@ -60,8 +59,7 @@ interface izSerializable
 {
 	/**
 	 * Called by an izMasterSerializer before reading or writing.
-	 * The implementer should use this method to declare its properties
-	 * to aSerializer.
+	 * The implementer uses this method to declare its properties to aSerializer.
 	 */
 	void declareProperties(izMasterSerializer aSerializer);
 	/**
@@ -70,13 +68,13 @@ interface izSerializable
 	 * declarations have changed (new property name, new order, new type, ...)
 	 */
 	void getDescriptor(const unreadProperty infos, out izPtr aDescriptor);
-
-    izSerializable* asSerializable();
 }
 
 /**
  * Turns a referenced variable of type RT as serializable.
  * The source must be stored in the referenceMan.
+ * A "referenced variable" is typically something that is modified
+ * at the run-time, such as the source of a delegate, a pointer to an Object, etc.
  */
 class izSerializableReference: izSerializable
 {
@@ -89,13 +87,16 @@ class izSerializableReference: izSerializable
     }
     public
     {
-
         this()
         {
             fTypeDescr.define(&Type,&Type,"Type");
             fIdDescr.define(&ID,&ID,"ID");
         }
 
+        /**
+         * Sets the internal fields according to aReferenced.
+         * Usually called before the serialization.
+         */
         void storeReference(RT)(RT* aReferenced)
         {
             fType = RT.stringof.dup;
@@ -103,7 +104,7 @@ class izSerializableReference: izSerializable
         }
 
         /**
-         * Returns the referenced RT linked to this instance.
+         * Sets aReferenced according to the internal fields.
          * Usually called after the deserialization.
          */
         void restoreReference(RT)(out RT* aReferenced)
@@ -120,9 +121,7 @@ class izSerializableReference: izSerializable
             aSerializer.addProperty(fIdDescr);
         }
     }
-    izSerializable* asSerializable(){return cast(izSerializable*) this;}
 }
-
 
 enum fixedSerializableTypes
 {
@@ -827,7 +826,6 @@ version(unittest)
 			void getDescriptor(const unreadProperty infos, out izPtr aDescriptor)
 			{
 			}
-            izSerializable* asSerializable(){return cast(izSerializable*) this;}
 	}
 	class bar: foo
 	{
@@ -836,14 +834,19 @@ version(unittest)
             baz fb0, fb1;
             baz* fx;
 			foo fg;
+            izEvent* fEvent;
+            izEvent SrcEvent;
             izSerializableReference bazRef;
-            //izSerializable ffG; // object.breakpoint error if put as local
+            izSerializableReference eventRef;
 			izPropDescriptor!izSerializable GDescr;
             izPropDescriptor!izSerializable XDescr;
+            izPropDescriptor!izSerializable UDescr;
+            void anAssignableEvent(izObject aNotifier){writeln("shhhhhhhh...");}
 		public:
 			@property void NullObjSetter(izSerializable value){}
 			@property izSerializable G(){return fg;}
             @property izSerializable X(){return bazRef;}
+            @property izSerializable U(){return eventRef;}
 			this()
 			{
 				fg = new foo;
@@ -855,12 +858,14 @@ version(unittest)
                 referenceMan.storeReference!(baz)(&fb1,127856UL);
                 bazRef = new izSerializableReference;
 
-                // using a direct variable: " -syntactically heavy- "
-				//ffG = cast(izSerializable) fg;
-				//GDescr.define(cast(izSerializable*)&ffG,"G");
+                SrcEvent = &anAssignableEvent; // this assignment is "pseudo const", used as source because...
+                referenceMan.storeType!izEvent;
+                referenceMan.storeReference!(izEvent)( &SrcEvent,184369UL); // ...cant pass &&anAssignableEvent
+                eventRef = new izSerializableReference;
 
                 GDescr.define(&NullObjSetter,&G,"G");
                 XDescr.define(&NullObjSetter,&X,"X");
+                UDescr.define(&NullObjSetter,&U,"U");
 
 			}
 			~this()
@@ -873,15 +878,22 @@ version(unittest)
 			{
                 // grab current reference: current value to bazref
                 if (aSerializer.state == izSerializationState.reading)
+                {
                     bazRef.storeReference!baz(fx);
+                    eventRef.storeReference!izEvent(fEvent);
+                }
 
 				super.declareProperties(aSerializer);
 				aSerializer.addProperty!izSerializable(GDescr);
                 aSerializer.addProperty!izSerializable(XDescr);
+                aSerializer.addProperty!izSerializable(UDescr);
 
                 // restore reference: bazref to current value
                 if (aSerializer.state == izSerializationState.writing)
+                {
                     bazRef.restoreReference!baz(fx);
+                    eventRef.restoreReference!izEvent(fEvent);
+                }
 			}
 	}
 
@@ -898,6 +910,7 @@ version(unittest)
         Bar.D = [1,2,3];
 		Bar.E = [1,2,3,4];
         Bar.fx = &Bar.fb0;
+        Bar.fEvent = &Bar.SrcEvent;
 
 		Bar.fg.A = 88;
 		Bar.fg.B = 44;
@@ -922,6 +935,7 @@ version(unittest)
 		Bar.initPublishedMembers;
         Bar.fg.initPublishedMembers;
         Bar.fx = null;
+        Bar.fEvent = null;
 
 
 		ser.deserialize(Bar,str);
@@ -932,11 +946,16 @@ version(unittest)
         assert( Bar.D == [1,2,3]);
         assert( Bar.E == [1,2,3,4]);
         assert( Bar.fx == &Bar.fb0);
+        assert( Bar.fEvent == &Bar.SrcEvent);
 
         assert( Bar.fg.A == 88);
 		assert( Bar.fg.B == 44);
         assert( Bar.fg.C == "bla bla");
         assert( Bar.fg.D == [11,22,33]);
         assert( Bar.fg.E == [11,22,33,44]);
+
+        // shhhhhhhhhh... event is reloaded
+        //(*Bar.fEvent)(null);
+
     }
 }
