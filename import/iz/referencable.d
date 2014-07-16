@@ -105,6 +105,27 @@ static class referenceMan
             return true;
         }
 
+// Remove stuff ----------------------------------------------------------------
+
+        /**
+         * tries to remove the reference of type RT and with ID anID from the store.
+         * result: the reference if it's found otherwise null.
+         */
+        static RT* removeReference(RT)(ulong anID)
+        {
+            auto result = reference!RT(anID);
+            if (result) fStore[RT.stringof][anID] = null;
+            return result;
+        }
+
+
+        /// tries to remove the reference aReference of type RT.
+        static void removeReference(RT)(RT* aReference)
+        {
+            auto id = referenceID!RT(aReference);
+            if (id) fStore[RT.stringof][id] = null;
+        }
+
 // Query stuff -----------------------------------------------------------------
 
         /// returns the ID of the variable of type RT if it is already referenced
@@ -174,6 +195,18 @@ unittest
     assert( referenceMan.isReferenced(&f1) );
     assert( referenceMan.isReferenced(&f2) );
     assert( referenceMan.isReferenced(&f3) );
+
+    referenceMan.removeReference(&f1);
+    referenceMan.removeReference(&f2);
+    referenceMan.removeReference!foo(20UL);
+
+    assert( !referenceMan.isReferenced(&f1) );
+    assert( !referenceMan.isReferenced(&f2) );
+    assert( !referenceMan.isReferenced(&f3) );
+
+    referenceMan.removeReference!foo(10UL);
+    referenceMan.removeReference(&f2);
+    referenceMan.removeReference!foo(20UL);
 
     writeln("referenceMan passed the tests");
 }
