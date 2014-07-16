@@ -335,7 +335,7 @@ class izMemoryStream: izObject, izStream, izStreamPersist, izFilePersist8
 			}
 			else
 			{
-				copyStream(this, aStream);
+				this.copyStream(aStream);
 			}
 		}
 		
@@ -352,28 +352,22 @@ class izMemoryStream: izObject, izStream, izStreamPersist, izFilePersist8
 			}
 			else
 			{
-				copyStream(aStream, this);
+				this.copyStream(aStream);
 			}
 		}
 
 // izFilePersist8 -------------------------------
 		
 		/**
-		 * Saves the stream content to the file named aFilename.
-		 * Any existing file is automatically overwritten.
+		 * Saves the stream content to the file aFilename.
+		 * An existing file is automatically overwritten.
 		 */
 		void saveToFile(in char[] aFilename)
 		{
 			version(Windows)
 			{
-				auto hdl = CreateFileA(
-					aFilename.toStringz,
-					GENERIC_WRITE, 0, 
-					(SECURITY_ATTRIBUTES*).init,
-					CREATE_ALWAYS, 
-					FILE_ATTRIBUTE_NORMAL, 
-					HANDLE.init
-				);
+				auto hdl = CreateFileA( aFilename.toStringz, GENERIC_WRITE, 0,
+					(SECURITY_ATTRIBUTES*).init, CREATE_ALWAYS, FILE_ATTRIBUTE_NORMAL, HANDLE.init);
 				
 				if (hdl == INVALID_HANDLE_VALUE)
 					throw new Error(format("stream exception: cannot create or overwrite '%s'", aFilename));
@@ -384,25 +378,32 @@ class izMemoryStream: izObject, izStream, izStreamPersist, izFilePersist8
 				WriteFile(hdl, fMemory, cast(uint)fSize, &numRead, null);
 				
 				if (numRead != fSize)
-					throw new Error(format("stream exception: '%s' is 
-					corrupted", aFilename));
+					throw new Error(format("stream exception: '%s' is corrupted", aFilename));
 			}
+            version(Posix)
+            {
+                auto hdl = open( aFilename.toStringz, O_CREAT | O_TRUNC | O_WRONLY, octal!666);
+				if (hdl <= -1)
+				    throw new Error(format("stream exception: cannot create or overwrite '%s'", aFilename));
+
+                scope(exit) core.sys.posix.unistd.close(hdl);
+                auto numRead = core.sys.posix.unistd.write(hdl, fMemory, fSize);
+				ftruncate64(hdl, fSize);
+
+                if (numRead != fSize)
+					throw new Error(format("stream exception: '%s' is corrupted", aFilename));
+            }
 		}
 		
 		/**
-		 * Loads the stream content from the file named aFilename.
+		 * Loads the stream content from the file aFilename.
 		 */
 		void loadFromFile(in char[] aFilename)		
 		{
 			version(Windows)
 			{
-				auto hdl = CreateFileA(
-					aFilename.toStringz, 
-					GENERIC_READ, 0, 
-					(SECURITY_ATTRIBUTES*).init, 
-					OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, 
-					HANDLE.init
-				);
+				auto hdl = CreateFileA(aFilename.toStringz, GENERIC_READ, 0,
+					(SECURITY_ATTRIBUTES*).init, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, HANDLE.init);
 						
 				if (hdl == INVALID_HANDLE_VALUE)
 					throw new Error(format("stream exception: cannot open '%s'", aFilename));
@@ -415,9 +416,24 @@ class izMemoryStream: izObject, izStream, izStreamPersist, izFilePersist8
 				position = 0;
 				
 				if (numRead != fSize)
-					throw new Error(format("stream exception: '%s' is not 
-					correctly loaded", aFilename));
+					throw new Error(format("stream exception: '%s' is not correctly loaded", aFilename));
 			}
+            version(Posix)
+			{
+                auto hdl = open(aFilename.toStringz, O_CREAT | O_RDONLY, octal!666);
+
+                if (hdl <= -1)
+                    throw new Error(format("stream exception: cannot open '%s'", aFilename));
+
+                scope(exit) core.sys.posix.unistd.close(hdl);
+                size(core.sys.posix.unistd.lseek64(hdl, 0, SEEK_END));
+				core.sys.posix.unistd.lseek64(hdl, 0, SEEK_SET);
+				auto numRead = core.sys.posix.unistd.read(hdl, fMemory, fSize);
+				position = 0;
+
+                if (numRead != fSize)
+					throw new Error(format("stream exception: '%s' is not correctly loaded", aFilename));
+            }
 		}	
 	}
 }

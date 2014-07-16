@@ -328,7 +328,7 @@ class izPropertyBinder(T): izObject
             for(auto i = 0; i < fToFree.count; i++)
             {
                 auto descr = fToFree[i];
-                free(descr);
+                if (descr) delete(descr);
             }
 			delete fItems;
             delete fToFree;

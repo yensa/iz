@@ -873,6 +873,8 @@ version(unittest)
 				delete fg;
                 delete fb0;
                 delete fb1;
+                delete eventRef;
+                delete bazRef;
 			}
 			override void declareProperties(izMasterSerializer aSerializer)
 			{
