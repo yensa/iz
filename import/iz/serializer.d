@@ -89,8 +89,8 @@ class izSerializableReference: izSerializable
     {
         this()
         {
-            fTypeDescr.define(&Type,&Type,"Type");
-            fIdDescr.define(&ID,&ID,"ID");
+            fTypeDescr.define(&Type, &Type, "Type");
+            fIdDescr.define(&ID, &ID, "ID");
         }
 
         /**
@@ -112,8 +112,8 @@ class izSerializableReference: izSerializable
             aReferenced = referenceMan.reference!RT(fID);
         }
 
-        mixin(genPropFromField!(char[],"Type","fType"));
-        mixin(genPropFromField!(ulong,"ID","fID"));
+        mixin(genPropFromField!(char[], "Type", "fType"));
+        mixin(genPropFromField!(ulong, "ID", "fID"));
         void getDescriptor(const unreadProperty infos, out izPtr aDescriptor){}
         void declareProperties(izMasterSerializer aSerializer)
         {
@@ -140,15 +140,15 @@ enum fixedSerializableTypes
  * izSerTypes represents all the fixed-length types, directly representing a data.
  */
  
-private alias izSerTypes = TypeTuple!( izSerializable, null,
+/*private alias izSerTypes = TypeTuple!( izSerializable, null,
 	bool, byte, ubyte, short, ushort, int, uint, long, ulong,
-	char, wchar, dchar, float, double);
+	char, wchar, dchar, float, double);*/
 	
-private string izSerTypesString [izSerTypes.length] = [ "izSerializable", "unknown",
+private immutable string[] izSerTypesString = [ "izSerializable", "unknown",
 	"bool", "byte", "ubyte", "short", "ushort", "int", "uint", "long", "ulong",
 	"char", "wchar", "dchar", "float", "double"];
 
-private ubyte izSerTypesLen[izSerTypes.length] =
+private immutable ubyte[] izSerTypesLen =
 [
 	0, 0, 1, 1, 1, 2, 2, 4, 4, 8, 8,
 	1, 2, 4, 4, 8
@@ -239,10 +239,10 @@ class izIstNode(T): izPreIstNode if(isTypeSerializable!T)
 			{
 				T arr;
 				static if (isStaticArray!T) typeix =
-					staticIndexOf!(typeof(T.init[0]),izSerTypes) + 0x200F;
+					IndexOf!(T.init[0].stringof, izSerTypesString) + 0x200F;
 				else static if (isDynamicArray!T) typeix =
-					staticIndexOf!(typeof(arr[0]),izSerTypes) + 0x200F;
-				else typeix = staticIndexOf!(T,izSerTypes) + 2;
+                    IndexOf!(arr[0].stringof, izSerTypesString) + 0x200F;
+                else typeix = IndexOf!(T.stringof, izSerTypesString) + 2;
 			}
 			aStream.write(&typeix, typeix.sizeof);
 			//name length
@@ -369,7 +369,6 @@ class izIstNode(T): izPreIstNode if(isTypeSerializable!T)
 			aStream.write(data.ptr,data.length);
 		}
 
-        // read from [] not implemented !
 		void readText(izStream aStream)
 		{
 			// removes the TAB added for the document readability
@@ -451,7 +450,7 @@ class izIstNode(T): izPreIstNode if(isTypeSerializable!T)
 			readIx = fullProp.length;
 			while(head != '"')
 			{
-				readIx--;
+				readIx--; // " inside string are included as it starts from the end.
 				head = fullProp[readIx];
 			}
 			// property value
@@ -462,9 +461,9 @@ class izIstNode(T): izPreIstNode if(isTypeSerializable!T)
 			uprop.isArray = (propType[$-2..$] == "[]" ) ;
 				
 			if (!uprop.isArray) uprop.type = cast(ushort)
-				countUntil( cast(string[])izSerTypesString,propType[0..$]);
+				countUntil( izSerTypesString, propType[0..$]);
 			else uprop.type = cast(ushort)
-				countUntil( cast(string[])izSerTypesString,propType[0..$-2]);
+				countUntil( izSerTypesString, propType[0..$-2]);
 				
 			T value;
 			static if (!is(T==izSerializable))
@@ -878,7 +877,7 @@ version(unittest)
 			}
 			override void declareProperties(izMasterSerializer aSerializer)
 			{
-                // grab current reference: current value to bazref
+                // grab current references: current value to baz/eventref
                 if (aSerializer.state == izSerializationState.reading)
                 {
                     bazRef.storeReference!baz(fx);
@@ -890,7 +889,7 @@ version(unittest)
                 aSerializer.addProperty!izSerializable(XDescr);
                 aSerializer.addProperty!izSerializable(UDescr);
 
-                // restore reference: bazref to current value
+                // restore references: baz/eventref to current values
                 if (aSerializer.state == izSerializationState.writing)
                 {
                     bazRef.restoreReference!baz(fx);
@@ -931,7 +930,7 @@ version(unittest)
 		str.position = 0;
 
 		str.saveToFile("ser.txt");
-        //scope(exit) std.stdio.remove("ser.txt");
+        scope(exit) std.stdio.remove("ser.txt");
 
         str.position = 0;
 		Bar.initPublishedMembers;

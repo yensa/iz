@@ -28,7 +28,7 @@ private alias itemsById[string] refStore;
 /**
  * Referencable manager.
  * - for a type, the first entry is always null.
- * - it's not responssible for providing an uniqueID, ID are just suggested.
+ * - it's not responssible for providing an uniqueID, ID's are just suggested.
  */
 static class referenceMan
 {

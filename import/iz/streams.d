@@ -3,19 +3,102 @@ module iz.streams;
 import core.exception, std.exception;
 import std.stdio, std.string, std.c.stdlib: malloc, free, realloc;
 import core.stdc.string: memcpy, memmove;
-import std.digest.md;
-
-version (Windows)
-{
-	import core.sys.windows.windows, std.windows.syserror, std.c.windows.windows;
-}
-version (Posix)
-{
-	import core.sys.posix.fcntl, core.sys.posix.unistd;
-}
-
+import std.digest.md, std.conv;
 import iz.types;
 
+/// stream creation mode 'There': open only if exists.
+public immutable int cmThere    = 0;
+/// stream creation mode 'NotThere': create only if not exists.
+public immutable int cmNotThere = 1;
+/// stream creation mode 'Always': create if not exists otherwise open.
+public immutable int cmAlways   = 2;
+
+version (Windows) 
+{
+	import core.sys.windows.windows, std.windows.syserror, std.c.windows.windows;
+
+    private immutable READ_WRITE =  GENERIC_READ | GENERIC_WRITE;
+    private immutable FILE_SHARE_ALL = FILE_SHARE_READ | FILE_SHARE_WRITE;
+
+    private extern(Windows) export BOOL SetEndOfFile(in HANDLE hFile);
+
+    public alias HANDLE izStreamHandle;
+
+    /// seek modes.
+    public immutable int skBeg = FILE_BEGIN;
+    public immutable int skCur = FILE_CURRENT;
+    public immutable int skEnd = FILE_END;
+
+    /// share modes.
+    public immutable int shNone = 0;
+    public immutable int shRead = FILE_SHARE_READ;
+    public immutable int shWrite= FILE_SHARE_WRITE;
+    public immutable int shAll  = shWrite | shRead;
+
+    /// access modes.
+    public immutable int acRead = GENERIC_READ;
+    public immutable int acWrite= GENERIC_WRITE;
+    public immutable int acAll  = acRead | acWrite;
+
+    /// returns true if aHandle is valid.
+    public bool isHandleValid(izStreamHandle aHandle)
+    {
+        return (aHandle != INVALID_HANDLE_VALUE);
+    }
+
+    /// translates a cmXX to a platform specific option.
+    public int cmToSystem(int aCreationMode)
+    {
+        switch(aCreationMode)
+        {
+            case cmThere: return OPEN_EXISTING;
+            case cmNotThere: return CREATE_NEW;
+            case cmAlways: return OPEN_ALWAYS;
+            default: return OPEN_ALWAYS;
+        }
+    }
+
+}
+version (Posix) 
+{
+	import core.sys.posix.fcntl, core.sys.posix.unistd;
+
+    public alias int izStreamHandle;
+
+    /// seek modes.
+    public immutable int skBeg = SEEK_SET;
+    public immutable int skCur = SEEK_CUR;
+    public immutable int skEnd = SEEK_END;
+
+    /// share modes. (does not allow execution)
+    public immutable int shNone = octal!600;
+    public immutable int shRead = octal!644;
+    public immutable int shWrite= octal!622;
+    public immutable int shAll  = octal!666;
+
+    /// access modes.
+    public immutable int acRead = O_RDONLY;
+    public immutable int acWrite= O_WRONLY;
+    public immutable int acAll  = O_RDWR;
+
+    /// returns true if aHandle is valid.
+    public bool isHandleValid(izStreamHandle aHandle)
+    {
+        return (fHandle > -1);
+    }
+
+    /// translates a cmXX to a platform specific option.
+    public int cmToSystem(int aCm)
+    {
+        switch(aCreationMode)
+        {
+            case cmThere: return 0;
+            case cmNotThere: return O_CREAT | O_EXCL;
+            case cmAlways: return O_CREAT;
+            default: return O_CREAT;
+        }
+    }
+}
 
 /**
  * An implementer can save or load from an izStream.
@@ -34,6 +117,23 @@ interface izFilePersist8
 {
 	void saveToFile(in char[] aFilename);
 	void loadFromFile(in char[] aFilename);
+    string filename();
+}
+
+private template genReadWriteVar()
+{
+    string genReadWriteVar()
+    {
+        string result;
+        foreach(T; izConstantSizeTypes)
+        {
+            result ~= "alias readVariable!" ~ T.stringof ~ " read" ~
+                T.stringof ~ ';' ~ '\r' ~ '\n';
+            result ~= "alias writeVariable!" ~ T.stringof ~ " write" ~
+                T.stringof ~ ';' ~ '\r' ~ '\n';
+        }
+        return result;
+    }
 }
 
 interface izStream
@@ -44,9 +144,11 @@ interface izStream
 	 */
 	size_t read(izPtr aBuffer, size_t aCount);
 	/**
-	 * Read T.sizeof bytes from the pointer aValue.
+	 * Read T.sizeof bytes in aValue.
 	 * Returns the count of bytes effectively read (either T.sizeof or 0).
 	 * T must verify isConstantSize.
+     * A typed reader is generated for each type in izConstantSizeTypes
+     * and named readint, readchar, etc.
 	 */
 	size_t readVariable(T)(T* aValue);
 	/**
@@ -58,6 +160,8 @@ interface izStream
 	 * Writes T.sizeof bytes to the pointer aValue.
 	 * Returns the count of bytes effectively written (either T.sizeof or 0).
 	 * T must verify isConstantSize.
+     * A typed writer is generated for each type in izConstantSizeTypes
+     * and named writeint, writechar, etc.
 	 */
 	size_t writeVariable(T)(T* aValue);
 	/**
@@ -65,9 +169,9 @@ interface izStream
 	 * to Position + anOffset if anOrigin = 1 or
 	 * to Size + anOffset if anOrigin = 2.
 	 */
-	ulong seek(long anOffset, int anOrigin);
+	ulong seek(ulong anOffset, int anOrigin);
 	/// ditto
-	ulong seek(int anOffset, int anOrigin);
+	ulong seek(uint anOffset, int anOrigin);
 	/**
 	 * Stream size.
 	 */
@@ -89,7 +193,6 @@ interface izStream
 	 */
 	void clear();
 }
-
 
 /**
  * An izStream to izStream copier.
@@ -119,14 +222,300 @@ void copyStream(izStream aSource, izStream aTarget)
 	}
 }
 
-/*
+/**
+ * Unspecialized stream class. Descendant are all some
+ * system stream (based on a file handle).
+ * This class is not directly usable.
+ */
 class izSystemStream: izObject, izStream, izStreamPersist
 {
+    private
+    {
+        izStreamHandle fHandle;
+    }
+    public
+    {
+        mixin(genReadWriteVar);
+        size_t read(izPtr aBuffer, size_t aCount)
+        {
+            if (!fHandle.isHandleValid) return 0;
+			version(Windows)
+			{
+				uint lCount = cast(uint) aCount;
+				LARGE_INTEGER Li;
+				Li.QuadPart = aCount;
+				ReadFile(fHandle, aBuffer, Li.LowPart, &lCount, null);
+				return lCount;
+			}
+			version(Posix)
+			{
+				return core.sys.posix.unistd.read(fHandle, aBuffer, aCount);
+			}
+        }
+
+	    size_t readVariable(T)(T* aValue)
+        {
+            return read(&aValue, T.sizeof);
+        }
+
+        size_t write(izPtr aBuffer, size_t aCount)
+        {
+            if (!fHandle.isHandleValid) return 0;
+			version(Windows)
+			{
+				uint lCount = cast(uint) aCount;
+				LARGE_INTEGER Li;
+				Li.QuadPart = aCount;
+				WriteFile(fHandle, aBuffer, Li.LowPart, &lCount, null);
+				return lCount;
+			}
+			version(Posix)
+			{
+				return core.sys.posix.unistd.write(fHandle, aBuffer, aCount);
+			}
+        }
+
+	    size_t writeVariable(T)(T* aValue)
+        {
+            return write(&aValue, T.sizeof);
+        }
+
+	    ulong seek(ulong anOffset, int anOrigin)
+        {
+            if (!fHandle.isHandleValid) return 0;
+			version(Windows)
+			{
+				LARGE_INTEGER Li;
+				Li.QuadPart = anOffset;
+				Li.LowPart = SetFilePointer(fHandle, Li.LowPart, &Li.HighPart, anOrigin);
+				return Li.QuadPart;
+			}
+			version(Posix)
+			{
+				return core.sys.posix.unistd.lseek64(fHandle, anOffset, anOrigin);
+			}
+        }
+
+	    ulong seek(uint anOffset, int anOrigin)
+        {
+            return seek(cast(ulong)anOffset, anOrigin);
+        }
+
+	    @property ulong size()
+        {
+            if (!fHandle.isHandleValid) return 0;
+			ulong lRes, lSaved;
+
+			lSaved = seek(0, skCur);
+			lRes = seek(0, skEnd);
+			seek(lSaved, skBeg);
+
+			return lRes;
+        }
+
+	    @property void size(ulong aValue)
+        {
+            if (!fHandle.isHandleValid) return;
+			if (size == aValue) return;
+
+			version(Windows)
+			{
+				LARGE_INTEGER Li;
+				Li.QuadPart = aValue;
+				SetFilePointer(fHandle, Li.LowPart, &Li.HighPart, FILE_BEGIN);
+				SetEndOfFile(fHandle);
+			}
+			version(Posix)
+			{
+				ftruncate(fHandle, aValue);
+			}
+        }
+
+	    @property void size(uint aValue)
+        {
+            if (!fHandle.isHandleValid) return;
+			version(Windows)
+			{
+				SetFilePointer(fHandle, aValue, null, FILE_BEGIN);
+				SetEndOfFile(fHandle);
+			}
+			version(Posix)
+			{
+				ftruncate(fHandle, aValue);
+			}
+        }
+
+	    @property ulong position()
+        {
+			return seek(0, skCur);
+        }
+
+	    @property void position(ulong aValue)
+        {
+			ulong lSize = size;
+			if (aValue >  lSize) aValue = lSize;
+			seek(aValue, skBeg);
+        }
+
+	    @property void position(uint aValue)
+        {
+            seek(aValue, skBeg);
+        }
+
+	    void clear()
+        {
+            size(0);
+        }
+
+        void saveToStream(izStream aStream)
+        {
+            copyStream(this, aStream);
+        }
+
+	    void loadFromStream(izStream aStream)
+        {
+            copyStream(aStream, this);
+        }
+    }
 }
 
+/**
+ * System stream specialized into reading and writing files, including huge ones
+ * (up to 2^64 bytes). Various constructors are avalaible, providing predefined
+ * sharing and access options.
+ */
 class izFileStream: izSystemStream
 {
-}*/
+    private
+    {
+        string fFilename;
+    }
+    public
+    {
+        /**
+         * Constructs the stream and call openPermissive.
+         */
+        this(in char[] aFilename, int creationMode = cmAlways)
+        {
+            openPermissive(aFilename, creationMode);
+        }
+
+        /**
+         * Constructs the stream and call open.
+         */
+        this(in char[] aFilename, int access, int share, int creationMode)
+        {
+            open (aFilename, access, share, creationMode);
+        }
+
+        ~this()
+        {
+            closeFile;
+        }
+
+        /**
+         * Opens a file for the current user. By default the file is always created or opened.
+         */
+        bool openStrict(in char[] aFilename, int creationMode = cmAlways)
+        {
+            version(Windows)
+            {
+			    fHandle = CreateFileA(aFilename.toStringz, READ_WRITE, shNone,
+			        (SECURITY_ATTRIBUTES*).init, cmToSystem(creationMode),
+                    FILE_ATTRIBUTE_NORMAL, HANDLE.init);
+            }
+            version(Posix)
+            {
+                fHandle = open(aFilename.toStringz, O_RDWR | cmToSystem(creationMode), shNone);
+            }
+
+			if (!fHandle.isHandleValid)
+			{
+				throw new Error(format("stream exception: cannot create or open '%s'", aFilename));
+			}
+            fFilename = aFilename.dup;
+            return fHandle.isHandleValid;
+        }
+
+        /**
+         * Opens a shared file. By default the file is always created or opened.
+         */
+        bool openPermissive(in char[] aFilename, int creationMode = cmAlways)
+        {
+            version(Windows)
+            {
+			    fHandle = CreateFileA(aFilename.toStringz, READ_WRITE, FILE_SHARE_ALL,
+			        (SECURITY_ATTRIBUTES*).init, cmToSystem(creationMode), FILE_ATTRIBUTE_NORMAL, HANDLE.init);
+            }
+            version(Posix)
+            {
+                fHandle = open(aFilename.toStringz, O_RDWR | cmToSystem(creationMode), shAll);
+            }
+
+			if (!fHandle.isHandleValid)
+			{
+				throw new Error(format("stream exception: cannot create or open '%s'", aFilename));
+			}
+            fFilename = aFilename.dup;
+            return fHandle.isHandleValid;
+        }
+
+        /**
+         * The fully parametric open version. Do not throw. Under POSIX, access can
+         * be already OR-ed with other, unrelated flags (e.g: O_NOFOLLOW or O_NONBLOCK).
+         */
+        bool open(in char[] aFilename, int access, int share, int creationMode)
+        {
+            version(Windows)
+            {
+			    fHandle = CreateFileA(aFilename.toStringz, access, share,
+			        (SECURITY_ATTRIBUTES*).init, cmToSystem(creationMode),
+                    FILE_ATTRIBUTE_NORMAL, HANDLE.init);
+            }
+            version(Posix)
+            {
+                fHandle = open(aFilename.toStringz, access | cmToSystem(creationMode), share);
+            }
+            fFilename = aFilename.dup;
+            return fHandle.isHandleValid;
+        }
+
+        /**
+         * Closes the files and flushes any pending changes to the disk.
+         * After the call, handle is not valid anymore.
+         */
+        void closeFile()
+        {
+			version(Windows)
+			{
+				if (fHandle.isHandleValid) CloseHandle(fHandle);
+				fHandle = INVALID_HANDLE_VALUE;
+			}
+			version(Posix)
+			{
+				if (fHandle.isHandleValid) core.sys.posix.unistd.close(fHandle);
+				fHandle = -1;
+			}
+			fFilename = "";
+        }
+        /**
+         * Exposes the handle for additional system stream operations.
+         */
+        @property const(izStreamHandle) handle(){return fHandle;}
+        /**
+         * Exposes the filename.
+         */
+        @property string filename(){return fFilename;}
+    }
+}
+
+/**
+ * System stream specialized into reading and writing from a named pipe.
+ */
+class izPipeStream
+{
+    // TODO: constructors and destructors
+}
 
 /**
  * Implements a stream of contiguous, GC-free, memory.
@@ -141,9 +530,11 @@ class izMemoryStream: izObject, izStream, izStreamPersist, izFilePersist8
 		izPtr fMemory;
 		size_t fSize;
 		size_t fPosition;
+        string fFilename;
 	}
 	public
 	{
+        mixin(genReadWriteVar);
 		this()
 		{
 			fMemory = malloc(16);
@@ -193,25 +584,25 @@ class izMemoryStream: izObject, izStream, izStreamPersist, izFilePersist8
 		
 // seek -------------------------------
 
-		ulong seek(long anOffset, int anOrigin)
+		ulong seek(ulong anOffset, int anOrigin)
 		{
 			switch(anOrigin)
 			{
-				case 0:		
+				case skBeg:
 					fPosition = cast(typeof(fPosition)) anOffset;
 					if (fPosition > fSize) fPosition = fSize;
 					return fPosition;		
-				case 1:	
+				case skCur:
 					fPosition += anOffset;
 					if (fPosition > fSize) fPosition = fSize;
 					return fPosition;	
-				case 2:
+				case skEnd:
 					return fSize;	
 				default: 
 					return fPosition;
 			}
 		}
-		ulong seek(int anOffset, int anOrigin)
+		ulong seek(uint anOffset, int anOrigin)
 		{
 			switch(anOrigin)
 			{
@@ -269,12 +660,12 @@ class izMemoryStream: izObject, izStream, izStreamPersist, izFilePersist8
 		
 		@property void position(ulong aValue)
 		{
-			seek(aValue, 0);
+			seek(aValue, skBeg);
 		}
 		
 		@property void position(uint aValue)
 		{
-			seek(aValue, 0);
+			seek(aValue, skBeg);
 		}
 		
 // misc -------------------------------	
@@ -294,6 +685,11 @@ class izMemoryStream: izObject, izStream, izStreamPersist, izFilePersist8
 		{
 			return fMemory;
 		}
+
+        @property string filename()
+        {
+            return fFilename;
+        }
 
 // operators -------------------------------
 
@@ -352,7 +748,7 @@ class izMemoryStream: izObject, izStream, izStreamPersist, izFilePersist8
 			}
 			else
 			{
-				this.copyStream(aStream);
+				copyStream(aStream, this);
 			}
 		}
 
@@ -393,6 +789,7 @@ class izMemoryStream: izObject, izStream, izStreamPersist, izFilePersist8
                 if (numRead != fSize)
 					throw new Error(format("stream exception: '%s' is corrupted", aFilename));
             }
+            fFilename = aFilename.idup;
 		}
 		
 		/**
@@ -434,6 +831,7 @@ class izMemoryStream: izObject, izStream, izStreamPersist, izFilePersist8
                 if (numRead != fSize)
 					throw new Error(format("stream exception: '%s' is not correctly loaded", aFilename));
             }
+            fFilename = aFilename.idup;
 		}	
 	}
 }
@@ -442,7 +840,21 @@ class izMemoryStream: izObject, izStream, izStreamPersist, izFilePersist8
 version(unittest)
 {
 	class izMemoryStreamTest1 : commonStreamTester!izMemoryStream {}
-	//class izFileStreamTest1: commonStreamTester!(izFileStream,"izFileStreamTest1.txt") {}
+	class izFileStreamTest1: commonStreamTester!(izFileStream,"filestream1.txt"){}
+
+    unittest
+    {
+        auto sz = 0x1_FFFF_FFFFUL;
+        auto huge = new izFileStream("huge.bin");
+        scope(exit)
+        {
+            delete huge;
+            std.stdio.remove("huge.bin");
+        }
+        huge.size = sz;
+        huge.position = 0;
+        assert(huge.size == sz);
+    }
 
 	class commonStreamTester(T, A...)
 	{
@@ -455,13 +867,13 @@ version(unittest)
 			{
 				str.write(&i, i.sizeof);
 				assert(str.position == (i + 1) * i.sizeof);
-			}	
+			}
 			str.position = 0;
 			assert(str.size == len * 4);
 			while(str.position < str.size)
 			{
-				int g;
-				str.read(&g, g.sizeof);
+				int g, c;
+				c = str.read(&g, g.sizeof);
 				assert(g == (str.position - 1) / g.sizeof );
 			}
 			str.clear;
@@ -473,10 +885,14 @@ version(unittest)
 				assert(str.position == (i + 1) * i.sizeof);
 			}	
 			str.position = 0;
-			
-			auto strcpy = new T(A);
+
+            static if (is(T == izFileStream))
+            {
+			    auto strcpy = new T("filestream2.txt");
+            }
+            else auto strcpy = new T(A);
 			scope (exit) delete strcpy;
-			strcpy.size = 1000;
+			strcpy.size = 100000;
 			assert(str.size == len * 4);
 			strcpy.loadFromStream(str);
 			assert(str.size == len * 4);
@@ -486,8 +902,8 @@ version(unittest)
 			for (int i = 0; i < len; i++)
 			{
 				int r0,r1;
-				str.readVariable!int(&r0);
-				strcpy.readVariable!int(&r1);
+				str.readint(&r0);
+				strcpy.readint(&r1);
 				assert(r0 == r1);
 			}
 			strcpy.position = 0;
@@ -496,10 +912,11 @@ version(unittest)
 
 			str.write("truncate the data".dup.ptr, 17);
 			str.position = 0;
+            strcpy.position = 0;
 			ubyte[] food0, food1;
 			food0.length = cast(size_t) str.size;
 			food1.length = cast(size_t) strcpy.size;
-			str.read(food0.ptr,food0.length);
+			str.read(food0.ptr, food0.length);
 			strcpy.read(food1.ptr,food1.length);
 			ubyte[16] md5_0 = md5Of(food0);
 			ubyte[16] md5_1 = md5Of(food1);
@@ -536,7 +953,15 @@ version(unittest)
               for(ubyte i = 0; i < 100; i++) assert( str.ubytes[i] == 99 - i  );
             }
 
-			writeln( T.stringof ~ "(T) passed the tests");
+            static if (is(T == izFileStream))
+            {
+                str.closeFile;
+                strcpy.closeFile;
+                std.stdio.remove("filestream1.txt");
+                std.stdio.remove("filestream2.txt");
+            }
+
+            writeln( T.stringof ~ " passed the tests");
 		}
 	}
 }
