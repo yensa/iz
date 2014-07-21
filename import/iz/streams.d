@@ -84,11 +84,11 @@ version (Posix)
     /// returns true if aHandle is valid.
     public bool isHandleValid(izStreamHandle aHandle)
     {
-        return (fHandle > -1);
+        return (aHandle > -1);
     }
 
     /// translates a cmXX to a platform specific option.
-    public int cmToSystem(int aCm)
+    public int cmToSystem(int aCreationMode)
     {
         switch(aCreationMode)
         {
@@ -365,6 +365,7 @@ class izSystemStream: izObject, izStream, izStreamPersist
 	    void clear()
         {
             size(0);
+            position(0);
         }
 
         void saveToStream(izStream aStream)
@@ -405,7 +406,7 @@ class izFileStream: izSystemStream
          */
         this(in char[] aFilename, int access, int share, int creationMode)
         {
-            open (aFilename, access, share, creationMode);
+            open(aFilename, access, share, creationMode);
         }
 
         ~this()
@@ -426,7 +427,8 @@ class izFileStream: izSystemStream
             }
             version(Posix)
             {
-                fHandle = open(aFilename.toStringz, O_RDWR | cmToSystem(creationMode), shNone);
+                fHandle = core.sys.posix.fcntl.open(aFilename.toStringz,
+                    O_RDWR | cmToSystem(creationMode), shNone);
             }
 
 			if (!fHandle.isHandleValid)
@@ -444,12 +446,13 @@ class izFileStream: izSystemStream
         {
             version(Windows)
             {
-			    fHandle = CreateFileA(aFilename.toStringz, READ_WRITE, FILE_SHARE_ALL,
+			    fHandle = CreateFileA(aFilename.toStringz, READ_WRITE, shAll,
 			        (SECURITY_ATTRIBUTES*).init, cmToSystem(creationMode), FILE_ATTRIBUTE_NORMAL, HANDLE.init);
             }
             version(Posix)
             {
-                fHandle = open(aFilename.toStringz, O_RDWR | cmToSystem(creationMode), shAll);
+                fHandle = core.sys.posix.fcntl.open(aFilename.toStringz,
+                    O_RDWR | cmToSystem(creationMode), shAll);
             }
 
 			if (!fHandle.isHandleValid)
@@ -474,7 +477,8 @@ class izFileStream: izSystemStream
             }
             version(Posix)
             {
-                fHandle = open(aFilename.toStringz, access | cmToSystem(creationMode), share);
+                fHandle = core.sys.posix.fcntl.open(aFilename.toStringz,
+                    access | cmToSystem(creationMode), share);
             }
             fFilename = aFilename.dup;
             return fHandle.isHandleValid;
@@ -860,7 +864,7 @@ version(unittest)
 	{
 		unittest
 		{
-			size_t len = 25_000;
+			uint len = 25_000;
 			auto str = new T(A);
 			scope (exit) delete str;
 			for (int i = 0; i < len; i++)
@@ -872,8 +876,8 @@ version(unittest)
 			assert(str.size == len * 4);
 			while(str.position < str.size)
 			{
-				int g, c;
-				c = str.read(&g, g.sizeof);
+				int g;
+				auto c = str.read(&g, g.sizeof);
 				assert(g == (str.position - 1) / g.sizeof );
 			}
 			str.clear;
