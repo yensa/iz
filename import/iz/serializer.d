@@ -689,9 +689,9 @@ class izMasterSerializer: izObject
 		}
 		body
 		{
+            fFormat = aFormat;
 			fState = izSerializationState.writing;
 			scope(exit) fState = izSerializationState.none;
-
 			fStream = aStream;
 			fRoot.deleteChildren;
 			fCurNode = fRoot;
@@ -734,6 +734,9 @@ class izMasterSerializer: izObject
 
 		/**
 		 * Called by an izSerializable in its declareProperties implementation.
+         * aDescriptor must not be a stack allocated descriptor because the property
+         * is neither read or written directly during a call to this function.
+         * Writing and reading appends after all the properties are declared.
 		 */
 		void addProperty(T)(ref izPropDescriptor!T aDescriptor) if(isTypeSerializable!T)
 		{
@@ -859,7 +862,7 @@ version(unittest)
 
                 SrcEvent = &anAssignableEvent; // this assignment is "pseudo const", used as source because...
                 referenceMan.storeType!izEvent;
-                referenceMan.storeReference!(izEvent)( &SrcEvent,184369UL); // ...cant pass &&anAssignableEvent
+                referenceMan.storeReference!(izEvent)(&SrcEvent,184369UL); // ...cant pass &&anAssignableEvent
                 eventRef = new izSerializableReference;
 
                 GDescr.define(&NullObjSetter,&G,"G");
@@ -939,7 +942,7 @@ version(unittest)
         Bar.fEvent = null;
 
 
-		ser.deserialize(Bar,str);
+		ser.deserialize(Bar, str, izSerializationFormat.text);
 
 		assert( Bar.A == 8);
 		assert( Bar.B == 4);

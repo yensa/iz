@@ -227,7 +227,7 @@ void copyStream(izStream aSource, izStream aTarget)
  * system stream (based on a file handle).
  * This class is not directly usable.
  */
-class izSystemStream: izObject, izStream, izStreamPersist
+package class izSystemStream: izObject, izStream, izStreamPersist
 {
     private
     {
@@ -485,7 +485,7 @@ class izFileStream: izSystemStream
         }
 
         /**
-         * Closes the files and flushes any pending changes to the disk.
+         * Closes the file and flushes any pending changes to the disk.
          * After the call, handle is not valid anymore.
          */
         void closeFile()
@@ -522,7 +522,7 @@ class izPipeStream
 }
 
 /**
- * Implements a stream of contiguous, GC-free, memory.
+ * Implements a stream of contiguous, GC-free, heap-memory.
  * Its maximal theoretical size is 2^32 bytes (x86) or 2^64 bytes (x86_64).
  * Its practical size limit is damped by the amount of remaining DRAM.
  * This limit is itself reduced by the memory fragmentation. 

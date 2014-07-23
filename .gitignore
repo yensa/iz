@@ -21,3 +21,5 @@ ser.txt
 *.npp
 *.json
 *.html
+*.js
+*.css

@@ -266,7 +266,7 @@ version(unittest)
 }
 
 
-package template genPropFromField(propType, string propName, string propField)
+template genPropFromField(propType, string propName, string propField)
 {
     string genPropFromField()
     {

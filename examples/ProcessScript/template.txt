@@ -1,0 +1,6 @@
+izSerializable Root = ""
+	char[] Executable = " "
+	char[] WorkingDirectory = " "
+	char[] Parameter = " "
+	bool WaitOnExit = "false"
+	uint ParameterCount = "0"
