@@ -6,7 +6,7 @@ import
 	iz.types, iz.containers;
 		
 /**
- * Flag used to describe the accessors combination.
+ * Flags used to describe the accessors combination.
  */
 enum izPropAccess 
 {
@@ -18,9 +18,11 @@ enum izPropAccess
 	
 /**
  * Describes the property of type T of an Object. Its members includes:
- * - a setter: either as an izPropSetter method or as pointer to the field.
- * - a getter: either as an izPropGetter method or as pointer to the field.
- * - a name: 
+ * <li> a setter: either as an izPropSetter method or as pointer to the field.</li>
+ * <li> a getter: either as an izPropGetter method or as pointer to the field.</li>
+ * <li> a name: optionally used, according to the context.</li>
+ * <li> a declarator: the Object declaring the props. the declarator is automatically set
+ *      when the descriptor uses at least one accessor method.</li>
  */
 struct izPropDescriptor(T)
 {
@@ -38,6 +40,7 @@ struct izPropDescriptor(T)
 	{
 		izPropSetter fSetter;
 		izPropGetter fGetter;
+        Object fDeclarator;
 
 		T* fSetPtr;
 		T* fGetPtr;
@@ -142,6 +145,7 @@ struct izPropDescriptor(T)
 			setter(aSetter);
 			getter(aGetter);
 			if (aName != "") {name(aName);}
+            fDeclarator = cast(Object) aSetter.ptr;
 		}
 		
 		/**
@@ -152,15 +156,17 @@ struct izPropDescriptor(T)
 			setter(aSetter);
 			setDirectSource(aSourceData);
 			if (aName != "") {name(aName);}
+            fDeclarator = cast(Object) aSetter.ptr;
 		}		
 		/**
 		 * Defines a property descriptor from a single data used as source/target
 		 */
-		void define(T* aData, in char[] aName = "")
+		void define(T* aData, in char[] aName = "", Object aDeclarator = null)
 		{
 			setDirectSource(aData);
 			setPropTarget(aData);
 			if (aName != "") {name(aName);}
+            fDeclarator = aDeclarator;
 		}
 		
 // setter ---------------
@@ -171,8 +177,10 @@ struct izPropDescriptor(T)
 		@property void setter(izPropSetter aSetter)
 		{
 			fSetter = aSetter;
+            fDeclarator = cast(Object) aSetter.ptr;
 			updateAccess;
 		}
+        /// ditto
 		@property izPropSetter setter(){return fSetter;}	
 		/**
 		 * Sets the property setter using a pointer to a direct data
@@ -192,8 +200,10 @@ struct izPropDescriptor(T)
 		@property void getter(izPropGetter aGetter)
 		{
 			fGetter = aGetter;
+            fDeclarator = cast(Object) aGetter.ptr;
 			updateAccess;
 		}
+        /// ditto
 		@property izPropGetter getter(){return fGetter;}	
 		/** 
 		 * Sets the property getter using a pointer to a direct data
@@ -221,10 +231,20 @@ struct izPropDescriptor(T)
 		{
 			fName = aName.dup;
 		}
+        /// ditto
 		@property string name()
 		{
 			return fName.idup;
 		}
+        /**
+		 * Defines the object declaring the property.
+		 */
+        @property void declarator(Object aDeclarator)
+        {
+            fDeclarator = aDeclarator;
+        }
+        /// ditto
+        @property Object declarator(){return fDeclarator;}
 	}	
 }
 
@@ -252,6 +272,7 @@ version(unittest)
 			descrAi.setter()(5);
 			assert(a.i == 5);
 			assert(a.i == descrAi.getter()());
+            assert(descrAi.declarator is a);
 			
 			auto refval = si(1,2,333);
 			auto b = new B;
