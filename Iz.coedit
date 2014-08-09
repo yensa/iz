@@ -28,7 +28,7 @@ object _1: TCEProject
       debugingOptions.addCInformations = True
       debugingOptions.generateMapFile = True
       messagesOptions.depreciationHandling = silent
-      messagesOptions.warnings = False
+      messagesOptions.additionalWarnings = True
       outputOptions.binaryKind = staticlib
       outputOptions.noBoundsCheck = False
       outputOptions.boundsCheck = onAlways

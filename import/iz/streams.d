@@ -22,6 +22,36 @@ version (Windows)
 
     private extern(Windows) export BOOL SetEndOfFile(in HANDLE hFile);
 
+    private extern(Windows) export HANDLE CreateNamedPipeA(
+      LPCTSTR lpName,
+      DWORD dwOpenMode,
+      DWORD dwPipeMode,
+      DWORD nMaxInstances,
+      DWORD nOutBufferSize,
+      DWORD nInBufferSize,
+      DWORD nDefaultTimeOut,
+      LPSECURITY_ATTRIBUTES lpSecurityAttributes
+    );
+
+    private extern(Windows) export BOOL ConnectNamedPipe(
+        in HANDLE hNamedPipe,
+        LPOVERLAPPED lpOverlapped = null
+    );
+
+    private extern(Windows) export BOOL PeekNamedPipe(
+         in HANDLE hNamedPipe,
+         out LPVOID lpBuffer,
+         in DWORD nBufferSize,
+         LPDWORD lpBytesRead,
+         LPDWORD lpTotalBytesAvail,
+         LPDWORD lpBytesLeftThisMessage
+    );
+
+    private extern(Windows) export BOOL DisconnectNamedPipe(
+        in HANDLE hNamedPipe
+    );
+
+
     public alias HANDLE izStreamHandle;
 
     /// seek modes.
@@ -362,6 +392,11 @@ package class izSystemStream: izObject, izStream, izStreamPersist
             seek(aValue, skBeg);
         }
 
+        /**
+         * Exposes the handle for additional system stream operations.
+         */
+        @property const(izStreamHandle) handle(){return fHandle;}
+
 	    void clear()
         {
             size(0);
@@ -503,22 +538,101 @@ class izFileStream: izSystemStream
 			fFilename = "";
         }
         /**
-         * Exposes the handle for additional system stream operations.
-         */
-        @property const(izStreamHandle) handle(){return fHandle;}
-        /**
          * Exposes the filename.
          */
         @property string filename(){return fFilename;}
     }
 }
 
+
+public immutable uint pipeServer = 0;
+public immutable uint pipeClient = 1;
+
 /**
  * System stream specialized into reading and writing from a named pipe.
  */
-class izPipeStream
+class izPipeStream: izSystemStream
 {
-    // TODO: constructors and destructors
+    private
+    {
+        izStreamHandle fServer;
+        string fPipeName;
+        bool fAsServer;
+    }
+    public
+    {
+        static izPipeStream createAsServer(in char[] aPipeName, int access = acAll)
+        {
+            return new izPipeStream(aPipeName, access, pipeServer);
+        }
+
+        static izPipeStream createAsClient(in char[] aPipeName, int access = acAll)
+        {
+            return new izPipeStream(aPipeName, access, pipeClient);
+        }
+
+        static izPipeStream createAsClient(in izStreamHandle aPipeHandle)
+        {
+            return new izPipeStream(aPipeHandle);
+        }
+
+        /**
+         * Creates a pipe with the role pipeRole.
+         */
+        this(in char[] aPipeName, int access, in uint pipeRole = pipeClient)
+        {
+            if (pipeRole == pipeServer)
+            {
+                uint BufSz = 512;
+                fHandle = CreateNamedPipeA(
+                    aPipeName.toStringz,
+                    access,         // GEN_READ or GEN_WRITE
+                    0,              // mode
+                    255,            // UNLIMITED_CLIENT
+                    BufSz, BufSz,   // BUFFSZ
+                    0,              // TIMEOUT
+                    (SECURITY_ATTRIBUTES*).init
+                );
+                fAsServer = fHandle.isHandleValid;
+                if (!fAsServer)
+                    throw new Error("stream exception: pipe server not created");
+            }
+            else
+            {
+                fHandle = CreateFileA(aPipeName.toStringz, access, shAll,
+			        (SECURITY_ATTRIBUTES*).init, cmToSystem(cmThere),
+                    FILE_ATTRIBUTE_NORMAL, HANDLE.init);
+                if (!fHandle.isHandleValid)
+                    throw new Error("stream exception: pipe client not created");
+            }
+        }
+
+        /**
+         * Creates a pipe as client of the server aPipeHandle.
+         */
+        this(in izStreamHandle aPipeHandle)
+        {
+            ConnectNamedPipe(aPipeHandle);
+            if (!fHandle.isHandleValid)
+                throw new Error("stream exception: pipe client not created");
+        }
+
+        ~this()
+        {
+            if (!fHandle.isHandleValid) return;
+            if (fAsServer) CloseHandle(fHandle);
+            else DisconnectNamedPipe(fHandle);
+        }
+
+        size_t peek(izPtr aBuffer, size_t aCount)
+        {
+            uint lCount = cast(uint) aCount;
+            uint cnt;
+            uint nothing;
+            PeekNamedPipe(fHandle, aBuffer, lCount, &cnt, &nothing, &nothing);
+            return cnt;
+        }
+    }
 }
 
 /**
@@ -844,7 +958,7 @@ class izMemoryStream: izObject, izStream, izStreamPersist, izFilePersist8
 version(unittest)
 {
 	class izMemoryStreamTest1 : commonStreamTester!izMemoryStream {}
-	class izFileStreamTest1: commonStreamTester!(izFileStream,"filestream1.txt"){}
+	class izFileStreamTest1: commonStreamTester!(izFileStream, "filestream1.txt"){}
 
     unittest
     {
@@ -859,6 +973,29 @@ version(unittest)
         huge.position = 0;
         assert(huge.size == sz);
     }
+
+    unittest
+    {/*
+        string pipename = r"\\\\.\\pipe\\pt1"c;
+        auto srv = izPipeStream.createAsServer(pipename);
+        auto clt = izPipeStream.createAsClient(pipename);
+        scope(exit)
+        {
+            delete clt;
+            delete srv;
+        }
+
+        ubyte rdr = 1;
+        srv.write(&rdr, 1);
+        rdr = 0;
+        clt.peek(&rdr, 1);
+        assert(srv.size == 1);
+        assert(rdr == 1);
+        rdr = 0;
+        clt.read(&rdr, 1);
+        assert(srv.size == 0);
+        assert(rdr == 1);
+    */}
 
 	class commonStreamTester(T, A...)
 	{
