@@ -38,6 +38,7 @@ unittest
 	{
 		void declareProperties(izMasterSerializer aSerializer){}
 		void getDescriptor(const unreadProperty infos, out izPtr aDescriptor){}
+        string className(){return typeof(this).stringof;}
 	}
 	static assert(isTypeSerializable!byte);
 	static assert(isTypeSerializable!(byte[2]));
@@ -55,8 +56,75 @@ enum izSerializationFormat {
 	xml		/// XML
 };
 
+
+/// Build the IST from a document
+class izSerTreeBuilder: izObject
+{
+    private
+    {
+        izIstObjectNode fRoot;
+        void delegate(izStream aStream)[4] rebuilder;
+
+        void rebuildFromBin(izStream aStream)
+        {
+            size_t cnt;
+            ubyte rdr;
+            aStream.read(&rdr, 1);
+
+            do
+            {
+			    // type
+			    ushort typeix;
+			    cnt = aStream.read(&typeix, typeix.sizeof);
+			    ushort type = 	(typeix & cast(ushort)0x000F);
+			    bool isArray = (typeix & cast(ushort)0xFFF0) == 0x0F;
+                // creates a node
+                switch(typeix)
+                {
+                    case fixedSerializableTypes.stObject: break;
+                    case fixedSerializableTypes.stUnknow: break;
+                    case fixedSerializableTypes.stBool: break;
+                    case fixedSerializableTypes.stByte: break;
+                    default: break;
+                }
+                while (rdr != 0xB0)
+                {
+                    cnt = aStream.read(&rdr, 1);
+                    if (cnt == 0) break;
+                }
+            }
+            while (cnt != 0);
+
+        }
+        void rebuildFromText(izStream aStream)
+        {
+        }
+
+    }
+    public
+    {
+        this()
+        {
+            rebuilder[0] = &rebuildFromBin;
+            rebuilder[1] = &rebuildFromText;
+        }
+
+        izIstObjectNode rebuildIST(izStream aStream, izSerializationFormat aFormat)
+        {
+            assert(rebuilder[aFormat],"forgot to set the array entry !");
+            rebuilder[aFormat](aStream);
+            return fRoot;
+        }
+    }
+}
+
 interface izSerializable
 {
+    /**
+     * Used by the izMasterSerializer to determine the type of class implementing
+     * izSerializable.
+     */
+    string className();
 	/**
 	 * Called by an izMasterSerializer before reading or writing.
 	 * The implementer uses this method to declare its properties to aSerializer.
@@ -71,7 +139,7 @@ interface izSerializable
 }
 
 /**
- * Turns a referenced variable of type RT as serializable.
+ * Turns a referenced variable of type RT in a izSerializable.
  * The source must be stored in the referenceMan.
  * A "referenced variable" is typically something that is modified
  * at the run-time, such as the source of a delegate, a pointer to an Object, etc.
@@ -115,6 +183,7 @@ class izSerializableReference: izSerializable
         mixin(genPropFromField!(char[], "Type", "fType"));
         mixin(genPropFromField!(ulong, "ID", "fID"));
         void getDescriptor(const unreadProperty infos, out izPtr aDescriptor){}
+        string className(){return typeof(this).stringof;}
         void declareProperties(izMasterSerializer aSerializer)
         {
             aSerializer.addProperty(fTypeDescr);
@@ -126,9 +195,9 @@ class izSerializableReference: izSerializable
 enum fixedSerializableTypes
 {
 	stObject,
-	stUnknow,				// if IndexOf(T,izSerTypes) == -1
-	stBool,					// if IndexOf(T,izSerTypes) == 0
-	stByte, stUbyte,		// ...
+	stUnknow,
+	stBool,
+	stByte, stUbyte,
 	stShort, stUshort,
 	stInt, stUint,
 	stLong, stUlong,
@@ -140,9 +209,9 @@ enum fixedSerializableTypes
  * izSerTypes represents all the fixed-length types, directly representing a data.
  */
  
-/*private alias izSerTypes = TypeTuple!( izSerializable, null,
+private alias izSerTypes = TypeTuple!( izSerializable, null,
 	bool, byte, ubyte, short, ushort, int, uint, long, ulong,
-	char, wchar, dchar, float, double);*/
+	char, wchar, dchar, float, double);
 	
 private immutable string[] izSerTypesString = [ "izSerializable", "unknown",
 	"bool", "byte", "ubyte", "short", "ushort", "int", "uint", "long", "ulong",
@@ -161,7 +230,7 @@ private immutable ubyte[] izSerTypesLen =
 struct unreadProperty
 {
 	/// the type.
-	ushort type;
+	ubyte type;
 	/// structure
 	bool isArray;
 	/// value copied in a variable length chunk
@@ -210,63 +279,90 @@ class izIstNode(T): izPreIstNode if(isTypeSerializable!T)
 			-------------------------------------------------------------------
 			byte	|	type	|	description
 			-------------------------------------------------------------------
-			0		|	byte	|	property header, constant, 0x0B
-			1		|	ushort	|	type +
-			2		|	...		|	organized in array if (value & 0x000F) > 0
-			3		|	uint	|	length of the property name, uint (X)
+			0		|	byte	|	property header, always 0x99
+			1		|	byte	|	type (index in 'izSerTypes')
+			2		|	byte	|	organized in array if 1.
+			3		|	ushort	|	length of the property name (X)
 			4		|	...		|
-			5		|	...		|
-			6		|	...		|
-			7		|	ubyte[]	|	property name
+			5		|	ubyte[]	|   property name
+			...		|	...		|
+            ...		|	...		|
+			5+X		|	uint	|	length of the property value (Y)
 			...		|			|
 			...		|			|
 			...		|			|
-			7+X		|	ubyte[]	|	property value.
+			9+X		|	ubyte[]	|	property value.
 			...		|			|
 			...		|			|
 			...		|			|
-			N		|	byte	|	property footer, constant, 0xA0	.
-			N + 1	|	byte	|	optional footer, constant, 0xB0, end of object mark.
+			9+X+Y	|	byte	|	property footer, always '0xA0'	.
+			10+X+Y	|	byte	|	optional footer for object end, '0xB0'.
 		*/
 		void writeBin(izStream aStream)
 		{
 			// header
-			ubyte mark = 0x99;
-			aStream.write(&mark, mark.sizeof);
+			ubyte symbol = 0x99;
+			aStream.write(&symbol, symbol.sizeof);
+
 			// type
-			ushort typeix = 0;
+			ubyte tp = 0, ar = 0;
 			static if (!is(T == izSerializable))
 			{
 				T arr;
-				static if (isStaticArray!T) typeix =
-					IndexOf!(T.init[0].stringof, izSerTypesString) + 0x200F;
-				else static if (isDynamicArray!T) typeix =
-                    IndexOf!(arr[0].stringof, izSerTypesString) + 0x200F;
-                else typeix = IndexOf!(T.stringof, izSerTypesString) + 2;
+                static if (isArray!T)
+                {
+                    ar = 1;
+				    static if (isStaticArray!T)
+                        tp = cast(ubyte)countUntil(izSerTypesString, typeof(T.init[0]).stringof);
+				    else static if (isDynamicArray!T)
+                        tp = cast(ubyte)countUntil(izSerTypesString, typeof(arr[0]).stringof);
+                }
+                else
+                {
+                    tp = cast(ubyte)(countUntil(izSerTypesString, T.stringof));
+                }
 			}
-			aStream.write(&typeix, typeix.sizeof);
+			aStream.write(&tp, tp.sizeof);
+            aStream.write(&ar, ar.sizeof);
+
 			//name length
-			uint namelen = cast(uint) fDescriptor.name.length;
+			ushort namelen = cast(ushort) fDescriptor.name.length;
 			aStream.write(&namelen, namelen.sizeof);
-			// name...
+
+            // name...
 			char[] namecpy = fDescriptor.name.dup;
-			aStream.write(namecpy.ptr,namecpy.length);
-			// value...
+			aStream.write(namecpy.ptr, namecpy.length);
+
+			// value length + value...
 			static if (!is(T == izSerializable))
 			{
 				T value = fDescriptor.getter()();
-				static if(!isArray!T) aStream.write(&value, value.sizeof);
+				static if(!isArray!T)
+                {
+                    uint valuelen = value.sizeof;
+                    aStream.write(&valuelen, valuelen.sizeof);
+                    aStream.write(&value, valuelen);
+                }
 				else
 				{
-					size_t byteSz = 0;
-					static if (isStaticArray!T) byteSz = typeof(T.init[0]).sizeof * value.length ;
-					static if (isDynamicArray!T) byteSz = typeof(arr[0]).sizeof * value.length ;
-					aStream.write(value.ptr, byteSz);
+					uint valuelen = 0;
+					static if (isStaticArray!T) valuelen = cast(uint) (typeof(T.init[0]).sizeof * value.length);
+					static if (isDynamicArray!T) valuelen = cast(uint) (typeof(arr[0]).sizeof * value.length);
+                    aStream.write(&valuelen, valuelen.sizeof);
+					aStream.write(value.ptr, valuelen);
 				}
 			}
+            else
+            {
+                char[] value = (cast(T)fDescriptor.getter()()).className.dup;
+                uint valuelen = cast(uint) value.length;
+                aStream.write(&valuelen, valuelen.sizeof);
+				aStream.write(value.ptr, valuelen);
+            }
+
 			// footer
-			mark = 0xA0;
-			aStream.write(&mark, mark.sizeof);
+			symbol = 0xA0;
+			aStream.write(&symbol, symbol.sizeof);
 		}
 
 		void readBin(izStream aStream)
@@ -274,39 +370,34 @@ class izIstNode(T): izPreIstNode if(isTypeSerializable!T)
 			size_t cnt;
 			auto headerpos = aStream.position;
 			ulong footerPos;
-			//uprop.parentName =
 			// header
-			ubyte mark;
-			cnt = aStream.read(&mark, mark.sizeof);
-			// type
-			ushort typeix;
-			cnt = aStream.read(&typeix, typeix.sizeof);
-			uprop.type = 	(typeix & cast(ushort)0x000F);
-			uprop.isArray = (typeix & cast(ushort)0xFFF0) == 0x0F;
-			//name length
-			uint namelen;
+			ubyte symbol;
+			cnt = aStream.read(&symbol, symbol.sizeof);
+
+            // type
+			ubyte ar;
+			cnt = aStream.read(&uprop.type, uprop.type.sizeof);
+            cnt = aStream.read(&ar, ar.sizeof);
+			uprop.isArray = ar == 1;
+
+            //name length
+			ushort namelen;
 			cnt = aStream.read(&namelen, namelen.sizeof);
+
 			// name...
 			uprop.name.length = namelen;
-			cnt = aStream.read(uprop.name.ptr,namelen);
+			cnt = aStream.read(uprop.name.ptr, namelen);
+
+            // value len
+            uint valuelen;
+            cnt = aStream.read(&valuelen, valuelen.sizeof);
+
 			// value...
-			mark = 0;
-			auto savedPos = aStream.position;
-			while ((mark != 0xA0) && (aStream.position < aStream.size))
-			{
-				aStream.read(&mark, mark.sizeof);
-				footerPos = aStream.position;
-			}
-			footerPos--;
-			aStream.position = savedPos;
-			static if (!is(T == izSerializable))
-			{
-				ulong valueLen = footerPos - aStream.position;
-				uprop.value.length = cast(size_t) valueLen;
-				cnt = aStream.read(uprop.value.ptr, cast(size_t) valueLen);
-			}
+            uprop.value.length = valuelen;
+            cnt = aStream.read(uprop.value.ptr, valuelen);
+
 			// footer
-			cnt = aStream.read(&mark, mark.sizeof);
+			cnt = aStream.read(&symbol, symbol.sizeof);
 		}
 
 		/*
@@ -363,6 +454,11 @@ class izIstNode(T): izPreIstNode if(isTypeSerializable!T)
 				if (is(T==char[])) data = tabstring(data);
 				aStream.write(data.ptr,data.length);
 			}
+            else
+            {
+                char[] value = (cast(T)fDescriptor.getter()()).className.dup;
+				aStream.write(value.ptr, value.length);
+            }
 
 			// close double quotes + EOL
 			data = "\"\r\n".dup;
@@ -460,9 +556,9 @@ class izIstNode(T): izPreIstNode if(isTypeSerializable!T)
 			
 			uprop.isArray = (propType[$-2..$] == "[]" ) ;
 				
-			if (!uprop.isArray) uprop.type = cast(ushort)
+			if (!uprop.isArray) uprop.type = cast(ubyte)
 				countUntil( izSerTypesString, propType[0..$]);
-			else uprop.type = cast(ushort)
+			else uprop.type = cast(ubyte)
 				countUntil( izSerTypesString, propType[0..$-2]);
 				
 			T value;
@@ -500,7 +596,7 @@ class izIstNode(T): izPreIstNode if(isTypeSerializable!T)
 		override void write(izStream aStream, izSerializationFormat aFormat)
 		{
 			fIsRead = false;
-            assert(writeFormat[aFormat],"forgot to set the array entry !");
+            assert(writeFormat[aFormat], "forgot to set the array entry !");
 			writeFormat[aFormat](aStream);
 			if ( is(T == izSerializable))
 			{
@@ -520,7 +616,7 @@ class izIstNode(T): izPreIstNode if(isTypeSerializable!T)
 		}
 		override void read(izStream aStream, izSerializationFormat aFormat)
 		{
-            assert(readFormat[aFormat],"forgot to set the array entry !");
+            assert(readFormat[aFormat], "forgot to set the array entry !");
 			readFormat[aFormat](aStream);
 			if ( is(T == izSerializable))
 			{
@@ -560,7 +656,7 @@ class izIstNode(T): izPreIstNode if(isTypeSerializable!T)
 						elemSz = typeof(arr[0]).sizeof;
 						arr.length = uprop.value.length / elemSz;
 					}
-					assert(elemSz);			
+					assert(elemSz);
 					memmove(arr.ptr, uprop.value.ptr, uprop.value.length);
 					fDescriptor.setter()(arr);
 				}
@@ -672,7 +768,7 @@ class izMasterSerializer: izObject
 			fRoot.deleteChildren;
 			fCurNode = fRoot;
 			fObj = aRoot;
-			auto rootDescr = izPropDescriptor!izSerializable(&fObj,"Root");
+			auto rootDescr = izPropDescriptor!izSerializable(&fObj, "Root");
 			fRoot.setSource(fObj, rootDescr);
 			fObj.declareProperties(this);
 			fRoot.write(fStream,fFormat);
@@ -696,7 +792,7 @@ class izMasterSerializer: izObject
 			fRoot.deleteChildren;
 			fCurNode = fRoot;
 			fObj = aRoot;
-			auto rootDescr = izPropDescriptor!izSerializable(&fObj,"Root");
+			auto rootDescr = izPropDescriptor!izSerializable(&fObj, "Root");
 			fRoot.setSource(fObj, rootDescr);
 			fObj.declareProperties(this);
 			fRoot.read(fStream,fFormat);
@@ -730,6 +826,9 @@ class izMasterSerializer: izObject
 			fState = izSerializationState.writing;
 			scope(exit) fState = izSerializationState.none;
             // TODO
+            auto bld = new izSerTreeBuilder;
+            delete fRoot;
+            fRoot = bld.rebuildIST(aStream, fFormat);
 		}
 
 		/**
@@ -825,9 +924,8 @@ version(unittest)
                 aSerializer.addProperty!(ubyte[])(DDescr);
 				aSerializer.addProperty!(ubyte[4])(EDescr);
 			}
-			void getDescriptor(const unreadProperty infos, out izPtr aDescriptor)
-			{
-			}
+			void getDescriptor(const unreadProperty infos, out izPtr aDescriptor){}
+            string className(){return typeof(this).stringof;}
 	}
 	class bar: foo
 	{
@@ -865,9 +963,9 @@ version(unittest)
                 referenceMan.storeReference!(izEvent)(&SrcEvent,184369UL); // ...cant pass &&anAssignableEvent
                 eventRef = new izSerializableReference;
 
-                GDescr.define(&NullObjSetter,&G,"G");
-                XDescr.define(&NullObjSetter,&X,"X");
-                UDescr.define(&NullObjSetter,&U,"U");
+                GDescr.define(&NullObjSetter, &G, "G");
+                XDescr.define(&NullObjSetter, &X, "X");
+                UDescr.define(&NullObjSetter, &U, "U");
 
 			}
 			~this()
@@ -899,6 +997,7 @@ version(unittest)
                     eventRef.restoreReference!izEvent(fEvent);
                 }
 			}
+            override string className(){return typeof(this).stringof;}
 	}
 
 	unittest
@@ -929,11 +1028,13 @@ version(unittest)
 			delete str;
 		}
 
+//----bin
+
 		ser.serialize(Bar, str, izSerializationFormat.text);
 		str.position = 0;
 
 		str.saveToFile("ser.txt");
-        scope(exit) std.stdio.remove("ser.txt");
+        //scope(exit) std.stdio.remove("ser.txt");
 
         str.position = 0;
 		Bar.initPublishedMembers;
@@ -958,8 +1059,40 @@ version(unittest)
         assert( Bar.fg.D == [11,22,33]);
         assert( Bar.fg.E == [11,22,33,44]);
 
-        // shhhhhhhhhh... event is reloaded
-        //(*Bar.fEvent)(null);
+        writeln( "izSerializer passed the bin format tests");
+
+//----text
+
+        ser.serialize(Bar, str, izSerializationFormat.text);
+		str.position = 0;
+
+		str.saveToFile("ser.txt");
+        //scope(exit) std.stdio.remove("ser.txt");
+
+        str.position = 0;
+		Bar.initPublishedMembers;
+        Bar.fg.initPublishedMembers;
+        Bar.fx = null;
+        Bar.fEvent = null;
+
+
+		ser.deserialize(Bar, str, izSerializationFormat.text);
+
+		assert( Bar.A == 8);
+		assert( Bar.B == 4);
+        assert( Bar.C == "bla");
+        assert( Bar.D == [1,2,3]);
+        assert( Bar.E == [1,2,3,4]);
+        assert( Bar.fx == &Bar.fb0);
+        assert( Bar.fEvent == &Bar.SrcEvent);
+
+        assert( Bar.fg.A == 88);
+		assert( Bar.fg.B == 44);
+        assert( Bar.fg.C == "bla bla");
+        assert( Bar.fg.D == [11,22,33]);
+        assert( Bar.fg.E == [11,22,33,44]);
+
+        writeln( "izSerializer passed the text format tests");
 
     }
 }
