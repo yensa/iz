@@ -483,6 +483,15 @@ interface izList(T)
 			return result;
 		}
 	}
+	static if( is (T == struct))
+	{
+		final T * addNewItem(T, A...)(A a)
+		{
+			T * result = new T(a);
+			add(result);
+			return result;
+		}
+	}
 
 	/**
 	 * Returns the last item.
@@ -805,7 +814,6 @@ template dlistPayload(T)
 		*cast(size_t*)	(result + prevOffs) = cast(size_t) aPrevious;
 		*cast(size_t*)	(result + nextOffs) = cast(size_t) aNext;
 		*cast(T*) 		(result + dataOffs) = aData;
-		//memmove(result + dataOffs, &aData, T.sizeof);
 
 		return result;
 	}
@@ -816,28 +824,27 @@ template dlistPayload(T)
 
 	void setPrev(void* aPayload, void* aPrevious)
 	{
-		*cast(size_t*) (aPayload + prevOffs) = cast(size_t) aPrevious;
+		*cast(void**) (aPayload + prevOffs) = aPrevious;
 	}
 
 	void setNext(void* aPayload, void* aNext)
 	{
-		*cast(size_t*) (aPayload + nextOffs) = cast(size_t) aNext;
+		*cast(void**) (aPayload + nextOffs) = aNext;
 	}
 
 	void setData(void* aPayload, T aData)
 	{
 		*cast(T*) (aPayload + dataOffs) = aData;
-		//memmove(aPayload + dataOffs, &aData, T.sizeof);
 	}
 
 	void* getPrev(void* aPayload)
 	{
-		return *cast(size_t**) (aPayload + prevOffs);
+		return *cast(void**) (aPayload + prevOffs);
 	}
 
 	void* getNext(void* aPayload)
 	{
-		return *cast(size_t**) (aPayload + nextOffs);
+		return *cast(void**) (aPayload + nextOffs);
 	}
 
 	T getData(void* aPayload)
