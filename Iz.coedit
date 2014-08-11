@@ -10,7 +10,7 @@ object _1: TCEProject
       outputOptions.binaryKind = staticlib
       outputOptions.inlining = True
       outputOptions.noBoundsCheck = True
-      outputOptions.boundsCheck = onAlways
+      outputOptions.boundsCheck = offAlways
       outputOptions.optimizations = True
       outputOptions.release = True
       pathsOptions.outputFilename = 'lib\iz.lib'
@@ -48,6 +48,9 @@ object _1: TCEProject
       outputOptions.boundsCheck = onAlways
       outputOptions.addMain = True
       outputOptions.unittest = True
+      outputOptions.versionIdentifiers.Strings = (
+        'coeditmessages'
+      )
       pathsOptions.outputFilename = 'temp\iztests.exe'
       preBuildProcess.options = []
       preBuildProcess.showWindow = swoNone

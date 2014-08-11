@@ -274,12 +274,12 @@ class izIstNode(T): izPreIstNode if(isTypeSerializable!T)
 		bool fIsRead;
 
 		/*
-			bin format:
+			bin format, for each property:
 
 			-------------------------------------------------------------------
 			byte	|	type	|	description
 			-------------------------------------------------------------------
-			0		|	byte	|	property header, always 0x99
+			0		|	byte	|	property header, always '0x99'
 			1		|	byte	|	type (index in 'izSerTypes')
 			2		|	byte	|	organized in array if 1.
 			3		|	ushort	|	length of the property name (X)
@@ -401,9 +401,29 @@ class izIstNode(T): izPreIstNode if(isTypeSerializable!T)
 		}
 
 		/*
-			text format:
+			text format, for each property:
 
-			<level times TAB>Type<space>PropertyName<space(s)>=<space(s)>"PropertyValue"<CR/LF or LF only after '"' count%2 == 0>
+			-------------------------------------------------------------------
+			byte	|	char	|	description
+			-------------------------------------------------------------------
+            0       |   \t      |   object level L in the serialization tree.
+            ...     |   \t      |
+            L       |   ?       |   property type.stringof of len Y
+            ...     |   ?       |
+            ...     |   ?       |
+            ...     |   ?       |
+            L+Y     |   0x20    |   separator
+            L+Y+1   |   '='     |   equal
+            L+Y+2   |   0x20    |   separator
+            L+Y+3   |   '"'     |   value begin symbol
+            L+Y+4   |   ?       |   value representation for N chars.
+            ...     |   ?       |
+            ...     |   ?       |
+            L+Y+4+N |   '"'     |   value end symbol
+            L+Y+5+N |   0x0D/0A |   \r\n or \n
+            L+Y+6+N |   0x0A    |   optionally \n
+
+			<level times TAB>Type<space>PropertyName<space(s)>=<space(s)>"PropertyValue"<CR/LF or LF>
 
 		*/
 		void writeText(izStream aStream)

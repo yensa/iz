@@ -27,6 +27,18 @@ private static bool isSetSuitable(S)()
 }
 
 /**
+ * returns E member count.
+ * E: an enum
+ */
+private ulong enumMemberCount(E)() if (is(E==enum))
+{
+    ulong result;
+    foreach(member; EnumMembers!E) result++;
+    return result;
+}
+
+
+/**
  * Returns true if S has enough room for being used as a izBitSet for enum E.
  */
 private static bool enumFitsInSet(E,S)() if (isSetSuitable!S && is(E==enum))
@@ -63,6 +75,8 @@ public struct izBitSet(S,E) if (setConstrain!(E,S))
         static immutable S _1 = cast(S) 1;
 
     public:
+
+        alias setType = S;
 
 // constructors ----------------------------------------------------------------
 
@@ -213,6 +227,18 @@ public struct izBitSet(S,E) if (setConstrain!(E,S))
             fSet = rhs.fSet;
         }
 
+        /// support for the array syntax.
+        bool opIndex(S index)
+        {
+            return (fSet == (fSet | _1 << index));
+        }
+
+        /// ditto
+        bool opIndex(E member)
+        {
+            return isIncluded(member);
+        }
+
         /// support for "+" and "-" operators.
         nothrow @safe izBitSet!(S,E) opBinary(string op)(E rhs)
         {
@@ -346,6 +372,130 @@ public struct izBitSet(S,E) if (setConstrain!(E,S))
         {
             return fRankLUT;
         }
+
+        /// returns the enum count
+        nothrow @safe static const(S) memberCount()
+        {
+            return cast(S) enumMemberCount!E;
+        }
+}
+
+
+/// returns true if T and E are suitable for constructing an izEnumProcs
+private static bool isCallableFromEnum(T, E)()
+{
+    return ((is(E==enum)) & (isCallable!T));
+}
+
+/**
+ * CallTable based on an enum. It can be compared to an associative array of type E[T].
+ * Additionally a bitset can be used to fire a burst of call.
+ * E: an enum.
+ * T: a callable type.
+ */
+public struct izEnumProcs(E,T) if (isCallableFromEnum!(T,E))
+{
+    private
+    {
+        static immutable uint[E] fRankLUT;
+        static immutable uint _1 = 1U;
+        alias ReturnType!T retT;
+        T[] procs;
+
+        void initLength()
+        {
+            procs.length = fRankLUT.length;
+        }
+    }
+    public
+    {
+
+// constructors ----------------------------------------------------------------
+
+        /// static constructor
+        nothrow @safe static this()
+        {
+            static assert( enumMemberCount!E < uint.max );
+            foreach(i, member; EnumMembers!E)
+                fRankLUT[member] = i;
+        }
+
+        /**
+         * constructs an enumCallee with a set of T.
+         * a: a list of T.
+         */
+        nothrow this(A...)(A a)
+        {
+            static assert(a.length == enumMemberCount!E);
+            initLength;
+            foreach(i, item; a)
+            {
+                procs[i] = a[i];
+            }
+        }
+
+        /**
+         * constructs an enumCallee with an array of T.
+         * someItems: an array of T.
+         */
+        nothrow this(T[] someItems)
+        {
+            assert(someItems.length == enumMemberCount!E);
+            initLength;
+            foreach(i, item; someItems)
+            {
+                procs[i] = someItems[i];
+            }
+        }
+
+// call ------------------------------------------------------------------------
+
+        /**
+         * calls the function matching to selector rank.
+         * selector: an E member.
+         * prms: arguments for calling the function.
+         */
+        retT opCall(CallParams...)(E selector, CallParams prms)
+        {
+            return procs[fRankLUT[selector]](prms);
+        }
+
+        /**
+         * calls the functions matching to a set of selectors.
+         * selectors: a set of E.
+         * prms: common or selector-sepcific arguments for calling the functions.
+         * return: an array representing the result of each selector, by rank.
+         */
+        retT[] opCall(BS,CallParams...)(BS selectors, CallParams prms)
+        if  (   (is(BS == izBitSet!(set8,E)))
+            ||  (is(BS == izBitSet!(set16,E)))
+            ||  (is(BS == izBitSet!(set32,E)))
+            ||  (is(BS == izBitSet!(set64,E)))
+            )
+        {
+            retT[] result;
+            result.length = cast(size_t) enumMemberCount!E;
+
+            static if(!isArray!(CallParams[0]))
+            {
+                for(selectors.setType i = 0; i < selectors.memberCount; i++)
+                {
+                    if (selectors[i])
+                        result[i] = procs[i](prms);
+                }
+                return result;
+            }
+            else
+            {
+                for(selectors.setType i = 0; i < selectors.memberCount; i++)
+                {
+                    if (selectors[i])
+                        result[i] = procs[i](prms[0][i]);
+                }
+                return result;
+            }
+        }
+    }
 }
 
 version(unittest)
@@ -405,7 +555,7 @@ version(unittest)
         set = [a8.a0,a8.a2,a8.a4];
         assert(set == 0b0001_0101);
         version(coeditmessages)
-            writeln("izBitSet passes the tests(operators)");
+            writeln("izBitSet passed the tests(operators)");
     }
 
     unittest
@@ -417,7 +567,22 @@ version(unittest)
         assert(set.isIncluded(a17.a9));
         assert(!set.isIncluded(a17.a10));
         version(coeditmessages)
-            writeln("izBitSet passes the tests(isIncluded)");
+            writeln("izBitSet passed the tests(isIncluded)");
+    }
+
+    unittest
+    {
+        auto bs = izBitSet!(set32,a17)(a17.a0,a17.a1,a17.a16);
+        assert(bs[0]);
+        assert(bs[1]);
+        assert(bs[16]);
+        assert(bs[a17.a0]);
+        assert(bs[a17.a1]);
+        assert(bs[a17.a16]);
+        assert(!bs[8]);
+        assert(!bs[a17.a8]);
+        version(coeditmessages)
+            writeln("izBitSet passed the tests(array operators)");
     }
 
     unittest
@@ -449,6 +614,62 @@ version(unittest)
         assert( set.rankLookup[a17.a16] == 16);
         assert( set.rankLookup[a17.a15] == 15);
         version(coeditmessages)
-            writeln("izBitSet passes the tests(misc.)");
+            writeln("izBitSet passed the tests(misc.)");
+    }
+
+    /// callprocs
+    unittest
+    {
+        enum A {t1=8,t2,t3}
+        void At1(){}
+        void At2(){}
+        void At3(){}
+
+        auto ACaller = izEnumProcs!(A, typeof(&At1))(&At1,&At2,&At3);
+
+        int Bt1(int p){return 10 + p;}
+        int Bt2(int p){return 20 + p;}
+        int Bt3(int p){return 30 + p;}
+        auto BCaller = izEnumProcs!(A, typeof(&Bt1))(&Bt1,&Bt2,&Bt3);
+        assert( BCaller(A.t1, 1) == 11);
+        assert( BCaller(A.t2, 2) == 22);
+        assert( BCaller(A.t3, 3) == 33);
+
+        auto bs = izBitSet!(set8,A)();
+        bs.include(A.t1,A.t3);
+
+        auto arr0 = BCaller(bs,8);
+        assert(arr0[0] == 18);
+        assert(arr0[1] == 0);
+        assert(arr0[2] == 38);
+
+        bs.include(A.t2);
+        auto arr1 = BCaller(bs,[4,5,6]);
+        assert(arr1[0] == 14);
+        assert(arr1[1] == 25);
+        assert(arr1[2] == 36);
+
+        int Ct1(int p[2]){return p[0] + p[1];}
+        int Ct2(int p[2]){return p[0] * p[1];}
+        int Ct3(int p[2]){return p[0] - p[1];}
+        auto CCaller = izEnumProcs!(A, typeof(&Ct1))(&Ct1,&Ct2,&Ct3);
+        assert(bs.all);
+        auto arr2 = CCaller(bs,[cast(int[2])[2,2],cast(int[2])[3,3],cast(int[2])[9,8]]);
+        assert(arr2[0] == 4);
+        assert(arr2[1] == 9);
+        assert(arr2[2] == 1);
+
+        int Dt1(int p, int c, int m){return 1 + p + c + m;}
+        int Dt2(int p, int c, int m){return 2 + p + c + m;}
+        int Dt3(int p, int c, int m){return 3 + p + c + m;}
+        auto DCaller = izEnumProcs!(A, typeof(&Dt1))(&Dt1,&Dt2,&Dt3);
+        assert(bs.all);
+        auto arr3 = DCaller(bs,1,2,3);
+        assert(arr3[0] == 7);
+        assert(arr3[1] == 8);
+        assert(arr3[2] == 9);
+
+        version(coeditmessages)
+            writeln("izEnumProcs passed the tests");
     }
 }
