@@ -20,17 +20,20 @@ version (Windows)
     private immutable READ_WRITE =  GENERIC_READ | GENERIC_WRITE;
     private immutable FILE_SHARE_ALL = FILE_SHARE_READ | FILE_SHARE_WRITE;
 
+    private immutable uint PIPE_ACCESS_INBOUND = 1;
+    private immutable uint PIPE_ACCESS_OUTBOUND = 2;
+
     private extern(Windows) export BOOL SetEndOfFile(in HANDLE hFile);
 
     private extern(Windows) export HANDLE CreateNamedPipeA(
-      LPCTSTR lpName,
-      DWORD dwOpenMode,
-      DWORD dwPipeMode,
-      DWORD nMaxInstances,
-      DWORD nOutBufferSize,
-      DWORD nInBufferSize,
-      DWORD nDefaultTimeOut,
-      LPSECURITY_ATTRIBUTES lpSecurityAttributes
+       LPCTSTR lpName,
+       DWORD dwOpenMode,
+       DWORD dwPipeMode,
+       DWORD nMaxInstances,
+       DWORD nOutBufferSize,
+       DWORD nInBufferSize,
+       DWORD nDefaultTimeOut,
+       LPSECURITY_ATTRIBUTES lpSecurityAttributes
     );
 
     private extern(Windows) export BOOL ConnectNamedPipe(
@@ -66,9 +69,15 @@ version (Windows)
     public immutable int shAll  = shWrite | shRead;
 
     /// access modes.
-    public immutable int acRead = GENERIC_READ;
-    public immutable int acWrite= GENERIC_WRITE;
-    public immutable int acAll  = acRead | acWrite;
+    public immutable uint acRead = GENERIC_READ;
+    public immutable uint acWrite= GENERIC_WRITE;
+    public immutable uint acAll  = acRead | acWrite;
+
+    /// pipe direction
+    public immutable uint pdIn  = PIPE_ACCESS_INBOUND;
+    public immutable uint pdOut = PIPE_ACCESS_OUTBOUND;
+    public immutable uint pdAll = pdIn | pdOut;
+
 
     /// returns true if aHandle is valid.
     public bool isHandleValid(izStreamHandle aHandle)
@@ -107,9 +116,9 @@ version (Posix)
     public immutable int shAll  = octal!666;
 
     /// access modes.
-    public immutable int acRead = O_RDONLY;
-    public immutable int acWrite= O_WRONLY;
-    public immutable int acAll  = O_RDWR;
+    public immutable uint acRead = O_RDONLY;
+    public immutable uint acWrite= O_WRONLY;
+    public immutable uint acAll  = O_RDWR;
 
     /// returns true if aHandle is valid.
     public bool isHandleValid(izStreamHandle aHandle)
@@ -545,8 +554,8 @@ class izFileStream: izSystemStream
 }
 
 
-public immutable uint pipeServer = 0;
-public immutable uint pipeClient = 1;
+public uint pipeServer = 0;
+public uint pipeClient = 1;
 
 /**
  * System stream specialized into reading and writing from a named pipe.
@@ -561,67 +570,78 @@ class izPipeStream: izSystemStream
     }
     public
     {
-        static izPipeStream createAsServer(in char[] aPipeName, int access = acAll)
+        static izPipeStream createAsServer(in char[] aPipeName, uint pipeAccess = pdAll)
         {
-            return new izPipeStream(aPipeName, access, pipeServer);
+            return new izPipeStream(aPipeName, pipeAccess, pipeServer);
         }
 
-        static izPipeStream createAsClient(in char[] aPipeName, int access = acAll)
+        static izPipeStream createAsClient(in char[] aPipeName, uint pipeAccess = acAll)
         {
-            return new izPipeStream(aPipeName, access, pipeClient);
-        }
-
-        static izPipeStream createAsClient(in izStreamHandle aPipeHandle)
-        {
-            return new izPipeStream(aPipeHandle);
+            return new izPipeStream(aPipeName, pipeAccess, pipeClient);
         }
 
         /**
          * Creates a pipe with the role pipeRole.
          */
-        this(in char[] aPipeName, int access, in uint pipeRole = pipeClient)
+        this(in char[] aPipeName, uint pipeAccess, uint pipeRole = pipeClient)
         {
-            if (pipeRole == pipeServer)
+            version(Windows)
             {
-                uint BufSz = 512;
-                fHandle = CreateNamedPipeA(
-                    aPipeName.toStringz,
-                    access,         // GEN_READ or GEN_WRITE
-                    0,              // mode
-                    255,            // UNLIMITED_CLIENT
-                    BufSz, BufSz,   // BUFFSZ
-                    0,              // TIMEOUT
-                    (SECURITY_ATTRIBUTES*).init
-                );
-                fAsServer = fHandle.isHandleValid;
-                if (!fAsServer)
-                    throw new Error("stream exception: pipe server not created");
-            }
-            else
-            {
-                fHandle = CreateFileA(aPipeName.toStringz, access, shAll,
-			        (SECURITY_ATTRIBUTES*).init, cmToSystem(cmThere),
-                    FILE_ATTRIBUTE_NORMAL, HANDLE.init);
-                if (!fHandle.isHandleValid)
-                    throw new Error("stream exception: pipe client not created");
-            }
-        }
+                if (pipeRole == pipeServer)
+                {
+                    uint BufSz = 4096;
+                    fHandle = CreateNamedPipeA(
+                        aPipeName.toStringz,
+                        pipeAccess,
+                        0, 255,
+                        BufSz, BufSz,
+                        0,
+                        (SECURITY_ATTRIBUTES*).init
+                    );
+                    fAsServer = isHandleValid(fHandle);
 
-        /**
-         * Creates a pipe as client of the server aPipeHandle.
-         */
-        this(in izStreamHandle aPipeHandle)
-        {
-            ConnectNamedPipe(aPipeHandle);
-            if (!fHandle.isHandleValid)
-                throw new Error("stream exception: pipe client not created");
+                    if (!fAsServer)
+                        throw new Error("stream exception: pipe server not created");
+
+                    waitNewClient;
+                }
+                else
+                {
+                    fHandle = CreateFileA(aPipeName.toStringz, pipeAccess, shAll,
+			            (SECURITY_ATTRIBUTES*).init, cmToSystem(cmThere),
+                        FILE_ATTRIBUTE_NORMAL, HANDLE.init);
+                    if (!fHandle.isHandleValid)
+                        throw new Error("stream exception: pipe client not created");
+                }
+            }
+            version(Posix)
+            {
+            }
         }
 
         ~this()
         {
             if (!fHandle.isHandleValid) return;
-            if (fAsServer) CloseHandle(fHandle);
-            else DisconnectNamedPipe(fHandle);
+            version(Windows)
+            {
+                if (fAsServer)
+                    CloseHandle(fServer);
+                else
+                    DisconnectNamedPipe(fHandle);
+            }
+            version(Posix)
+            {
+            }
+        }
+
+        bool waitNewClient()
+        {
+            if (!fAsServer) return false;
+            while(true)
+            {
+                if (ConnectNamedPipe(fServer, null) == 0)
+                    return false;
+            }
         }
 
         size_t peek(izPtr aBuffer, size_t aCount)
@@ -629,7 +649,13 @@ class izPipeStream: izSystemStream
             uint lCount = cast(uint) aCount;
             uint cnt;
             uint nothing;
-            PeekNamedPipe(fHandle, aBuffer, lCount, &cnt, &nothing, &nothing);
+            version(Windows)
+            {
+                PeekNamedPipe(fHandle, aBuffer, lCount, &cnt, &nothing, &nothing);
+            }
+            version(Posix)
+            {
+            }
             return cnt;
         }
     }
@@ -975,27 +1001,17 @@ version(unittest)
     }
 
     unittest
-    {/*
-        string pipename = r"\\\\.\\pipe\\pt1"c;
+    {
+        // must be tested with several processes
+        auto pipename = r"\\.\pipe\apipenname";
         auto srv = izPipeStream.createAsServer(pipename);
-        auto clt = izPipeStream.createAsClient(pipename);
+        auto clt1 = izPipeStream.createAsClient(pipename);
         scope(exit)
         {
-            delete clt;
+            delete clt1;
             delete srv;
         }
-
-        ubyte rdr = 1;
-        srv.write(&rdr, 1);
-        rdr = 0;
-        clt.peek(&rdr, 1);
-        assert(srv.size == 1);
-        assert(rdr == 1);
-        rdr = 0;
-        clt.read(&rdr, 1);
-        assert(srv.size == 0);
-        assert(rdr == 1);
-    */}
+    }
 
 	class commonStreamTester(T, A...)
 	{

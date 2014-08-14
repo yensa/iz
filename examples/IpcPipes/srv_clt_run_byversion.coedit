@@ -1,0 +1,55 @@
+object CurrentProject: TCEProject
+  OptionsCollection = <  
+    item
+      name = 'buildserver'
+      outputOptions.noBoundsCheck = False
+      outputOptions.boundsCheck = onAlways
+      outputOptions.versionIdentifiers.Strings = (
+        'server'
+      )
+      pathsOptions.outputFilename = 'server.exe'
+      preBuildProcess.options = []
+      preBuildProcess.showWindow = swoNone
+      postBuildProcess.options = []
+      postBuildProcess.showWindow = swoNone
+      runOptions.options = []
+      runOptions.showWindow = swoNone
+    end  
+    item
+      name = 'buildclient'
+      outputOptions.noBoundsCheck = False
+      outputOptions.boundsCheck = onAlways
+      outputOptions.versionIdentifiers.Strings = (
+        'client'
+      )
+      pathsOptions.outputFilename = 'client.exe'
+      preBuildProcess.options = []
+      preBuildProcess.showWindow = swoNone
+      postBuildProcess.options = []
+      postBuildProcess.showWindow = swoNone
+      runOptions.options = []
+      runOptions.showWindow = swoNone
+    end  
+    item
+      name = 'buildrunner'
+      outputOptions.noBoundsCheck = False
+      outputOptions.boundsCheck = onAlways
+      outputOptions.versionIdentifiers.Strings = (
+        'runner'
+      )
+      pathsOptions.outputFilename = 'runner.exe'
+      preBuildProcess.options = []
+      preBuildProcess.showWindow = swoNone
+      postBuildProcess.options = []
+      postBuildProcess.showWindow = swoNone
+      runOptions.options = [poNewConsole]
+      runOptions.showWindow = swoShow
+    end>
+  Sources.Strings = (
+    'serv_client_runner.d'
+  )
+  ConfigurationIndex = 2
+  LibraryAliases.Strings = (
+    'iz'
+  )
+end

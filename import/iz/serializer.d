@@ -400,7 +400,7 @@ class izIstNode(T): izPreIstNode if(isTypeSerializable!T)
 			cnt = aStream.read(&symbol, symbol.sizeof);
 		}
 
-		/*
+		/**
 			text format, for each property:
 
 			-------------------------------------------------------------------
@@ -744,6 +744,8 @@ enum izSerializationState
 
 /**
  * Handles the de/serialization of tree of izSerializable objects.
+ * It's based on the idea of an "intermediate representation".
+ * which is not fully implemented.
  */
 class izMasterSerializer: izObject
 {

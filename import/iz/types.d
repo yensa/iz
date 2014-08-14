@@ -69,7 +69,6 @@ unittest
 	}
 }
 
-
 /**
  * The most simple IZ object.
  * It should always be used as ancestor for a new class to match the IZ principles.
@@ -77,6 +76,13 @@ unittest
 class izObject
 {
 	mixin setClassGcFree;
+
+    static create(C, A...)(A a)
+    {
+        return new C(a);
+    }
+
+
 	// note: this is meaningless in console-unit tests but verified in a real program
 	// (the test also pass without injecting setClassGcFree because it seems dmd can allocate on the stack in UT mode ?).
 	unittest
