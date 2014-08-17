@@ -1181,7 +1181,7 @@ version(unittest)
 
 			s someS[200];
 			sList SList = new sList;
-			scope(exit) delete SList;
+			scope(exit) SList.demolish;
 			SList.onChange = &listChangedProc;
 			changeMonitor = false;
 			for (auto i = 0; i < someS.length; i++)
@@ -1226,7 +1226,7 @@ version(unittest)
 
 			c someC[200];
 			cList CList = new cList;
-			scope(exit) delete CList;
+			scope(exit) CList.demolish;
 			CList.onChange = &listChangedProc;
 			changeMonitor = false;
 			for (auto i = 0; i < someC.length; i++)
@@ -1296,7 +1296,7 @@ version(unittest)
 
 			s someS[200];
 			sList SList = new sList;
-			scope(exit) delete SList;
+			scope(exit) SList.demolish;
 			SList.onChange = &listChangedProc;
 			changeMonitor = false;
 			for (auto i = 0; i < someS.length; i++)
@@ -1341,7 +1341,7 @@ version(unittest)
 
 			c someC[200];
 			cList CList = new cList;
-			scope(exit) delete CList;
+			scope(exit) CList.demolish;
 			CList.onChange = &listChangedProc;
 			changeMonitor = false;
 			for (auto i = 0; i < someC.length; i++)
@@ -2302,7 +2302,7 @@ private class foo: izObject, izTreeItem
         auto str = new izMemoryStream;
         Root.saveToStream(str);
         //str.saveToFile(r"C:\izTreeNodes.txt");
-        delete str;
+        str.demolish;
 
 		Root.deleteChildren;
 

@@ -992,7 +992,7 @@ version(unittest)
         auto huge = new izFileStream("huge.bin");
         scope(exit)
         {
-            delete huge;
+            huge.demolish;
             std.stdio.remove("huge.bin");
         }
         huge.size = sz;
@@ -1000,7 +1000,7 @@ version(unittest)
         assert(huge.size == sz);
     }
 
-    unittest
+    version(Windows) unittest
     {
         // must be tested with several processes
         auto pipename = r"\\.\pipe\apipenname";
@@ -1008,8 +1008,8 @@ version(unittest)
         auto clt1 = izPipeStream.createAsClient(pipename);
         scope(exit)
         {
-            delete clt1;
-            delete srv;
+            clt1.demolish;
+            srv.demolish;
         }
     }
 
@@ -1019,7 +1019,7 @@ version(unittest)
 		{
 			uint len = 25_000;
 			auto str = new T(A);
-			scope (exit) delete str;
+			scope (exit)  str.demolish;
 			for (int i = 0; i < len; i++)
 			{
 				str.write(&i, i.sizeof);
@@ -1048,7 +1048,7 @@ version(unittest)
 			    auto strcpy = new T("filestream2.txt");
             }
             else auto strcpy = new T(A);
-			scope (exit) delete strcpy;
+			scope (exit) strcpy.demolish;
 			strcpy.size = 100000;
 			assert(str.size == len * 4);
 			strcpy.loadFromStream(str);

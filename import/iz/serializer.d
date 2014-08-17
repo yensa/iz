@@ -768,7 +768,7 @@ class izMasterSerializer: izObject
 		~this()
 		{
 			fRoot.deleteChildren;
-			delete fRoot;
+			fRoot.demolish;
 		}
 
 		/**
@@ -849,7 +849,7 @@ class izMasterSerializer: izObject
 			scope(exit) fState = izSerializationState.none;
             // TODO
             auto bld = new izSerTreeBuilder;
-            delete fRoot;
+            fRoot.demolish;
             fRoot = bld.rebuildIST(aStream, fFormat);
 		}
 
@@ -992,11 +992,11 @@ version(unittest)
 			}
 			~this()
 			{
-				delete fg;
-                delete fb0;
-                delete fb1;
-                delete eventRef;
-                delete bazRef;
+				fg.demolish;
+                fb0.demolish;
+                fb1.demolish;
+                eventRef.demolish;
+                bazRef.demolish;
 			}
 			override void declareProperties(izMasterSerializer aSerializer)
 			{
@@ -1045,9 +1045,9 @@ version(unittest)
 
 		scope(exit)
 		{
-			delete Bar;
-			delete ser;
-			delete str;
+			Bar.demolish;
+			ser.demolish;
+			str.demolish;
 		}
 
 //----bin
