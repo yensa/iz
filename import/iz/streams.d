@@ -120,6 +120,11 @@ version (Posix)
     public immutable uint acWrite= O_WRONLY;
     public immutable uint acAll  = O_RDWR;
 
+    /// pipe direction
+    public immutable uint pdIn  = 0;
+    public immutable uint pdOut = 0;
+    public immutable uint pdAll = 0;
+
     /// returns true if aHandle is valid.
     public bool isHandleValid(izStreamHandle aHandle)
     {
@@ -636,11 +641,18 @@ class izPipeStream: izSystemStream
 
         bool waitNewClient()
         {
-            if (!fAsServer) return false;
-            while(true)
+            version(Windows)
             {
-                if (ConnectNamedPipe(fServer, null) == 0)
-                    return false;
+                if (!fAsServer) return false;
+                while(true)
+                {
+                    if (ConnectNamedPipe(fServer, null) == 0)
+                        return false;
+                }
+            }
+            version(Posix)
+            {
+                return false;
             }
         }
 
