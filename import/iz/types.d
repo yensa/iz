@@ -38,7 +38,48 @@ unittest
 	alias int myInt;
 	assert( isConstantSize!myInt ); // OK
 	//assert( isConstantSize!myClass ); // FAIL
-}		
+}
+
+
+/// void version of the init type property.
+@property void reset(T)(out T t)
+{
+    t = T.init;
+}
+
+unittest
+{
+    uint a = 159;
+    string b = "bla";
+    a.reset;
+    assert(a == typeof(a).init);
+    b.reset;
+    assert(b == typeof(b).init);
+}
+
+/// protected object destructor
+static void demolish(O)(ref O o) if (is(O : Object))
+{
+    if(!o) return;
+    delete o;
+    o = null;
+}
+
+/// demolish syntactic counterpart for new
+T molish(T, A...)(A a)
+{
+    return new T(a);
+}
+
+unittest
+{
+    auto a = molish!Object;
+    a.demolish;
+    assert(!a);
+    a.demolish;
+    assert(!a);
+    a.demolish;
+}
 
 
 /**
@@ -77,12 +118,6 @@ class izObject
 {
 	mixin setClassGcFree;
 
-    static create(C, A...)(A a)
-    {
-        return new C(a);
-    }
-
-
 	// note: this is meaningless in console-unit tests but verified in a real program
 	// (the test also pass without injecting setClassGcFree because it seems dmd can allocate on the stack in UT mode ?).
 	unittest
@@ -90,8 +125,32 @@ class izObject
 		auto foo = new izObject;
 		scope(exit) delete foo;
 		assert( GC.addrOf(&foo) == null );
+
+        auto Foo = molish!izObject;
+        Foo.demolish;
+
 		writeln("izObject passed the tests");
 	}
+}
+
+version(unittest)
+{
+    interface i{void g();}
+    class bar : izObject, i
+    {
+        uint a,b,c;
+        this(uint aa, uint bb, uint cc)
+        {
+            a = aa; b = bb; c = cc;
+        }
+        void g(){}
+    }
+
+    unittest
+    {
+        auto Bar = molish!bar(0u,1u,2u);
+        Bar.demolish;
+    }
 }
 
 /**
