@@ -1,4 +1,5 @@
 object _1: TCEProject
+  RootFolder = '..'
   OptionsCollection = <  
     item
       name = 'release'
@@ -87,6 +88,7 @@ object _1: TCEProject
     'import\iz\properties.d'
     'import\iz\referencable.d'
     'import\iz\serializer.d'
+    'import\iz\observer.d'
   )
   ConfigurationIndex = 2
 end
