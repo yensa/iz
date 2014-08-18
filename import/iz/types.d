@@ -65,6 +65,13 @@ static void demolish(O)(ref O o) if (is(O : Object))
     o = null;
 }
 
+/// ditto
+static void demolish(Objs...)(ref Objs objs)
+{
+    foreach(ref o; objs)
+        o.demolish;
+}
+
 /// demolish syntactic counterpart for new
 T molish(T, A...)(A a)
 {
@@ -79,6 +86,17 @@ unittest
     a.demolish;
     assert(!a);
     a.demolish;
+
+    auto b = molish!Object;
+    auto c = molish!Object;
+    demolish(a,b,c);
+    assert(!a);
+    assert(!b);
+    assert(!c);
+    demolish(a,b,c);
+    assert(!a);
+    assert(!b);
+    assert(!c);
 }
 
 
@@ -131,26 +149,6 @@ class izObject
 
 		writeln("izObject passed the tests");
 	}
-}
-
-version(unittest)
-{
-    interface i{void g();}
-    class bar : izObject, i
-    {
-        uint a,b,c;
-        this(uint aa, uint bb, uint cc)
-        {
-            a = aa; b = bb; c = cc;
-        }
-        void g(){}
-    }
-
-    unittest
-    {
-        auto Bar = molish!bar(0u,1u,2u);
-        Bar.demolish;
-    }
 }
 
 /**
