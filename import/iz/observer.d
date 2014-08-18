@@ -21,7 +21,8 @@ interface izSubject
 }
 
 /**
- * izCustomSubject handles a list of obsevers of types OT.
+ * izCustomSubject handles a list of Obsevers of Types OT.
+ * even if both types are filtered, OT should rather be an interface than a class.
  */
 class izCustomSubject(OT): izObject, izSubject
 if (is(OT == interface) || is(OT == class))
@@ -60,6 +61,12 @@ if (is(OT == interface) || is(OT == class))
             if (fObservers.find(obs) != -1)
                 return;
             fObservers.add(obs);
+        }
+
+        void addObservers(Objs...)(Objs objs)
+        {
+            foreach(obj; objs)
+                addObserver(obj);
         }
 
         void removeObserver(Object anObserver)
@@ -127,10 +134,18 @@ class izObserverInterconnector: izSubject
             fObservers.add(anObserver);
         }
 
+        void addObservers(Objs...)(Objs objs)
+        {
+            foreach(obj; objs)
+                addObserver(obj);
+        }
+
         void removeObserver(Object anObserver)
         {
             beginUpdate;
             fObservers.remove(anObserver);
+            for (auto i = 0; i < fSubjects.count; i++)
+                (cast(izSubject) fSubjects[i]).removeObserver(anObserver);
         }
 
         void addSubject(Object aSubject)
@@ -139,6 +154,12 @@ class izObserverInterconnector: izSubject
             if (fSubjects.find(aSubject) != -1)
                 return;
             fSubjects.add(aSubject);
+        }
+
+        void addSubjects(Subjs...)(Subjs subjs)
+        {
+            foreach(subj; subjs)
+                addSubject(subj);
         }
 
         void removeSubject(Object aSubject)
@@ -175,18 +196,27 @@ class izObserverInterconnector: izSubject
 version(unittest)
 {
 
-    interface intPropObserver
+    interface PropObserver(T)
     {
-        void min(int aValue);
-        void max(int aValue);
-        void def(int aValue);
+        void min(T aValue);
+        void max(T aValue);
+        void def(T aValue);
     }
+    alias intPropObserver = PropObserver!int;
 
     class foo: intPropObserver
     {
         void min(int aValue){writeln("min");}
         void max(int aValue){writeln("max");}
         void def(int aValue){writeln("def");}
+    }
+    alias uintPropObserver = PropObserver!uint;
+
+    class bar: uintPropObserver
+    {
+        void min(uint aValue){writeln("min");}
+        void max(uint aValue){writeln("max");}
+        void def(uint aValue){writeln("def");}
     }
 
     class intPropSubject : izCustomSubject!intPropObserver
@@ -202,35 +232,58 @@ version(unittest)
         }
     }
 
+    class uintPropSubject : izCustomSubject!uintPropObserver
+    {
+        final override void updateObservers()
+        {
+            for(auto i = 0; i < fObservers.count; i++)
+                (cast(intPropObserver)fObservers[i]).min(uint.min);
+            for(auto i = 0; i < fObservers.count; i++)
+                (cast(intPropObserver)fObservers[i]).max(uint.max);
+            for(auto i = 0; i < fObservers.count; i++)
+                (cast(intPropObserver)fObservers[i]).def(uint.init);
+        }
+    }
+
     unittest
     {
         auto inter = molish!izObserverInterconnector;
-        auto subj = molish!intPropSubject;
-        auto obs1 = molish!foo;
-        auto obs2 = molish!foo;
-        auto obs3 = molish!foo;
+        auto isubj = molish!intPropSubject;
+        auto iobs1 = molish!foo;
+        auto iobs2 = molish!foo;
+        auto iobs3 = molish!foo;
+        auto usubj = molish!uintPropSubject;
+        auto uobs1 = molish!bar;
+        auto uobs2 = molish!bar;
+        auto uobs3 = molish!bar;
 
         scope(exit)
         {
-            inter.demolish;
-            subj.demolish;
-            obs1.demolish;
-            obs2.demolish;
-            obs3.demolish;
+            demolish(inter, isubj, usubj);
+            demolish(iobs1, iobs2, iobs3);
+            demolish(uobs1, uobs2, uobs3);
         }
 
         inter.beginUpdate;
-        inter.addObserver(obs1);
-        inter.addObserver(obs2);
-        inter.addObserver(obs3);
-        inter.addSubject(subj);
+        inter.addSubjects(isubj, usubj);
+        inter.addObservers(iobs1, iobs2, iobs3);
+        inter.addObservers(uobs1, uobs2, uobs3);
         inter.endUpdate;
 
-        assert(inter.fSubjects.count == 1);
-        assert(inter.fObservers.count == 3);
-        assert(subj.fObservers.count == 3);
+        assert(inter.fSubjects.count == 2);
+        assert(inter.fObservers.count == 6);
+        assert(isubj.fObservers.count == 3);
+        assert(usubj.fObservers.count == 3);
+
+        inter.beginUpdate;
+        inter.removeObserver(iobs1);
+        inter.endUpdate;
+
+        assert(inter.fSubjects.count == 2);
+        assert(inter.fObservers.count == 5);
+        assert(isubj.fObservers.count == 2);
+        assert(usubj.fObservers.count == 3);
 
         writeln( "izObserverInterconnector passed the tests");
     }
-
 }
