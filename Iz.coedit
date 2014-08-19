@@ -10,7 +10,7 @@ object _1: TCEProject
       messagesOptions.depreciationHandling = silent
       outputOptions.binaryKind = staticlib
       outputOptions.inlining = True
-      outputOptions.noBoundsCheck = True
+      outputOptions.noBoundsCheck = False
       outputOptions.boundsCheck = offAlways
       outputOptions.optimizations = True
       outputOptions.release = True

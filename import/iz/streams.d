@@ -23,9 +23,9 @@ version (Windows)
     private immutable uint PIPE_ACCESS_INBOUND = 1;
     private immutable uint PIPE_ACCESS_OUTBOUND = 2;
 
-    private extern(Windows) export BOOL SetEndOfFile(in HANDLE hFile);
+    extern(Windows) export BOOL SetEndOfFile(in HANDLE hFile);
 
-    private extern(Windows) export HANDLE CreateNamedPipeA(
+    extern(Windows) export HANDLE CreateNamedPipeA(
        LPCTSTR lpName,
        DWORD dwOpenMode,
        DWORD dwPipeMode,
@@ -36,12 +36,12 @@ version (Windows)
        LPSECURITY_ATTRIBUTES lpSecurityAttributes
     );
 
-    private extern(Windows) export BOOL ConnectNamedPipe(
+    extern(Windows) export BOOL ConnectNamedPipe(
         in HANDLE hNamedPipe,
         LPOVERLAPPED lpOverlapped = null
     );
 
-    private extern(Windows) export BOOL PeekNamedPipe(
+    extern(Windows) export BOOL PeekNamedPipe(
          in HANDLE hNamedPipe,
          out LPVOID lpBuffer,
          in DWORD nBufferSize,
@@ -50,7 +50,7 @@ version (Windows)
          LPDWORD lpBytesLeftThisMessage
     );
 
-    private extern(Windows) export BOOL DisconnectNamedPipe(
+    extern(Windows) export BOOL DisconnectNamedPipe(
         in HANDLE hNamedPipe
     );
 
