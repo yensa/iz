@@ -255,7 +255,7 @@ public struct izBitSet(S,E) if (setConstrain!(E,S))
             else static assert(0, "Operator "~op~" not implemented");
         }
 
-        /// support for "+" and "-" operators.
+        /// ditto
         nothrow @safe izBitSet!(S,E) opBinary(string op)(E[] rhs)
         {
             static if (op == "+")
@@ -268,6 +268,46 @@ public struct izBitSet(S,E) if (setConstrain!(E,S))
                 exclude(rhs);
                 return this;
             }
+            else static assert(0, "Operator "~op~" not implemented");
+        }
+
+        /// ditto
+        nothrow @safe izBitSet!(S,E) opBinary(string op)(izBitSet!(S,E) rhs)
+        {
+            static if (op == "+")
+            {
+                fSet | rhs.fSet;
+                return this;
+            }
+            else static if (op == "-")
+            {
+                fSet ^= rhs.fSet;
+                return this;
+            }
+            else static assert(0, "Operator "~op~" not implemented");
+        }
+
+        /// support for the "-=" and "+=" operators
+        nothrow @safe void opOpAssign(string op)(E[] rhs)
+        {
+            static if (op == "+") include(rhs);
+            else static if (op == "-") exclude(rhs);
+            else static assert(0, "Operator "~op~" not implemented");
+        }
+
+        /// ditto
+        nothrow @safe void opOpAssign(string op, E...)(E rhs)
+        {
+            static if (op == "+") include(rhs);
+            else static if (op == "-") exclude(rhs);
+            else static assert(0, "Operator "~op~" not implemented");
+        }
+
+        /// ditto
+        nothrow @safe void opOpAssign(string op)(izBitSet!(S,E) rhs)
+        {
+            static if (op == "+") fSet |= rhs.fSet;
+            else static if (op == "-") fSet ^= rhs.fSet;
             else static assert(0, "Operator "~op~" not implemented");
         }
 
@@ -554,6 +594,12 @@ version(unittest)
         assert(set == [a8.a0,a8.a1,a8.a2,a8.a3,a8.a4]);
         set = [a8.a0,a8.a2,a8.a4];
         assert(set == 0b0001_0101);
+        set = [a8.a0,a8.a1];
+        assert(set == 0b0000_0011);
+        set += [a8.a2,a8.a3];
+        assert(set == 0b0000_1111);
+        set -= [a8.a0,a8.a1];
+        assert(set == 0b0000_1100);
         version(coeditmessages)
             writeln("izBitSet passed the tests(operators)");
     }
