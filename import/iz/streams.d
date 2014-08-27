@@ -236,6 +236,34 @@ interface izStream
 	 * Resets the stream size to 0.
 	 */
 	void clear();
+    /// support for the concatenation operator.
+    void opOpAssign(string op)(izStream rhs)
+    {
+        static if(op == "~")
+        {
+            alias lhs = this;
+            auto stored = rhs.position;
+
+            lhs.seek(0, skEnd);
+            rhs.seek(0, skBeg);
+
+            size_t read;
+            size_t buff_sz = 4096;
+            auto buff = malloc(buff_sz);
+            scope(exit)
+            {
+            rhs.position = stored;
+                free(buff);
+            }
+
+            while(true)
+            {
+                read = rhs.read(buff, buff_sz);
+                if (read == 0) return;
+                lhs.write(buff, read);
+            }
+        }
+    }
 }
 
 /**
@@ -264,6 +292,23 @@ void copyStream(izStream aSource, izStream aTarget)
 		auto cnt = aSource.read(buff, buffsz);
 		aTarget.write(buff, cnt);
 	}
+}
+
+unittest
+{
+    ubyte _a[] = [0x11,0x22,0x33,0x44];
+    ubyte _b[] = [0x55,0x66,0x77,0x88];
+    auto a = molish!izMemoryStream;
+    auto b = molish!izMemoryStream;
+    a.write(_a.ptr, 4);
+    b.write(_b.ptr, 4);
+    a ~= b;
+    a.position = 0;
+    ulong g;
+    a.read(&g,8);
+    assert(a.size == 8);
+    version(LittleEndian) assert(g == 0x8877665544332211);
+    version(BigEndian) assert(g == 0x1122334455667788);
 }
 
 /**
