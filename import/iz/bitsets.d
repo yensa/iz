@@ -4,6 +4,8 @@ import std.stdio;
 import std.traits;
 import std.conv;
 
+import iz.types;
+
 /// container for a izBitSet based on an enum which has up to 8 members.
 alias ubyte set8;
 /// container for a izBitSet based on an enum which has up to 16 members.
@@ -192,7 +194,7 @@ public struct izBitSet(S,E) if (setConstrain!(E,S))
                     scope(failure){break;}
                     auto member = to!E(identifier);
                     include(member);
-                    identifier = identifier.init;
+                    identifier.reset;
                 }
 
                 if (reader == representation.ptr + representation.length)

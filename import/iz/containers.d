@@ -804,17 +804,22 @@ class izStaticList(T): izObject, izList!T
  */
 template dlistPayload(T)
 {
-	const prevOffs = 0;
-	const nextOffs = size_t.sizeof;
-	const dataOffs = size_t.sizeof + size_t.sizeof;
+	private static const prevOffs = 0;
+	private static const nextOffs = size_t.sizeof;
+	private static const dataOffs = size_t.sizeof + size_t.sizeof;
+
+    @trusted @nogc nothrow private:
+
 	void* newPld(void* aPrevious, void* aNext, T aData)
 	{
 		auto result = std.c.stdlib.malloc( 2 * size_t.sizeof + T.sizeof);
-		if (!result) throw new OutOfMemoryError();
-		*cast(size_t*)	(result + prevOffs) = cast(size_t) aPrevious;
-		*cast(size_t*)	(result + nextOffs) = cast(size_t) aNext;
-		*cast(T*) 		(result + dataOffs) = aData;
 
+        if (result)
+        {
+		    *cast(size_t*)	(result + prevOffs) = cast(size_t) aPrevious;
+		    *cast(size_t*)	(result + nextOffs) = cast(size_t) aNext;
+		    *cast(T*) 		(result + dataOffs) = aData;
+        }
 		return result;
 	}
 	void freePld(void* aPayload)
@@ -873,6 +878,7 @@ class izDynamicList(T): izObject, izList!T
 	}
 	protected
 	{
+        @safe @nogc nothrow
 		void* getPayloadFromIx(size_t anIndex)
 		{
 			auto current = fFirst;
@@ -883,6 +889,7 @@ class izDynamicList(T): izObject, izList!T
 			return current;
 		}
 
+        @trusted
 		void* getPayloadFromDt(T anItem)
 		{
 			auto current = fFirst;
@@ -915,18 +922,21 @@ class izDynamicList(T): izObject, izList!T
 			if (fOnChange) fOnChange(this, aChangeKind);
         }
 
+        @safe @nogc nothrow
         T opIndex(ptrdiff_t i)
         {
             auto _pld = getPayloadFromIx(i);
             return payload.getData(_pld);
         }
 
+        @safe @nogc nothrow
         void opIndexAssign(T anItem, size_t i)
         {
             auto _pld = getPayloadFromIx(i);
             payload.setData(_pld, anItem);
         }
 
+        @trusted
         int opApply(int delegate(T) dg)
         {
 			int result = 0;
@@ -940,6 +950,7 @@ class izDynamicList(T): izObject, izList!T
 			return result;
         }
 
+        @trusted
         int opApplyReverse(int delegate(T) dg)
         {
 			int result = 0;
@@ -953,16 +964,19 @@ class izDynamicList(T): izObject, izList!T
 			return result;
         }
 
+        @safe @nogc nothrow
         T last()
         {
             return payload.getData(fLast);
         }
 
+        @safe @nogc nothrow
         T first()
         {
             return payload.getData(fFirst);
         }
 
+        @trusted
         ptrdiff_t find(T anItem)
         {
             void* current = fFirst;
@@ -977,6 +991,7 @@ class izDynamicList(T): izObject, izList!T
             return -1;
         }
 
+        @trusted
         ptrdiff_t add(T anItem)
         {
             if (fFirst == null)
@@ -996,6 +1011,7 @@ class izDynamicList(T): izObject, izList!T
             }
         }
 
+        @trusted
 		ptrdiff_t insert(T anItem)
 		{
 			auto _pld = payload.newPld(null, fFirst, anItem);
@@ -1008,6 +1024,7 @@ class izDynamicList(T): izObject, izList!T
 			return fCount++;
 		}
 
+        @trusted
 		ptrdiff_t insert(size_t aPosition, T anItem)
 		{
 			if (fFirst == null)
@@ -1034,6 +1051,7 @@ class izDynamicList(T): izObject, izList!T
 			}
 		}
 
+        @trusted
 		void swapItems(T anItem1, T anItem2)
 		{
 			auto _pld1 = getPayloadFromDt(anItem1);
@@ -1050,6 +1068,7 @@ class izDynamicList(T): izObject, izList!T
 			hasChanged(izContainerChangeKind.change, null);
 		}
 
+        @trusted
 		void swapIndexes(size_t index1, size_t index2)
 		{
 			auto _pld1 = getPayloadFromIx(index1);
@@ -1066,6 +1085,7 @@ class izDynamicList(T): izObject, izList!T
 			hasChanged(izContainerChangeKind.change, null);
 		}
 
+        @trusted
 		bool remove(T anItem)
 		{
 			auto _pld = getPayloadFromDt(anItem);
@@ -1096,6 +1116,7 @@ class izDynamicList(T): izObject, izList!T
 			return true;
 		}
 
+        @trusted
 		T* extract(size_t anIndex)
 		{
 			T* result = null;
@@ -1129,6 +1150,7 @@ class izDynamicList(T): izObject, izList!T
 			return result;	 // ! result is undefined
 		}
 
+        @trusted
 		void clear()
 		{
 			auto current = fFirst;
@@ -1143,17 +1165,17 @@ class izDynamicList(T): izObject, izList!T
 			fLast = null;
 		}
 
-		@property size_t count()
+		@trusted @property size_t count()
 		{
 			return fCount;
 		}
 
-		@property void onChange(izListNotification aNotification)
+		@trusted @property void onChange(izListNotification aNotification)
 		{
 			fOnChange = aNotification;
 		}
 
-		@property izListNotification onChange()
+		@trusted @property izListNotification onChange()
 		{
 			return fOnChange;
 		}

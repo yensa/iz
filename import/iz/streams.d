@@ -300,6 +300,7 @@ unittest
     ubyte _b[] = [0x55,0x66,0x77,0x88];
     auto a = molish!izMemoryStream;
     auto b = molish!izMemoryStream;
+    scope(exit) demolish(a, b);
     a.write(_a.ptr, 4);
     b.write(_b.ptr, 4);
     a ~= b;
