@@ -471,10 +471,10 @@ interface izList(T)
 	int opApplyReverse(int delegate(T) dg);
 
 	/**
-	 * If T is a class then allocates, adds to the back, and returns a new item of type T.
-	 * Items allocated by this function need to be manually freed before the holder gets destroyed.
+	 * Allocates, adds to the back, and returns a new item of type T.
+	 * Items allocated by this function need to be manually freed before the holder destruction.
 	 */
-	static if( is (T : Object))
+	static if(is (T : Object))
 	{
 		final T addNewItem(T, A...)(A a)
 		{
@@ -483,11 +483,20 @@ interface izList(T)
 			return result;
 		}
 	}
-	static if( is (T == struct))
+	static if(is (T == struct))
 	{
 		final T * addNewItem(T, A...)(A a)
 		{
 			T * result = new T(a);
+			add(result);
+			return result;
+		}
+	}
+    static if(isPointer!T)
+	{
+		final T addNewItem(A...)(A a)
+		{
+			T result = new PointerTarget!T(a);
 			add(result);
 			return result;
 		}
