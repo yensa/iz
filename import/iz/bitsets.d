@@ -332,6 +332,12 @@ public struct izBitSet(S,E) if (setConstrain!(E,S))
             return (rhsset.fSet == fSet);
         }
 
+        /// support for the in operator.
+        bool opIn_r(E rhs)
+        {
+            return isIncluded(rhs);
+        }
+
 // Pascal-ish primitives -------------------------------------------------------
 
         /**
@@ -614,6 +620,10 @@ version(unittest)
         assert(set.isIncluded(a17.a8));
         assert(set.isIncluded(a17.a9));
         assert(!set.isIncluded(a17.a10));
+        assert(!(a17.a7 in set));
+        assert(a17.a8 in set);
+        assert(a17.a9 in set);
+        assert(!(a17.a10 in set));
         version(coeditmessages)
             writeln("izBitSet passed the tests(isIncluded)");
     }

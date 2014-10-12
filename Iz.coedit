@@ -7,7 +7,7 @@ object _1: TCEProject
       documentationOptions.generateJSON = True
       documentationOptions.DocumentationDirectory = 'doc'
       documentationOptions.JSONFilename = 'doc\iz.json'
-      messagesOptions.depreciationHandling = silent
+      messagesOptions.additionalWarnings = True
       outputOptions.binaryKind = staticlib
       outputOptions.inlining = True
       outputOptions.noBoundsCheck = False
