@@ -451,7 +451,7 @@ enum izContainerChangeKind {add,change,remove};
  */
 interface izList(T)
 {
-	alias void delegate(Object aList, izContainerChangeKind aChangeKind) izListNotification;
+	alias izListNotification = void delegate(Object aList, izContainerChangeKind aChangeKind);
 
 	/**
 	 * hasChanged() notify the implementer about the modification of the list.
@@ -883,7 +883,7 @@ class izDynamicList(T): izObject, izList!T
 		void* fLast;
 		void* fFirst;
 		izListNotification fOnChange;
-		alias dlistPayload!T payload;
+		alias payload = dlistPayload!T;
 	}
 	protected
 	{
@@ -1203,7 +1203,7 @@ version(unittest)
 			bool changeMonitor;
 
 			// struct as ptr
-			alias izStaticList!(s*) sList;
+			alias sList = izStaticList!(s*);
 
 			void listChangedProc(Object aList, izContainerChangeKind aChangeKind)
 			{
@@ -1253,7 +1253,7 @@ version(unittest)
 			}
 
 			// class as ref
-			alias izStaticList!c cList;
+			alias cList = izStaticList!c;
 
 			c someC[200];
 			cList CList = new cList;
@@ -1318,7 +1318,7 @@ version(unittest)
 			bool changeMonitor;
 
 			// struct as ptr
-			alias izDynamicList!(s*) sList;
+			alias sList = izDynamicList!(s*);
 
 			void listChangedProc(Object aList, izContainerChangeKind aChangeKind)
 			{
@@ -1368,7 +1368,7 @@ version(unittest)
 			}
 
 			// class as ref
-			alias izStaticList!c cList;
+			alias cList = izStaticList!c;
 
 			c someC[200];
 			cList CList = new cList;
@@ -2147,7 +2147,7 @@ if ((is(C==class)))
 version(unittest)
 {
 	private class bar{int a,b,c;}
-	alias izMakeTreeItem!bar linkedBar;
+	alias linkedBar = izMakeTreeItem!bar;
 	private class linkedBarTest: linkedBar
 	{
 		unittest

@@ -29,12 +29,12 @@ struct izPropDescriptor(T)
 	public
 	{
 		/// standard setter proptotype
-		alias void delegate (T value) izPropSetter;
+		alias izPropSetter = void delegate (T value);
 		/// standard getter prototype
-		alias T delegate() izPropGetter;
+		alias izPropGetter = T delegate();
 		
 		/// alternative setter kind. Internally casted as a izPropSetter.
-		alias void delegate (const T value) izPropSetterConst;
+		alias izPropSetterConst = void delegate (const T value);
 	}
 	private
 	{
@@ -308,7 +308,7 @@ template genStandardPropDescriptors()
 		foreach(T; izConstantSizeTypes)
 		{
 			//result ~= ("/// Describes an " ~ T.stringof ~ ".\r\n").dup; // https://issues.dlang.org/show_bug.cgi?id=648
-			result ~= ("alias izPropDescriptor!(" ~ T.stringof ~ ") " ~ T.stringof ~ "prop;\r\n").dup; 
+			result ~= ("alias " ~ T.stringof ~ "prop =  izPropDescriptor!(" ~ T.stringof ~ ")" ~ ";\r\n").dup;
 		}
 		return result;
 	}
@@ -427,8 +427,8 @@ private class izPropertyBinderTester
 {
 	unittest
 	{
-		alias izPropertyBinder!int intprops;
-		alias izPropertyBinder!float floatprops;
+		alias intprops = izPropertyBinder!int;
+		alias floatprops = izPropertyBinder!float;
 
 		class foo
 		{

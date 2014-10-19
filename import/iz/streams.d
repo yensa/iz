@@ -55,7 +55,7 @@ version (Windows)
     );
 
 
-    public alias HANDLE izStreamHandle;
+    public alias izStreamHandle = HANDLE;
 
     /// seek modes.
     public immutable int skBeg = FILE_BEGIN;
@@ -102,7 +102,7 @@ version (Posix)
 {
 	import core.sys.posix.fcntl, core.sys.posix.unistd;
 
-    public alias int izStreamHandle;
+    public alias izStreamHandle = int;
 
     /// seek modes.
     public immutable int skBeg = SEEK_SET;

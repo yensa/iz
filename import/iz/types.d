@@ -8,10 +8,10 @@ import
 	std.traits, std.typetuple, std.typecons;
 
 /// iz pointer.
-alias void* izPtr;
+alias izPtr = void*;
 
 /// iz notification
-alias void delegate(izObject aNotifier) izEvent;
+alias izEvent = void delegate(izObject aNotifier);
 
 /** 
  * izfixedLenTypes represents all the fixed-length types, directly representing a data.
@@ -35,7 +35,7 @@ static bool isConstantSize(T)()
 unittest
 {
 	class myClass{}
-	alias int myInt;
+	alias myInt = int;
 	assert( isConstantSize!myInt ); // OK
 	//assert( isConstantSize!myClass ); // FAIL
 }

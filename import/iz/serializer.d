@@ -262,7 +262,7 @@ class izIstNode(T): izPreIstNode if(isTypeSerializable!T)
 {
 	private
 	{
-		alias void delegate (izStream aStream) rwProc;
+		alias rwProc = void delegate (izStream aStream);
 
 		rwProc[4] readFormat;
 		rwProc[4] writeFormat;
@@ -730,7 +730,7 @@ class izIstNode(T): izPreIstNode if(isTypeSerializable!T)
 /**
  * IST element representing a serializable sub object.
  */
-alias izIstNode!izSerializable izIstObjectNode;
+alias izIstObjectNode = izIstNode!izSerializable;
 
 /**
  * Flag used to describe the state of an izMasterSerializer.
@@ -864,7 +864,7 @@ class izMasterSerializer: izObject
 			if (aDescriptor.name == "")
 				throw new Error("serializer error, unnamed property descriptor");
 
-			alias izIstNode!T node_t;
+			alias node_t = izIstNode!T;
 
 			static if (is(T == izSerializable))
 			{

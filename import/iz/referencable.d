@@ -17,12 +17,12 @@ interface izReferenced
  * Items (void*) referenced by ID (ulong).
  * First entry is always invalid.
  */
-private alias void*[ulong] itemsById;
+private alias itemsById = void*[ulong];
 
 /**
  * itemsById for the type(string)
  */
-private alias itemsById[string] refStore;
+private alias refStore = itemsById[string];
 
 
 /**
@@ -152,8 +152,8 @@ static class referenceMan
 
 unittest
 {
-    alias ubyte delegate(long param) delegate1;
-    alias short delegate(uint param) delegate2;
+    alias delegate1 = ubyte delegate(long param);
+    alias delegate2 = short delegate(uint param);
     class foo{int aMember;}
 
     assert( !referenceMan.isTypeStored!delegate1 );

@@ -7,13 +7,13 @@ import std.conv;
 import iz.types;
 
 /// container for a izBitSet based on an enum which has up to 8 members.
-alias ubyte set8;
+alias set8 = ubyte;
 /// container for a izBitSet based on an enum which has up to 16 members.
-alias ushort set16;
+alias set16 = ushort;
 /// container for a izBitSet based on an enum which has up to 32 members.
-alias uint set32;
+alias set32 = uint;
 /// container for a izBitSet based on an enum which has up to 64 members.
-alias ulong set64;
+alias set64 = ulong;
 
 /**
  * Returns true if S is suitable for being used as a izBitSet container.
@@ -55,7 +55,7 @@ private static bool enumFitsInSet(E,S)() if (isSetSuitable!S && is(E==enum))
 }
 
 // setConstrain may include more test in the future.
-private alias enumFitsInSet setConstrain;
+private alias setConstrain = enumFitsInSet ;
 
 /**
  * The parameterized struct izBitSet allows to manipulate set of bits
@@ -453,7 +453,7 @@ public struct izEnumProcs(E,T) if (isCallableFromEnum!(T,E))
     {
         static immutable uint[E] fRankLUT;
         static immutable uint _1 = 1U;
-        alias ReturnType!T retT;
+        alias retT = ReturnType!T;
         T[] procs;
 
         void initLength()
@@ -580,7 +580,7 @@ version(unittest)
     /// operator operations
     unittest
     {
-        alias izBitSet!(set8,a8) bs8;
+        alias bs8 = izBitSet!(set8,a8);
         bs8 set = bs8(a8.a0,a8.a1,a8.a2,a8.a3,a8.a4,a8.a5,a8.a6,a8.a7);
         assert(set == 0b1111_1111);
         assert(set.all);
