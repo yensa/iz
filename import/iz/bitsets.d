@@ -107,6 +107,12 @@ public struct izBitSet(S,E) if (setConstrain!(E,S))
             fSet = 0;
             include(someMembers);
         }
+        /// ditto
+        nothrow @safe this(E aMember)
+        {
+            fSet = 0;
+            include(aMember);
+        }
 
         /**
          * initializes the set with someMembers.
@@ -224,7 +230,7 @@ public struct izBitSet(S,E) if (setConstrain!(E,S))
         }
 
         /// ditto
-        nothrow @safe void opAssign(izBitSet!(S,E) rhs)
+        nothrow @safe void opAssign(typeof(this) rhs)
         {
             fSet = rhs.fSet;
         }
@@ -242,7 +248,7 @@ public struct izBitSet(S,E) if (setConstrain!(E,S))
         }
 
         /// support for "+" and "-" operators.
-        nothrow @safe izBitSet!(S,E) opBinary(string op)(E rhs)
+        nothrow @safe typeof(this) opBinary(string op)(E rhs)
         {
             static if (op == "+")
             {
@@ -258,7 +264,7 @@ public struct izBitSet(S,E) if (setConstrain!(E,S))
         }
 
         /// ditto
-        nothrow @safe izBitSet!(S,E) opBinary(string op)(E[] rhs)
+        nothrow @safe typeof(this) opBinary(string op)(E[] rhs)
         {
             static if (op == "+")
             {
@@ -274,7 +280,7 @@ public struct izBitSet(S,E) if (setConstrain!(E,S))
         }
 
         /// ditto
-        nothrow @safe izBitSet!(S,E) opBinary(string op)(izBitSet!(S,E) rhs)
+        nothrow @safe typeof(this) opBinary(string op)(typeof(this) rhs)
         {
             static if (op == "+")
             {
@@ -306,7 +312,7 @@ public struct izBitSet(S,E) if (setConstrain!(E,S))
         }
 
         /// ditto
-        nothrow @safe void opOpAssign(string op)(izBitSet!(S,E) rhs)
+        nothrow @safe void opOpAssign(string op)(typeof(this) rhs)
         {
             static if (op == "+") fSet |= rhs.fSet;
             else static if (op == "-") fSet ^= rhs.fSet;
@@ -320,7 +326,7 @@ public struct izBitSet(S,E) if (setConstrain!(E,S))
         }
 
         /// ditto
-        nothrow @safe bool opEquals(izBitSet!(S,E) rhs)
+        nothrow @safe bool opEquals(typeof(this) rhs)
         {
             return (fSet == rhs.fSet);
         }
@@ -328,7 +334,7 @@ public struct izBitSet(S,E) if (setConstrain!(E,S))
         /// ditto
         nothrow @safe  bool opEquals(E[] rhs)
         {
-            auto rhsset = izBitSet!(S,E)(rhs);
+            auto rhsset = typeof(this)(rhs);
             return (rhsset.fSet == fSet);
         }
 
