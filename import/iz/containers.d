@@ -474,18 +474,18 @@ interface izList(T)
 	 * Allocates, adds to the back, and returns a new item of type T.
 	 * Items allocated by this function need to be manually freed before the holder destruction.
 	 */
-	static if(is (T : Object))
+	static if(is (T == class))
 	{
-		final T addNewItem(T, A...)(A a)
+		final T addNewItem(A...)(A a)
 		{
-			T result = izAllocObject!T(a);
+		    T result = izAllocObject!T(a);
 			add(result);
 			return result;
 		}
 	}
 	static if(is (T == struct))
 	{
-		final T * addNewItem(T, A...)(A a)
+		final T * addNewItem(A...)(A a)
 		{
 			T * result = new T(a);
 			add(result);
