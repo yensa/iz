@@ -483,7 +483,7 @@ interface izList(T)
 			return result;
 		}
 	}
-	static if(is (T == struct))
+	else static if(is (T == struct))
 	{
 		final T * addNewItem(A...)(A a)
 		{
@@ -492,7 +492,7 @@ interface izList(T)
 			return result;
 		}
 	}
-    static if(isPointer!T)
+    else static if(isPointer!T)
 	{
 		final T addNewItem(A...)(A a)
 		{
