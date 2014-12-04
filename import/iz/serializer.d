@@ -186,8 +186,8 @@ class izSerializableReference: izSerializable
         string className(){return typeof(this).stringof;}
         void declareProperties(izMasterSerializer aSerializer)
         {
-            aSerializer.addProperty(fTypeDescr);
-            aSerializer.addProperty(fIdDescr);
+            aSerializer.addProperty(&fTypeDescr);
+            aSerializer.addProperty(&fIdDescr);
         }
     }
 }
@@ -268,7 +268,7 @@ class izIstNode(T): izPreIstNode if(isTypeSerializable!T)
 		rwProc[4] writeFormat;
 
 		unreadProperty uprop;
-		izPropDescriptor!T fDescriptor;
+		izPropDescriptor!T* fDescriptor;
 		izSerializable fDeclarator;
 
 		bool fIsRead;
@@ -306,7 +306,7 @@ class izIstNode(T): izPreIstNode if(isTypeSerializable!T)
 
 			// type
 			ubyte tp = 0, ar = 0;
-			static if (!is(T == izSerializable))
+			static if (!is(T : izSerializable))
 			{
 				T arr;
                 static if (isArray!T)
@@ -334,7 +334,7 @@ class izIstNode(T): izPreIstNode if(isTypeSerializable!T)
 			aStream.write(namecpy.ptr, namecpy.length);
 
 			// value length + value...
-			static if (!is(T == izSerializable))
+			static if (!is(T : izSerializable))
 			{
 				T value = fDescriptor.getter()();
 				static if(!isArray!T)
@@ -465,7 +465,7 @@ class izIstNode(T): izPreIstNode if(isTypeSerializable!T)
 			aStream.write(data.ptr,data.length);
 
 			// value
-			static if (!is(T == izSerializable))
+			static if (!is(T : izSerializable))
 			{
                 // http://forum.dlang.org/thread/ipepszxjboblskllwvlv@forum.dlang.org
                 auto val = fDescriptor.getter()();
@@ -582,10 +582,10 @@ class izIstNode(T): izPreIstNode if(isTypeSerializable!T)
 				countUntil( izSerTypesString, propType[0..$-2]);
 				
 			T value;
-			static if (!is(T==izSerializable))
+			static if (!is(T : izSerializable))
 			    value = to!T(propValue);
 
-			static if (!is(T==izSerializable))
+			static if (!is(T : izSerializable))
             {
 			    static if (!isArray!T) //if (!uprop.isArray)
 			    {
@@ -618,7 +618,7 @@ class izIstNode(T): izPreIstNode if(isTypeSerializable!T)
 			fIsRead = false;
             assert(writeFormat[aFormat], "forgot to set the array entry !");
 			writeFormat[aFormat](aStream);
-			if ( is(T == izSerializable))
+			if ( is(T : izSerializable))
 			{
 				for(auto i = 0; i < childrenCount; i++)
 					(cast(izPreIstNode) children[i]).write(aStream,aFormat);
@@ -638,7 +638,7 @@ class izIstNode(T): izPreIstNode if(isTypeSerializable!T)
 		{
             assert(readFormat[aFormat], "forgot to set the array entry !");
 			readFormat[aFormat](aStream);
-			if ( is(T == izSerializable))
+			if ( is(T : izSerializable))
 			{
 				for(auto i = 0; i < childrenCount; i++)
 					(cast(izPreIstNode) children[i]).read(aStream,aFormat);
@@ -660,7 +660,7 @@ class izIstNode(T): izPreIstNode if(isTypeSerializable!T)
 			fIsRead = false;
 			scope(success) fIsRead = true;
 
-			if (!is(T == izSerializable))
+			if (!is(T : izSerializable))
 			{
 				static if(!isArray!T)
 				{
@@ -698,8 +698,8 @@ class izIstNode(T): izPreIstNode if(isTypeSerializable!T)
 
 		/**
 		 * Defines the descriptor and the parentObject.
-		 */
-		void setSource(izSerializable aSerializable, ref izPropDescriptor!T aDescriptor)
+		 */     
+        void setSource(izSerializable aSerializable, izPropDescriptor!T * aDescriptor)
 		in
         {
             assert(aSerializable);
@@ -713,7 +713,7 @@ class izIstNode(T): izPreIstNode if(isTypeSerializable!T)
 		/**
 		 * Returns the property descriptor linked to this tree item.
 		 */
-		@property izPropDescriptor!T descriptor(){return fDescriptor;}
+		@property izPropDescriptor!T * descriptor(){return fDescriptor;}
 
 		/**
 		 * Returns the izSerializable Object which declared descriptor.
@@ -791,7 +791,7 @@ class izMasterSerializer: izObject
 			fCurNode = fRoot;
 			fObj = aRoot;
 			auto rootDescr = izPropDescriptor!izSerializable(&fObj, "Root");
-			fRoot.setSource(fObj, rootDescr);
+			fRoot.setSource(fObj, &rootDescr);
 			fObj.declareProperties(this);
 			fRoot.write(fStream,fFormat);
 		}
@@ -815,7 +815,7 @@ class izMasterSerializer: izObject
 			fCurNode = fRoot;
 			fObj = aRoot;
 			auto rootDescr = izPropDescriptor!izSerializable(&fObj, "Root");
-			fRoot.setSource(fObj, rootDescr);
+			fRoot.setSource(fObj, &rootDescr);
 			fObj.declareProperties(this);
 			fRoot.read(fStream,fFormat);
 			fRoot.restore();
@@ -859,14 +859,14 @@ class izMasterSerializer: izObject
          * is neither read or written directly during a call to this function.
          * Writing and reading appends after all the properties are declared.
 		 */
-		void addProperty(T)(ref izPropDescriptor!T aDescriptor) if(isTypeSerializable!T)
+		void addProperty(T)(izPropDescriptor!T * aDescriptor) if(isTypeSerializable!T)
 		{
 			if (aDescriptor.name == "")
 				throw new Error("serializer error, unnamed property descriptor");
 
 			alias node_t = izIstNode!T;
 
-			static if (is(T == izSerializable))
+			static if (is(T : izSerializable))
 			{
 				auto istItem = fCurNode.addNewChildren!izIstObjectNode;
 				istItem.setSource(fObj, aDescriptor);
@@ -940,11 +940,11 @@ version(unittest)
 
 			void declareProperties(izMasterSerializer aSerializer)
 			{
-				aSerializer.addProperty!int(ADescr);
-				aSerializer.addProperty!int(BDescr);
-                aSerializer.addProperty!(char[])(CDescr);
-                aSerializer.addProperty!(ubyte[])(DDescr);
-				aSerializer.addProperty!(ubyte[4])(EDescr);
+				aSerializer.addProperty!int(&ADescr);
+				aSerializer.addProperty!int(&BDescr);
+                aSerializer.addProperty!(char[])(&CDescr);
+                aSerializer.addProperty!(ubyte[])(&DDescr);
+				aSerializer.addProperty!(ubyte[4])(&EDescr);
 			}
 			void getDescriptor(const unreadProperty infos, out izPtr aDescriptor){}
             string className(){return typeof(this).stringof;}
@@ -1008,9 +1008,9 @@ version(unittest)
                 }
 
 				super.declareProperties(aSerializer);
-				aSerializer.addProperty!izSerializable(GDescr);
-                aSerializer.addProperty!izSerializable(XDescr);
-                aSerializer.addProperty!izSerializable(UDescr);
+				aSerializer.addProperty!izSerializable(&GDescr);
+                aSerializer.addProperty!izSerializable(&XDescr);
+                aSerializer.addProperty!izSerializable(&UDescr);
 
                 // restore references: baz/eventref to current values
                 if (aSerializer.state == izSerializationState.writing)
