@@ -79,6 +79,23 @@ object _1: TCEProject
       postBuildProcess.showWindow = swoNone
       runOptions.options = []
       runOptions.showWindow = swoNone
+    end  
+    item
+      name = 'dev-newser'
+      debugingOptions.debug = True
+      messagesOptions.additionalWarnings = True
+      outputOptions.noBoundsCheck = False
+      outputOptions.versionIdentifiers.Strings = (
+        'coeditmessages'
+        'devnewser'
+      )
+      pathsOptions.outputFilename = 'temp\iztests.exe'
+      preBuildProcess.options = []
+      preBuildProcess.showWindow = swoNone
+      postBuildProcess.options = []
+      postBuildProcess.showWindow = swoNone
+      runOptions.options = [poUsePipes, poStderrToOutPut]
+      runOptions.showWindow = swoNone
     end>
   Sources.Strings = (
     'import\iz\types.d'
@@ -91,5 +108,5 @@ object _1: TCEProject
     'import\iz\observer.d'
     'import\iz\temp.d'
   )
-  ConfigurationIndex = 0
+  ConfigurationIndex = 4
 end
