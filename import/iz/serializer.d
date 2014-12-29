@@ -54,7 +54,7 @@ enum izSerializationFormat {
 	text,	/// simple utf8 text, cf. with izIstNode doc. for a full specification
 	json,	/// JSON
 	xml		/// XML
-};
+}
 
 
 /// Build the IST from a document
@@ -203,7 +203,7 @@ enum fixedSerializableTypes
 	stLong, stUlong,
 	stFloat, stDouble,
 	stLast
-};
+}
 
 /**
  * izSerTypes represents all the fixed-length types, directly representing a data.
@@ -740,7 +740,7 @@ enum izSerializationState
 	none, 		/// the izMasterSerializer does nothing.
 	reading,	/// the izMasterSerializer is reading from an izSerializable
 	writing		/// the izMasterSerializer is writing to an izSerializable
-};
+}
 
 /**
  * Handles the de/serialization of tree of izSerializable objects.

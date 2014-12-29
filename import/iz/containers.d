@@ -1982,11 +1982,11 @@ interface izTreeItem
 				current.prevSibling = null;
 				current.nextSibling = null;
 
-				hasChanged(izContainerChangeKind.remove,current);
+				hasChanged(izContainerChangeKind.remove, current);
 			}
 			current = _next;
 
-			hasChanged(izContainerChangeKind.change,current);
+			hasChanged(izContainerChangeKind.change, current);
 		}
 		firstChild = null;
 	}
@@ -2012,7 +2012,7 @@ interface izTreeItem
 
 			current = _next;
 
-			hasChanged(izContainerChangeKind.change,null);
+			hasChanged(izContainerChangeKind.change, null);
 		}
 		firstChild = null;
 	}
