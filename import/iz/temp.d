@@ -530,7 +530,7 @@ public class izSerializer
             fRootNode.setDescriptor(&fRootDescr);
         }
         
-        /// creates a writer object which render a node to a stream
+        /// creates a writer object which renders a node into a stream
         void writeNode(izIstNode node)
         {
             auto writer = newWriter(fFormat, fCurrNode, fStream);
@@ -655,6 +655,7 @@ public class izSerializer
                 reader.readProp;
                 std.stdio.writeln( *fCurrNode.nodeInfo );
                 fCurrNode = new izIstNode;
+                
             }
             
             parents ~= fRootNode;

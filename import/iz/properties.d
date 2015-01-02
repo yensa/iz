@@ -79,6 +79,11 @@ struct izPropDescriptor(T)
 	public
 	{
 		static immutable ubyte DescriptorFormat = 0;
+        
+        this(in char[] aName = "")
+        {
+            if (aName != "") {name(aName);}
+        }
 		
 		/**
 		 * Constructs a property descriptor from an izPropSetter and an izPropGetter method.
@@ -237,8 +242,8 @@ struct izPropDescriptor(T)
 			return fName.idup;
 		}
         /**
-		 * Defines the object declaring the property.
-		 */
+         * Defines the object declaring the property.
+         */
         @property void declarator(Object aDeclarator)
         {
             fDeclarator = aDeclarator;
