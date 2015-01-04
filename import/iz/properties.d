@@ -11,9 +11,9 @@ import
 enum izPropAccess 
 {
 	none, /// denotes an error, no accessors.
-	ro,   /// read-only, has only a getter.
-	wo,   /// write-only, has only a dSetter.
-	rw    /// read & write, has both accessors.
+	ro,	  /// read-only, has only a getter.
+	wo,	  /// write-only, has only a dSetter.
+	rw	  /// read & write, has both accessors.
 };	
 	
 /**
@@ -22,7 +22,7 @@ enum izPropAccess
  * <li> a getter: either as an izPropGetter method or as pointer to the field.</li>
  * <li> a name: optionally used, according to the context.</li>
  * <li> a declarator: the Object declaring the props. the declarator is automatically set
- *      when the descriptor uses at least one accessor method.</li>
+ *		when the descriptor uses at least one accessor method.</li>
  */
 struct izPropDescriptor(T)
 {
@@ -40,7 +40,7 @@ struct izPropDescriptor(T)
 	{
 		izPropSetter fSetter;
 		izPropGetter fGetter;
-        Object fDeclarator;
+		Object fDeclarator;
 
 		T* fSetPtr;
 		T* fGetPtr;
@@ -79,11 +79,11 @@ struct izPropDescriptor(T)
 	public
 	{
 		static immutable ubyte DescriptorFormat = 0;
-        
-        this(in char[] aName = "")
-        {
-            if (aName != "") {name(aName);}
-        }
+		
+		this(in char[] aName = "")
+		{
+			if (aName != "") {name(aName);}
+		}
 		
 		/**
 		 * Constructs a property descriptor from an izPropSetter and an izPropGetter method.
@@ -150,7 +150,7 @@ struct izPropDescriptor(T)
 			setter(aSetter);
 			getter(aGetter);
 			if (aName != "") {name(aName);}
-            fDeclarator = cast(Object) aSetter.ptr;
+			fDeclarator = cast(Object) aSetter.ptr;
 		}
 		
 		/**
@@ -161,7 +161,7 @@ struct izPropDescriptor(T)
 			setter(aSetter);
 			setDirectSource(aSourceData);
 			if (aName != "") {name(aName);}
-            fDeclarator = cast(Object) aSetter.ptr;
+			fDeclarator = cast(Object) aSetter.ptr;
 		}		
 		/**
 		 * Defines a property descriptor from a single data used as source/target
@@ -171,7 +171,7 @@ struct izPropDescriptor(T)
 			setDirectSource(aData);
 			setPropTarget(aData);
 			if (aName != "") {name(aName);}
-            fDeclarator = aDeclarator;
+			fDeclarator = aDeclarator;
 		}
 		
 // setter ---------------
@@ -182,10 +182,10 @@ struct izPropDescriptor(T)
 		@property void setter(izPropSetter aSetter)
 		{
 			fSetter = aSetter;
-            fDeclarator = cast(Object) aSetter.ptr;
+			fDeclarator = cast(Object) aSetter.ptr;
 			updateAccess;
 		}
-        /// ditto
+		/// ditto
 		@property izPropSetter setter(){return fSetter;}	
 		/**
 		 * Sets the property setter using a pointer to a direct data
@@ -205,10 +205,10 @@ struct izPropDescriptor(T)
 		@property void getter(izPropGetter aGetter)
 		{
 			fGetter = aGetter;
-            fDeclarator = cast(Object) aGetter.ptr;
+			fDeclarator = cast(Object) aGetter.ptr;
 			updateAccess;
 		}
-        /// ditto
+		/// ditto
 		@property izPropGetter getter(){return fGetter;}	
 		/** 
 		 * Sets the property getter using a pointer to a direct data
@@ -236,20 +236,20 @@ struct izPropDescriptor(T)
 		{
 			fName = aName.dup;
 		}
-        /// ditto
+		/// ditto
 		@property string name()
 		{
 			return fName.idup;
 		}
-        /**
-         * Defines the object declaring the property.
-         */
-        @property void declarator(Object aDeclarator)
-        {
-            fDeclarator = aDeclarator;
-        }
-        /// ditto
-        @property Object declarator(){return fDeclarator;}
+		/**
+		 * Defines the object declaring the property.
+		 */
+		@property void declarator(Object aDeclarator)
+		{
+			fDeclarator = aDeclarator;
+		}
+		/// ditto
+		@property Object declarator(){return fDeclarator;}
 	}	
 }
 
@@ -277,7 +277,7 @@ version(unittest)
 			descrAi.setter()(5);
 			assert(a.i == 5);
 			assert(a.i == descrAi.getter()());
-            assert(descrAi.declarator is a);
+			assert(descrAi.declarator is a);
 			
 			auto refval = si(1,2,333);
 			auto b = new B;
@@ -294,14 +294,14 @@ version(unittest)
 
 template genPropFromField(propType, string propName, string propField)
 {
-    string genPropFromField()
-    {
-        return
-            "@property void "~ propName ~ "(" ~ propType.stringof ~ " aValue)" ~
-            "{ " ~ propField ~ " = aValue;} " ~
-            "@property " ~ propType.stringof ~ " " ~ propName ~
-            "(){ return " ~ propField ~ ";}" ;
-    }
+	string genPropFromField()
+	{
+		return
+			"@property void "~ propName ~ "(" ~ propType.stringof ~ " aValue)" ~
+			"{ " ~ propField ~ " = aValue;} " ~
+			"@property " ~ propType.stringof ~ " " ~ propName ~
+			"(){ return " ~ propField ~ ";}" ;
+	}
 }
 
 
@@ -313,7 +313,7 @@ template genStandardPropDescriptors()
 		foreach(T; izConstantSizeTypes)
 		{
 			//result ~= ("/// Describes an " ~ T.stringof ~ ".\r\n").dup; // https://issues.dlang.org/show_bug.cgi?id=648
-			result ~= ("alias " ~ T.stringof ~ "prop =  izPropDescriptor!(" ~ T.stringof ~ ")" ~ ";\r\n").dup;
+			result ~= ("alias " ~ T.stringof ~ "prop =	izPropDescriptor!(" ~ T.stringof ~ ")" ~ ";\r\n").dup;
 		}
 		return result;
 	}
@@ -338,7 +338,7 @@ class izPropertyBinder(T): izObject
 {
 	private
 	{
-        izDynamicList!(izPropDescriptor!T *) fToFree;
+		izDynamicList!(izPropDescriptor!T *) fToFree;
 		izDynamicList!(izPropDescriptor!T *) fItems;
 		izPropDescriptor!T *fSource;
 	}
@@ -347,21 +347,21 @@ class izPropertyBinder(T): izObject
 		this()
 		{
 			fItems = new izDynamicList!(izPropDescriptor!T *);
-            fToFree = new izDynamicList!(izPropDescriptor!T *);
+			fToFree = new izDynamicList!(izPropDescriptor!T *);
 		}
 		~this()
 		{
-            for(auto i = 0; i < fToFree.count; i++)
-            {
-                auto descr = fToFree[i];
-                if (descr) delete(descr);
-            }
+			for(auto i = 0; i < fToFree.count; i++)
+			{
+				auto descr = fToFree[i];
+				if (descr) delete(descr);
+			}
 			delete fItems;
-            delete fToFree;
+			delete fToFree;
 		}
 		/**
 		 * Add a property to the list.
-         * If the binder is not local then aProp should neither be a stack allocated descriptor.
+		 * If the binder is not local then aProp should neither be a stack allocated descriptor.
 		 */
 		ptrdiff_t addBinding(ref izPropDescriptor!T aProp, bool isSource = false)
 		{
@@ -369,17 +369,17 @@ class izPropertyBinder(T): izObject
 			return fItems.add(&aProp);
 		}
 
-        /**
+		/**
 		 * Add a new property to the list.
-         * The binder handles its life-time.
+		 * The binder handles its life-time.
 		 */
-        izPropDescriptor!T * newBinding()
-        {
-            auto result = new izPropDescriptor!T;
-            fItems.add(result);
-            fToFree.add(result);
-            return result;
-        }
+		izPropDescriptor!T * newBinding()
+		{
+			auto result = new izPropDescriptor!T;
+			fItems.add(result);
+			fToFree.add(result);
+			return result;
+		}
 
 		/**
 		 * Remove the aIndex-nth property from the list.
@@ -387,7 +387,7 @@ class izPropertyBinder(T): izObject
 		void removeBinding(size_t anIndex)
 		{
 			auto itm = fItems.extract(anIndex);
-            fToFree.remove(*itm);
+			fToFree.remove(*itm);
 		}
 		/**
 		 * Triggers the setter of each property.
@@ -589,36 +589,36 @@ private class izPropertyBinderTester
 
 unittest
 {
-    auto strSync = new izPropertyBinder!int;
+	auto strSync = new izPropertyBinder!int;
 
-    class a
-    {
-        private int fStr;
-        public @property str(int aValue){fStr = aValue;}
-        public @property int str(){return fStr;}
-    }
+	class a
+	{
+		private int fStr;
+		public @property str(int aValue){fStr = aValue;}
+		public @property int str(){return fStr;}
+	}
 
-    auto a0 = new a;
-    auto a1 = new a;
-    auto a2 = new a;
+	auto a0 = new a;
+	auto a1 = new a;
+	auto a2 = new a;
 
-    auto propa0str = strSync.newBinding;
-    propa0str.define(&a0.str,&a0.str);
-    auto propa1str = strSync.newBinding;
-    propa1str.define(&a1.str,&a1.str);
-    auto propa2str = strSync.newBinding;
-    propa2str.define(&a2.str,&a2.str);
+	auto propa0str = strSync.newBinding;
+	propa0str.define(&a0.str,&a0.str);
+	auto propa1str = strSync.newBinding;
+	propa1str.define(&a1.str,&a1.str);
+	auto propa2str = strSync.newBinding;
+	propa2str.define(&a2.str,&a2.str);
 
-    strSync.change(8);
+	strSync.change(8);
 
-    assert(a0.str == 8);
-    assert(a1.str == 8);
-    assert(a2.str == 8);
+	assert(a0.str == 8);
+	assert(a1.str == 8);
+	assert(a2.str == 8);
 
-    delete a0;
-    delete a1;
-    delete a2;
-    delete strSync;
+	delete a0;
+	delete a1;
+	delete a2;
+	delete strSync;
 
-    writeln("izPropertyBinder(T) passed the newBinding() test");
+	writeln("izPropertyBinder(T) passed the newBinding() test");
 }
