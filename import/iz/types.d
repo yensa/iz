@@ -120,7 +120,7 @@ if (is(CT == class))
  * Frees and invalidate a list of Object. 
  * *destruct()* is called for each item.
  * Params:
- * Objs = variadic list of Object instances.
+ * objs = variadic list of Object instances.
  */
 static void destruct(Objs...)(ref Objs objs)
 {

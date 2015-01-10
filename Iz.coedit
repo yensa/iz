@@ -3,10 +3,6 @@ object _1: TCEProject
   OptionsCollection = <  
     item
       name = 'release'
-      documentationOptions.generateDocumentation = True
-      documentationOptions.generateJSON = True
-      documentationOptions.DocumentationDirectory = 'doc'
-      documentationOptions.JSONFilename = 'doc\iz.json'
       messagesOptions.additionalWarnings = True
       outputOptions.binaryKind = staticlib
       outputOptions.inlining = True
@@ -24,8 +20,6 @@ object _1: TCEProject
     item
       name = 'debug'
       debugingOptions.debug = True
-      debugingOptions.addDInformations = True
-      debugingOptions.addCInformations = True
       debugingOptions.generateMapFile = True
       messagesOptions.depreciationHandling = silent
       messagesOptions.additionalWarnings = True
@@ -103,6 +97,7 @@ object _1: TCEProject
     'import\iz\serializer.d'
     'import\iz\observer.d'
     'import\iz\temp.d'
+    'import\iz\traits.d'
   )
   ConfigurationIndex = 2
 end
