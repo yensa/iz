@@ -82,7 +82,7 @@ public struct izSerNodeInfo
     izPtr   descriptor;
     ubyte[] value;
     char[]  name;
-    uint    level;
+    size_t  level;
     bool    isArray;
     bool    isDamaged;
     bool    isLastChild;
@@ -480,18 +480,18 @@ public enum izSerFormat
 izSerWriter newWriter(P...)(izSerFormat format, P params)
 {
     if (format == izSerFormat.binary)
-        return new izSerBinaryWriter(params);
+        return construct!izSerBinaryWriter(params);
     else if (format == izSerFormat.text)
-        return new izSerTextWriter(params);
+        return construct!izSerTextWriter(params);
     assert(false);
 }
 
 izSerReader newReader(P...)(izSerFormat format, P params)
 {
     if (format == izSerFormat.binary)
-        return new izSerBinaryReader(params);
+        return construct!izSerBinaryReader(params);
     else if (format == izSerFormat.text)
-        return new izSerTextReader(params);
+        return construct!izSerTextReader(params);
     assert(false);
 }
 
@@ -534,7 +534,7 @@ public class izSerializer
         void writeNode(izIstNode node)
         {
             auto writer = newWriter(fFormat, fCurrNode, fStream);
-            scope(exit) delete writer;
+            scope(exit) destruct(writer);
             //
             if (isSerObjectType(node.nodeInfo.type))
                 writer.writeObjectBeg;
@@ -556,12 +556,12 @@ public class izSerializer
     {  
         this()
         {
-            fRootNode = new izIstNode;
+            fRootNode = construct!izIstNode;
         }
         ~this()
         {
             fRootNode.deleteChildren;
-            delete fRootNode;
+            destruct(fRootNode);
         }         
               
   

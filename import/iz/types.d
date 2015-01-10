@@ -6,7 +6,7 @@ import
 import 
 	std.stdio, std.c.stdlib,
 	std.traits, std.typetuple, std.typecons;
-
+    
 /// iz pointer.
 alias izPtr = void*;
 
@@ -57,76 +57,98 @@ unittest
     assert(b == typeof(b).init);
 }
 
-/// protected object destructor
-static void demolish(O)(ref O o) if (is(O : Object))
+T heapAllocate(T, Args...) (Args args)
+if (is(T == class))
 {
-    if(!o) return;
-    delete o;
-    o = null;
+	import std.conv : emplace;
+	auto size = __traits(classInstanceSize, T);
+	auto memory = malloc(size)[0..size];
+	if(!memory) throw new Exception("Out of memory");
+	return emplace!(T, Args)(memory, args);
 }
 
-/// ditto
-static void demolish(Objs...)(ref Objs objs)
+void heapDeallocate(T)(ref T obj)
+if (is(T == class))
 {
-    foreach(ref o; objs)
-        o.demolish;
+	destroy(obj);
+	free(cast(void*)obj);
 }
 
-/// demolish syntactic counterpart for new
-T molish(T, A...)(A a)
-{
-    return new T(a);
-}
-
-unittest
-{
-    auto a = molish!Object;
-    a.demolish;
-    assert(!a);
-    a.demolish;
-    assert(!a);
-    a.demolish;
-
-    auto b = molish!Object;
-    auto c = molish!Object;
-    demolish(a,b,c);
-    assert(!a);
-    assert(!b);
-    assert(!c);
-    demolish(a,b,c);
-    assert(!a);
-    assert(!b);
-    assert(!c);
-}
-
-
-/**
- * This class allocator/deallocator is implemented in each super class.
- * Meaning that most of the IZ classes must be freed manually.
+/**  
+ * The static function construct returns a new, GC-free, class instance.
+ * Params:
+ * CT = a class type.
+ * a = variadic parameters passed to the constructor.
  */
-mixin template setClassGcFree()
+static CT construct(CT, A...)(A a) 
+if (is(CT == class))
 {
-	new(size_t sz)
-	{
-		auto p = malloc(sz);
-		if (!p) throw new OutOfMemoryError();
-		return p;
-	}
-	delete(izPtr p)
-	{
-		if (p) free(p);
-	}
+    version(none)
+    {
+        CT result = cast(CT) malloc(__traits(classInstanceSize, CT));
+        if (!result) throw new Exception("Out of memory");
+        
+        static if (__traits(hasMember, CT, "__ctor"))
+            return result.__ctor(a);
+        else return result;
+    }
+    else return heapAllocate!CT(a);
 }
-///
+       
+/** 
+ * The static function destruct frees and invalidate a class instance.
+ * Params:
+ * CT = a class type, likely to be infered by the *instance* parameter
+ * instance = an instance of type *CT*.
+ */
+static void destruct(CT)(ref CT instance) 
+if (is(CT == class))
+{
+    if (!instance) return;
+    version(none)
+    {
+        static if (__traits(hasMember, CT, "__dtor"))
+            instance.__dtor();
+        free(cast(void*)instance);
+        instance = null;
+    }
+    else heapDeallocate(instance);
+    instance = null;
+}   
+
+/** 
+ * Frees and invalidate a list of Object. 
+ * *destruct()* is called for each item.
+ * Params:
+ * Objs = variadic list of Object instances.
+ */
+static void destruct(Objs...)(ref Objs objs)
+{
+    foreach(ref obj; objs)
+        obj.destruct;
+} 
+
 unittest
 {
-	// myClass is GC-free
-	class myClass{
-		mixin setClassGcFree;
-		// however some members may not.
-		int[] someInts;
-	}
+    auto a = construct!Object;
+    a.destruct;
+    assert(!a);
+    a.destruct;
+    assert(!a);
+    a.destruct;
+
+    auto b = construct!Object;
+    auto c = construct!Object;
+    destruct(a,b,c);
+    assert(!a);
+    assert(!b);
+    assert(!c);
+    destruct(a,b,c);
+    assert(!a);
+    assert(!b);
+    assert(!c);
 }
+
 
 /**
  * The most simple IZ object.
@@ -134,18 +156,22 @@ unittest
  */
 class izObject
 {
-	mixin setClassGcFree;
+    /// default, forwarded, constructor.
+    //this(){}
+    
+    /// ditto
+    //this(A...)(A a){}
+    
+    /// default, forwarded, destructor.
+    //~this(){}
 
-	// note: this is meaningless in console-unit tests but verified in a real program
-	// (the test also pass without injecting setClassGcFree because it seems dmd can allocate on the stack in UT mode ?).
+    /// Example: creates an izObject, verifies that it's not managed and destructs it.
 	unittest
 	{
-		auto foo = new izObject;
-		scope(exit) delete foo;
-		assert( GC.addrOf(&foo) == null );
-
-        auto Foo = molish!izObject;
-        Foo.demolish;
+		izObject foo = construct!izObject;
+        assert( GC.addrOf(cast(void*)foo) == null );
+		scope(exit) foo.destruct;
+		assert( GC.addrOf(cast(void*)foo) == null );
 
 		writeln("izObject passed the tests");
 	}

@@ -272,7 +272,7 @@ version(unittest)
 	{
 		unittest
 		{	
-			auto a = new A;
+			auto a = construct!A;
 			auto descrAi = izPropDescriptor!int(&a.i,&a.i,"I");
 			descrAi.setter()(5);
 			assert(a.i == 5);
@@ -280,19 +280,20 @@ version(unittest)
 			assert(descrAi.declarator is a);
 			
 			auto refval = si(1,2,333);
-			auto b = new B;
+			auto b = construct!B;
 			auto descrBi = izPropDescriptor!si(&b.i,&b.i,"I");
 			descrBi.setter()(refval);
 			assert(b.i.e == 333);
 			assert(b.i.e == descrBi.getter()().e);
 		
+            destruct(a,b);
 			writeln("izPropDescriptor(T) passed the tests");
 		}	
 	}
 }
 
 
-template genPropFromField(propType, string propName, string propField)
+public template genPropFromField(propType, string propName, string propField)
 {
 	string genPropFromField()
 	{
@@ -304,19 +305,13 @@ template genPropFromField(propType, string propName, string propField)
 	}
 }
 
-
-template genStandardPropDescriptors()
+private char[] genStandardPropDescriptors()
 {
-	char[] genStandardPropDescriptors()
-	{
-		char[] result;
-		foreach(T; izConstantSizeTypes)
-		{
-			//result ~= ("/// Describes an " ~ T.stringof ~ ".\r\n").dup; // https://issues.dlang.org/show_bug.cgi?id=648
-			result ~= ("alias " ~ T.stringof ~ "prop =	izPropDescriptor!(" ~ T.stringof ~ ")" ~ ";\r\n").dup;
-		}
-		return result;
-	}
+	char[] result;
+	foreach(T; izConstantSizeTypes)
+		result ~= ("public alias " ~ T.stringof ~ "prop = izPropDescriptor!(" ~ 
+            T.stringof ~ ")" ~ ";\r\n").dup;
+	return result;
 }
 
 /// Property descriptors for the built-in types defined in izConstantSizeTypes.
@@ -346,8 +341,8 @@ class izPropertyBinder(T): izObject
 	{
 		this()
 		{
-			fItems = new izDynamicList!(izPropDescriptor!T *);
-			fToFree = new izDynamicList!(izPropDescriptor!T *);
+			fItems = construct!(izDynamicList!(izPropDescriptor!T *));
+			fToFree = construct!(izDynamicList!(izPropDescriptor!T *));
 		}
 		~this()
 		{
@@ -356,8 +351,8 @@ class izPropertyBinder(T): izObject
 				auto descr = fToFree[i];
 				if (descr) delete(descr);
 			}
-			delete fItems;
-			delete fToFree;
+			fItems.destruct;
+			fToFree.destruct;
 		}
 		/**
 		 * Add a property to the list.
@@ -435,7 +430,7 @@ private class izPropertyBinderTester
 		alias intprops = izPropertyBinder!int;
 		alias floatprops = izPropertyBinder!float;
 
-		class foo
+		class Foo : izObject
 		{
 			private
 			{
@@ -448,13 +443,13 @@ private class izPropertyBinderTester
 			{
 				this()
 				{
-					fASlaves = new intprops;
-					fBSlaves = new floatprops;
+					fASlaves = construct!intprops;
+					fBSlaves = construct!floatprops;
 				}
 				~this()
 				{
-					delete fASlaves;
-					delete fBSlaves;
+				    fASlaves.destruct;
+				    fBSlaves.destruct;
 				}
 				void A(int value)
 				{
@@ -484,7 +479,7 @@ private class izPropertyBinderTester
 			}
 		}
 
-		class foosync
+		class FooSync: izObject
 		{
 			private
 			{
@@ -500,17 +495,17 @@ private class izPropertyBinderTester
 			}
 		}
 
-		class bar: Object
+		class Bar: izObject
 		{
 			public int A;
 			public float B;
 		}
 
 		// 1 master, 2 slaves
-		auto a0 = new foo;
-		auto a1 = new foosync;
-		auto a2 = new foosync;
-		auto a3 = new bar;
+		auto a0 = construct!Foo;
+		auto a1 = construct!FooSync;
+		auto a2 = construct!FooSync;
+		auto a3 = construct!Bar;
 
 		auto prp1 = intprop(&a1.A,&a1.A);
 		a0.AddABinding(prp1);
@@ -547,14 +542,13 @@ private class izPropertyBinderTester
 		assert( a3.B == a0.B);
 
 		// interdependent bindings
-		auto m0 = new foo;
-		auto m1 = new foo;
-		auto m2 = new foo;
+		auto m0 = construct!Foo;
+		auto m1 = construct!Foo;
+		auto m2 = construct!Foo;
 
 		intprop mprp0 = intprop(&m0.A, &m0.A);
 		intprop mprp1 = intprop(&m1.A, &m1.A);
 		intprop mprp2 = intprop(&m2.A, &m2.A);
-
 
 		m0.AddABinding(mprp1);
 		m0.AddABinding(mprp2);
@@ -575,13 +569,13 @@ private class izPropertyBinderTester
 		assert( m1.A == m2.A);
 		assert( m0.A == m2.A);
 
-		delete a0;
-		delete a1;
-		delete a2;
-		delete a3;
-		delete m0;
-		delete m1;
-		delete m2;
+		a0.destruct;
+		a1.destruct;
+		a2.destruct;
+		a3.destruct;
+		m0.destruct;
+		m1.destruct;
+		m2.destruct;
 
 		writeln("izPropertyBinder(T) passed the tests");
 	}
@@ -589,18 +583,18 @@ private class izPropertyBinderTester
 
 unittest
 {
-	auto strSync = new izPropertyBinder!int;
+	auto strSync = construct!(izPropertyBinder!int);
 
-	class a
+	class A : izObject
 	{
 		private int fStr;
 		public @property str(int aValue){fStr = aValue;}
 		public @property int str(){return fStr;}
 	}
 
-	auto a0 = new a;
-	auto a1 = new a;
-	auto a2 = new a;
+	auto a0 = construct!A;
+	auto a1 = construct!A;
+	auto a2 = construct!A;
 
 	auto propa0str = strSync.newBinding;
 	propa0str.define(&a0.str,&a0.str);
@@ -615,10 +609,10 @@ unittest
 	assert(a1.str == 8);
 	assert(a2.str == 8);
 
-	delete a0;
-	delete a1;
-	delete a2;
-	delete strSync;
+	a0.destruct;
+	a1.destruct;
+	a2.destruct;
+	strSync.destruct;
 
 	writeln("izPropertyBinder(T) passed the newBinding() test");
 }

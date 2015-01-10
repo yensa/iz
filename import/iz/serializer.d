@@ -762,13 +762,13 @@ class izMasterSerializer: izObject
 	{
 		this()
 		{
-			fRoot = new izIstObjectNode;
+			fRoot = construct!izIstObjectNode;
 		}
 
 		~this()
 		{
 			fRoot.deleteChildren;
-			fRoot.demolish;
+			fRoot.destruct;
 		}
 
 		/**
@@ -848,8 +848,8 @@ class izMasterSerializer: izObject
 			fState = izSerializationState.writing;
 			scope(exit) fState = izSerializationState.none;
             // TODO
-            auto bld = new izSerTreeBuilder;
-            fRoot.demolish;
+            auto bld = construct!izSerTreeBuilder;
+            fRoot.destruct;
             fRoot = bld.rebuildIST(aStream, fFormat);
 		}
 
@@ -971,19 +971,19 @@ version(unittest)
             @property izSerializable U(){return eventRef;}
 			this()
 			{
-				fg = new foo;
-                fb0 = new baz;
-                fb1 = new baz;
+				fg = construct!foo;
+                fb0 = construct!baz;
+                fb1 = construct!baz;
 
                 referenceMan.storeType!baz;
                 referenceMan.storeReference!(baz)(&fb0,498754UL);
                 referenceMan.storeReference!(baz)(&fb1,127856UL);
-                bazRef = new izSerializableReference;
+                bazRef = construct!izSerializableReference;
 
                 SrcEvent = &anAssignableEvent; // this assignment is "pseudo const", used as source because...
                 referenceMan.storeType!izEvent;
                 referenceMan.storeReference!(izEvent)(&SrcEvent,184369UL); // ...cant pass &&anAssignableEvent
-                eventRef = new izSerializableReference;
+                eventRef = construct!izSerializableReference;
 
                 GDescr.define(&NullObjSetter, &G, "G");
                 XDescr.define(&NullObjSetter, &X, "X");
@@ -992,11 +992,11 @@ version(unittest)
 			}
 			~this()
 			{
-				fg.demolish;
-                fb0.demolish;
-                fb1.demolish;
-                eventRef.demolish;
-                bazRef.demolish;
+				fg.destruct;
+                fb0.destruct;
+                fb1.destruct;
+                eventRef.destruct;
+                bazRef.destruct;
 			}
 			override void declareProperties(izMasterSerializer aSerializer)
 			{
@@ -1025,9 +1025,9 @@ version(unittest)
 	unittest
 	{
 
-		auto Bar = new bar;
-		auto str = new izMemoryStream;
-		auto ser = new izMasterSerializer;
+		auto Bar = construct!bar;
+		auto str = construct!izMemoryStream;
+		auto ser = construct!izMasterSerializer;
 
 		Bar.A = 8;
 		Bar.B = 4;
@@ -1045,9 +1045,9 @@ version(unittest)
 
 		scope(exit)
 		{
-			Bar.demolish;
-			ser.demolish;
-			str.demolish;
+			Bar.destruct;
+			ser.destruct;
+			str.destruct;
 		}
 
 //----bin

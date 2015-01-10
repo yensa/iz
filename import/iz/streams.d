@@ -313,9 +313,8 @@ unittest
 {
     ubyte _a[] = [0x11,0x22,0x33,0x44];
     ubyte _b[] = [0x55,0x66,0x77,0x88];
-    auto a = molish!izMemoryStream;
-    auto b = molish!izMemoryStream;
-    scope(exit) demolish(a, b);
+    auto a = construct!izMemoryStream;
+    auto b = construct!izMemoryStream;
     a.write(_a.ptr, 4);
     b.write(_b.ptr, 4);
     a ~= b;
@@ -325,6 +324,8 @@ unittest
     assert(a.size == 8);
     version(LittleEndian) assert(g == 0x8877665544332211);
     version(BigEndian) assert(g == 0x1122334455667788);
+    a.destruct;
+    b.destruct;
 }
 
 /**
@@ -638,12 +639,12 @@ public class izPipeStream: izSystemStream
     {
         static izPipeStream createAsServer(in char[] aPipeName, uint pipeAccess = pdAll)
         {
-            return new izPipeStream(aPipeName, pipeAccess, pipeServer);
+            return construct!izPipeStream(aPipeName, pipeAccess, pipeServer);
         }
 
         static izPipeStream createAsClient(in char[] aPipeName, uint pipeAccess = acAll)
         {
-            return new izPipeStream(aPipeName, pipeAccess, pipeClient);
+            return construct!izPipeStream(aPipeName, pipeAccess, pipeClient);
         }
 
         /**
@@ -1051,8 +1052,8 @@ unittest
 {
     // izMemoryStream.setMemory
     izPtr mem = malloc(4096);
-    auto str = molish!izMemoryStream;
-    scope(exit) demolish(str);
+    auto str = construct!izMemoryStream;
+    scope(exit) destruct(str);
     //
     str.size = 128;
     str.position = 128;
@@ -1080,10 +1081,10 @@ version(unittest)
     unittest
     {
         auto sz = 0x1_FFFF_FFFFUL;
-        auto huge = new izFileStream("huge.bin");
+        auto huge = construct!izFileStream("huge.bin");
         scope(exit)
         {
-            huge.demolish;
+            huge.destruct;
             std.stdio.remove("huge.bin");
         }
         huge.size = sz;
@@ -1094,14 +1095,14 @@ version(unittest)
     version(Windows) unittest
     {
         // must be tested with several processes
-        auto pipename = r"\\.\pipe\apipenname";
+        /*auto pipename = r"\\.\pipe\apipenname";
         auto srv = izPipeStream.createAsServer(pipename);
         auto clt1 = izPipeStream.createAsClient(pipename);
         scope(exit)
         {
-            clt1.demolish;
-            srv.demolish;
-        }
+            clt1.destruct;
+            srv.destruct;
+        }*/
     }
 
 	class commonStreamTester(T, A...)
@@ -1109,8 +1110,8 @@ version(unittest)
 		unittest
 		{
 			uint len = 25_000;
-			auto str = new T(A);
-			scope (exit)  str.demolish;
+			auto str = construct!T(A);
+			scope (exit)  str.destruct;
 			for (int i = 0; i < len; i++)
 			{
 				str.write(&i, i.sizeof);
@@ -1136,10 +1137,10 @@ version(unittest)
 
             static if (is(T == izFileStream))
             {
-			    auto strcpy = new T("filestream2.txt");
+			    auto strcpy = construct!T("filestream2.txt");
             }
-            else auto strcpy = new T(A);
-			scope (exit) strcpy.demolish;
+            else auto strcpy = construct!T(A);
+			scope (exit) strcpy.destruct;
 			strcpy.size = 100000;
 			assert(str.size == len * 4);
 			strcpy.loadFromStream(str);

@@ -10,7 +10,7 @@ object _1: TCEProject
       messagesOptions.additionalWarnings = True
       outputOptions.binaryKind = staticlib
       outputOptions.inlining = True
-      outputOptions.boundsCheck = offAlways
+      outputOptions.boundsCheck = onAlways
       outputOptions.optimizations = True
       outputOptions.release = True
       pathsOptions.outputFilename = 'lib\iz.lib'
@@ -41,8 +41,8 @@ object _1: TCEProject
     end  
     item
       name = 'unittest'
-      debugingOptions.debug = True
       messagesOptions.additionalWarnings = True
+      messagesOptions.showColumnsNumber = True
       outputOptions.boundsCheck = onAlways
       outputOptions.addMain = True
       outputOptions.unittest = True
@@ -80,6 +80,7 @@ object _1: TCEProject
       name = 'dev-newser'
       debugingOptions.debug = True
       messagesOptions.additionalWarnings = True
+      outputOptions.boundsCheck = onAlways
       outputOptions.versionIdentifiers.Strings = (
         'coeditmessages'
         'devnewser'
@@ -103,5 +104,5 @@ object _1: TCEProject
     'import\iz\observer.d'
     'import\iz\temp.d'
   )
-  ConfigurationIndex = 0
+  ConfigurationIndex = 2
 end

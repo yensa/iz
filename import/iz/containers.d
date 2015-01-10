@@ -478,7 +478,7 @@ interface izList(T)
 	{
 		final T addNewItem(A...)(A a)
 		{
-		    T result = izAllocObject!T(a);
+		    T result = construct!T(a);
 			add(result);
 			return result;
 		}
@@ -1211,8 +1211,8 @@ version(unittest)
 			}
 
 			s someS[200];
-			sList SList = new sList;
-			scope(exit) SList.demolish;
+			sList SList = construct!sList;
+			scope(exit) SList.destruct;
 			SList.onChange = &listChangedProc;
 			changeMonitor = false;
 			for (auto i = 0; i < someS.length; i++)
@@ -1256,8 +1256,8 @@ version(unittest)
 			alias cList = izStaticList!c;
 
 			c someC[200];
-			cList CList = new cList;
-			scope(exit) CList.demolish;
+			cList CList = construct!cList;
+			scope(exit) CList.destruct;
 			CList.onChange = &listChangedProc;
 			changeMonitor = false;
 			for (auto i = 0; i < someC.length; i++)
@@ -1326,8 +1326,8 @@ version(unittest)
 			}
 
 			s someS[200];
-			sList SList = new sList;
-			scope(exit) SList.demolish;
+			sList SList = construct!sList;
+			scope(exit) SList.destruct;
 			SList.onChange = &listChangedProc;
 			changeMonitor = false;
 			for (auto i = 0; i < someS.length; i++)
@@ -1371,8 +1371,8 @@ version(unittest)
 			alias cList = izStaticList!c;
 
 			c someC[200];
-			cList CList = new cList;
-			scope(exit) CList.demolish;
+			cList CList = construct!cList;
+			scope(exit) CList.destruct;
 			CList.onChange = &listChangedProc;
 			changeMonitor = false;
 			for (auto i = 0; i < someC.length; i++)
@@ -2152,7 +2152,8 @@ version(unittest)
 	{
 		unittest
 		{
-			auto a = new linkedBarTest;
+			auto a = construct!linkedBarTest;
+            scope(exit) destruct(a);
 			assert(cast(izTreeItem)a);
 			writeln("izMakeLinkedClass passed the tests");
 		}
@@ -2330,10 +2331,10 @@ private class foo: izObject, izTreeItem
 		assert(Root.children[1].children[3].childrenCount == 3);
 		assert(Root.children[1].children[3].children[0].level == 3);
 
-        auto str = new izMemoryStream;
+        auto str = construct!izMemoryStream;
         Root.saveToStream(str);
         //str.saveToFile(r"C:\izTreeNodes.txt");
-        str.demolish;
+        str.destruct;
 
 		Root.deleteChildren;
 

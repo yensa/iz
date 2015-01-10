@@ -152,25 +152,28 @@ static class referenceMan
 
 unittest
 {
+    import iz.types;
+    
     alias delegate1 = ubyte delegate(long param);
     alias delegate2 = short delegate(uint param);
-    class foo{int aMember;}
+    class Foo{int aMember;}
 
     assert( !referenceMan.isTypeStored!delegate1 );
     assert( !referenceMan.isTypeStored!delegate2 );
-    assert( !referenceMan.isTypeStored!foo );
+    assert( !referenceMan.isTypeStored!Foo );
 
     referenceMan.storeType!delegate1;
     referenceMan.storeType!delegate2;
-    referenceMan.storeType!foo;
+    referenceMan.storeType!Foo;
 
     assert( referenceMan.isTypeStored!delegate1 );
     assert( referenceMan.isTypeStored!delegate2 );
-    assert( referenceMan.isTypeStored!foo );
+    assert( referenceMan.isTypeStored!Foo );
 
-    auto f1 = new foo;
-    auto f2 = new foo;
-    auto f3 = new foo;
+    auto f1 = construct!Foo;
+    auto f2 = construct!Foo;
+    auto f3 = construct!Foo;
+    scope(exit) destruct(f1,f2,f3);
 
     assert( !referenceMan.isReferenced(&f1) );
     assert( !referenceMan.isReferenced(&f2) );
@@ -184,9 +187,9 @@ unittest
     referenceMan.storeReference( &f2, 15UL );
     referenceMan.storeReference( &f3, 20UL );
 
-    assert( referenceMan.reference!foo(10UL) == &f1);
-    assert( referenceMan.reference!foo(15UL) == &f2);
-    assert( referenceMan.reference!foo(20UL) == &f3);
+    assert( referenceMan.reference!Foo(10UL) == &f1);
+    assert( referenceMan.reference!Foo(15UL) == &f2);
+    assert( referenceMan.reference!Foo(20UL) == &f3);
 
     assert( referenceMan.referenceID(&f1) == 10UL);
     assert( referenceMan.referenceID(&f2) == 15UL);
@@ -198,15 +201,15 @@ unittest
 
     referenceMan.removeReference(&f1);
     referenceMan.removeReference(&f2);
-    referenceMan.removeReference!foo(20UL);
+    referenceMan.removeReference!Foo(20UL);
 
     assert( !referenceMan.isReferenced(&f1) );
     assert( !referenceMan.isReferenced(&f2) );
     assert( !referenceMan.isReferenced(&f3) );
 
-    referenceMan.removeReference!foo(10UL);
+    referenceMan.removeReference!Foo(10UL);
     referenceMan.removeReference(&f2);
-    referenceMan.removeReference!foo(20UL);
+    referenceMan.removeReference!Foo(20UL);
 
     writeln("referenceMan passed the tests");
 }
