@@ -4,6 +4,7 @@ import std.stdio;
 import std.traits;
 import std.typetuple;
 
+
 /**
  * Checks if the methods of an interface can be found within a structure.
  *
@@ -138,4 +139,48 @@ version(unittest)
         
         writeln( "isCompatible!(interface,struct) passed the tests");
     }
+}
+
+
+private string getDelegates(I)()
+if (is(I==interface))
+{
+    string result;
+    foreach(member; __traits(allMembers, I))
+    {
+        alias DelegateType = typeof(&__traits(getMember, I, member));
+        result ~= DelegateType.stringof ~ " " ~ member ~ "; ";    
+    }
+    return result;
+}
+ 
+struct DelegatedInterface(I)
+if (is(I==interface))
+{
+    void* contextPtr;
+    mixin(getDelegates!I);
+}
+
+DelegatedInterface!I * getDelegatedInterface(I,S)(S s)
+if (isCompatible_short!(I, S))
+{
+    return null;
+}
+
+DelegatedInterface!I * getDelegatedInterface(I,C)(C c)
+if (is(C : I))
+{
+    return null;
+}
+
+
+
+unittest
+{
+    import std.stdio;
+    interface IZ {void a(int p); void b(byte p);}
+    
+    assert(getDelegates!IZ == "void function(int p) a; void function(byte p) b; ");
+    
+    alias IZDelegatedInterface = DelegatedInterface!IZ; 
 }
