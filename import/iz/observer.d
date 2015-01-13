@@ -19,8 +19,9 @@ interface izSubject
 }
 
 /**
- * izCustomSubject handles a list of Obsevers of type OT.
- * Even if both types are filtered, OT should rather be an interface than a class.
+ * izCustomSubject handles a list of obsever.
+ * Params:
+ * OT = the observer type, either an interface or a class.
  */
 class izCustomSubject(OT): izObject, izSubject
 if (is(OT == interface) || is(OT == class))
@@ -53,9 +54,9 @@ if (is(OT == interface) || is(OT == class))
 
         void addObserver(Object anObserver)
         {
-            auto obs = cast(OT) anObserver;
-            if (!obs)
+            if (!acceptObserver(anObserver))
                 return;
+            auto obs = cast(OT) anObserver;
             if (fObservers.find(obs) != -1)
                 return;
             fObservers.add(obs);
@@ -69,10 +70,8 @@ if (is(OT == interface) || is(OT == class))
 
         void removeObserver(Object anObserver)
         {
-            if (!acceptObserver(anObserver))
-                return;
             auto obs = cast(OT) anObserver;
-            fObservers.remove(obs);
+            if (obs) fObservers.remove(obs);
         }
     }
 }
@@ -351,4 +350,135 @@ version(unittest)
         import std.stdio;
         writeln( "izObserverInterconnector passed the tests");
     }
+}
+
+
+/**
+ * interface for an observer based on an enum.
+ * Params:
+ * E = an enum.
+ * T = the type of the parameter an observer is monitoring.
+ */
+interface izEnumBasedObserver(E, T...)
+if (is(E == enum))
+{
+    /**
+     * The method called by a subject.
+     * Params:
+     * notification = the E member allowing to distinguish the "call reason".
+     * t = the parameters the observer is interested in.
+     */
+    void subjectNotification(E notification, T t);   
+}
+
+/**
+ * izCustomSubject handles a list of obsever.
+ * This version only accept an observer if it's an izEnumBasedObserver.
+ * Params:
+ * E = an enum.
+ * T = the variadic list of parameter types used in the notification. 
+ */
+class izCustomSubject(E, T...): izObject, izSubject 
+if (is(E == enum))
+{
+    protected
+    {
+        alias ObserverType = izEnumBasedObserver!(E,T);
+        izDynamicList!ObserverType fObservers;
+    }
+    public
+    {
+        this()
+        {
+            fObservers = construct!(izDynamicList!ObserverType);
+        }
+
+        ~this()
+        {
+            fObservers.destruct;
+        }
+
+        void updateObservers()
+        {
+            /*virtual: send all values*/
+        }
+
+        bool acceptObserver(Object anObserver)
+        {
+            return (cast(ObserverType) anObserver !is null);
+        }
+
+        void addObserver(Object anObserver)
+        {
+            auto obs = cast(ObserverType) anObserver;
+            if (!obs)
+                return;
+            if (fObservers.find(obs) != -1)
+                return;
+            fObservers.add(obs);
+        }
+
+        void addObservers(Objs...)(Objs objs)
+        {
+            foreach(obj; objs)
+                addObserver(obj);
+        }
+
+        void removeObserver(Object anObserver)
+        {
+            auto obs = cast(ObserverType) anObserver;
+            if (!obs)
+                return;
+            fObservers.remove(obs);
+        }
+    }
+} 
+
+unittest
+{
+    enum DocumentNotification{opening, cloding, saving, changed}
+    
+    class DocSubject : izCustomSubject!(DocumentNotification, izPtr, izPtr)
+    {
+        void notify(DocumentNotification dn)
+        {
+            foreach(obs;fObservers)
+                (cast(ObserverType) obs)
+                    .subjectNotification(dn, null, null);
+        }
+    }
+    class DocObserver: izEnumBasedObserver!(DocumentNotification, izPtr, izPtr)
+    {
+        DocumentNotification lastNotification;
+        void subjectNotification(DocumentNotification notification, izPtr data1, izPtr data2)
+        {
+            lastNotification = notification;
+        }
+    }   
+    
+    auto inter = construct!izObserverInterconnector;
+    auto subj = construct!DocSubject;
+    auto obs1 = construct!DocObserver;
+    auto obs2 = construct!DocObserver;
+    auto obs3 = construct!DocObserver;
+    
+    scope(exit) destruct(inter, subj, obs1, obs2, obs3);
+    
+    inter.addSubject(subj);
+    inter.addObservers(obs1, obs2, obs3);
+    inter.addObservers(obs1, obs2, obs3);
+    assert(inter.fObservers.count == 3);
+    assert(subj.fObservers.count == 3);
+    
+    subj.notify(DocumentNotification.changed);
+    assert(obs1.lastNotification == DocumentNotification.changed);
+    assert(obs2.lastNotification == DocumentNotification.changed);
+    assert(obs3.lastNotification == DocumentNotification.changed);
+    subj.notify(DocumentNotification.opening);
+    assert(obs1.lastNotification == DocumentNotification.opening);
+    assert(obs2.lastNotification == DocumentNotification.opening);
+    assert(obs3.lastNotification == DocumentNotification.opening);
+    
+    import std.stdio;
+    writeln( "izEnumBasedObserver passed the tests");       
 }
