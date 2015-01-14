@@ -58,7 +58,7 @@ enum izSerializationFormat {
 
 
 /// Build the IST from a document
-class izSerTreeBuilder: izObject
+class izSerTreeBuilder
 {
     private
     {
@@ -246,7 +246,7 @@ struct unreadProperty
 /**
  * Prepares an izIstNode.
  */
-class izPreIstNode: izObject, izTreeItem
+class izPreIstNode: izTreeItem
 {
 	mixin izTreeItemAccessors;
 	abstract void write(izStream aStream, izSerializationFormat aFormat);
@@ -747,7 +747,7 @@ enum izSerializationState
  * It's based on the idea of an "intermediate representation".
  * which is not fully implemented.
  */
-class izMasterSerializer: izObject
+class izMasterSerializer
 {
 	private
 	{
@@ -963,7 +963,7 @@ version(unittest)
 			izPropDescriptor!izSerializable GDescr;
             izPropDescriptor!izSerializable XDescr;
             izPropDescriptor!izSerializable UDescr;
-            void anAssignableEvent(izObject aNotifier){writeln("shhhhhhhh...");}
+            void anAssignableEvent(Object aNotifier){writeln("shhhhhhhh...");}
 		public:
 			@property void NullObjSetter(izSerializable value){}
 			@property izSerializable G(){return fg;}

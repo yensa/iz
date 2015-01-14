@@ -1,6 +1,6 @@
 module iz.streams;
 
-import core.exception, std.exception;
+import core.exception;
 import std.stdio, std.string, std.c.stdlib: malloc, free, realloc;
 import core.stdc.string: memcpy, memmove;
 import std.digest.md, std.conv;
@@ -144,7 +144,10 @@ version (Posix)
     }
 }
 
-/// Enumerates the possible streams seek modes.
+/**
+ * Enumerates the possible streams seek modes.
+ * triggers this ICE: https://issues.dlang.org/show_bug.cgi?id=13975
+ */
 public enum izSeekMode {
     beg = skBeg, /// seek from the beginning. 
     cur = skCur, /// seek from the current position.
@@ -282,8 +285,12 @@ public interface izStream
 }
 
 /**
- * An izStream to izStream copier.
- * It preserves aSource initial position.
+ * Copies the content of an _izStream_ to another one.
+ * The position in the source is preserved.
+ *
+ * Params:
+ * aSource = the _izStream_ instance whose content will be copied.
+ * aTarger = the _izStream_ instance whose content will be replaced.
  */
 public void copyStream(izStream aSource, izStream aTarget)
 {
@@ -329,11 +336,11 @@ unittest
 }
 
 /**
- * Unspecialized stream class. Descendant are all some
+ * Unspecialized stream class. Descendants are all some
  * system stream (based on a file handle).
  * This class is not directly usable.
  */
-package class izSystemStream: izObject, izStream, izStreamPersist
+package class izSystemStream: izStream, izStreamPersist
 {
     private
     {
@@ -493,8 +500,7 @@ package class izSystemStream: izObject, izStream, izStreamPersist
 
 /**
  * System stream specialized into reading and writing files, including huge ones
- * (up to 2^64 bytes). Various constructors are avalaible, providing predefined
- * sharing and access options.
+ * (up to 2^64 bytes). Several constructors are avalaible with predefined options. 
  */
 public class izFileStream: izSystemStream
 {
@@ -624,9 +630,6 @@ public class izFileStream: izSystemStream
 public uint pipeServer = 0;
 public uint pipeClient = 1;
 
-/**
- * System stream specialized into reading and writing from a named pipe.
- */
 public class izPipeStream: izSystemStream
 {
     private
@@ -741,7 +744,7 @@ public class izPipeStream: izSystemStream
  * Its practical size limit is damped by the amount of remaining DRAM.
  * This limit is itself reduced by the memory fragmentation. 
  */
-public class izMemoryStream: izObject, izStream, izStreamPersist, izFilePersist8
+public class izMemoryStream: izStream, izStreamPersist, izFilePersist8
 {
 	private
 	{
@@ -1095,14 +1098,14 @@ version(unittest)
     version(Windows) unittest
     {
         // must be tested with several processes
-        /*auto pipename = r"\\.\pipe\apipenname";
+        auto pipename = r"\\.\pipe\apipenname";
         auto srv = izPipeStream.createAsServer(pipename);
         auto clt1 = izPipeStream.createAsClient(pipename);
         scope(exit)
         {
             clt1.destruct;
             srv.destruct;
-        }*/
+        }
     }
 
 	class commonStreamTester(T, A...)

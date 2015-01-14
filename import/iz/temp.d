@@ -265,7 +265,7 @@ void setNodeInfo(T)(izSerNodeInfo * nodeInfo, izPropDescriptor!T * descriptor)
 }
 
 /// IST node
-public class izIstNode: izObject, izTreeItem
+public class izIstNode : izTreeItem
 {
     mixin izTreeItemAccessors;
     private izSerNodeInfo fNodeInfo;

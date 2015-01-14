@@ -23,7 +23,7 @@ interface izSubject
  * Params:
  * OT = the observer type, either an interface or a class.
  */
-class izCustomSubject(OT): izObject, izSubject
+class izCustomSubject(OT): izSubject
 if (is(OT == interface) || is(OT == class))
 {
     protected
@@ -378,7 +378,7 @@ if (is(E == enum))
  * E = an enum.
  * T = the variadic list of parameter types used in the notification. 
  */
-class izCustomSubject(E, T...): izObject, izSubject 
+class izCustomSubject(E, T...) : izSubject 
 if (is(E == enum))
 {
     protected
@@ -436,7 +436,7 @@ if (is(E == enum))
 
 unittest
 {
-    enum DocumentNotification{opening, cloding, saving, changed}
+    enum DocumentNotification{opening, closing, saving, changed}
     
     class DocSubject : izCustomSubject!(DocumentNotification, izPtr, izPtr)
     {
