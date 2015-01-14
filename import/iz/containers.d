@@ -20,7 +20,7 @@ import iz.types, iz.streams;
  * - concatenation.
  * - assign from built-in arrays slices.
  */
-struct izArray(T)
+public struct izArray(T)
 {
 	private
 	{
@@ -443,13 +443,13 @@ private class izArrayTester
  * izContainerChangeKind represents the message kinds a container
  * can emit (either by assignable event or by over-ridable method).
  */
-enum izContainerChangeKind {add,change,remove};
+public enum izContainerChangeKind {add, change, remove};
 
 /**
  * TODO:
  * - opApply ref or not according to T (to store structs w/o using a ptr).
  */
-interface izList(T)
+public interface izList(T)
 {
 	alias izListNotification = void delegate(Object aList, izContainerChangeKind aChangeKind);
 
@@ -557,7 +557,7 @@ interface izList(T)
 	 * Tries to extract the anIndex-nth item from the list.
 	 * Returns the item or null if the removal fails.
 	 */
-	T* extract(size_t anIndex);
+	T extract(size_t anIndex);
 
     /**
      * Removes the items.
@@ -588,7 +588,7 @@ interface izList(T)
  * - removeFirst/removeLast.
  * - extract return value.
  */
-class izStaticList(T): izObject, izList!T
+public class izStaticList(T): izList!T
 {
 	private
 	{
@@ -760,9 +760,9 @@ class izStaticList(T): izObject, izList!T
 			return result;
 		}
 
-		T* extract(size_t anIndex)
+		T extract(size_t anIndex)
 		{
-            T* result = null;
+            T result = fItems[anIndex];
 			if (anIndex == fItems.length-1)
             {
                 fItems.shrink;
@@ -780,7 +780,7 @@ class izStaticList(T): izObject, izList!T
 				memmove(fromPtr, fromPtr + T.sizeof, (fItems.length - anIndex) * T.sizeof);
 				fItems.shrink;
 			}
-            hasChanged(izContainerChangeKind.remove,result);
+            hasChanged(izContainerChangeKind.remove, &result);
             return result; // ! result is undefined.
 		}
 
@@ -811,7 +811,7 @@ class izStaticList(T): izObject, izList!T
 /**
  * Payload for the dynamic list.
  */
-template dlistPayload(T)
+private template dlistPayload(T)
 {
 	private static const prevOffs = 0;
 	private static const nextOffs = size_t.sizeof;
@@ -875,7 +875,7 @@ template dlistPayload(T)
  * - extract return value.
  * - removeFirst/removeLast.
  */
-class izDynamicList(T): izObject, izList!T
+public class izDynamicList(T): izList!T
 {
 	private
 	{
@@ -1126,13 +1126,13 @@ class izDynamicList(T): izObject, izList!T
 		}
 
         @trusted
-		T* extract(size_t anIndex)
+		T extract(size_t anIndex)
 		{
-			T* result = null;
+			T result;
 			auto _pld = getPayloadFromIx(anIndex);
 			if (!_pld) return result;
+            result = payload.getData(_pld);
 
-			auto g = payload.getData(_pld);
 			auto _prev = payload.getPrev(_pld);
 			auto _next = payload.getNext(_pld);
 			if (fLast == _pld)
@@ -1154,7 +1154,7 @@ class izDynamicList(T): izObject, izList!T
 			payload.freePld(_pld);
 			fCount--;
 
-			hasChanged(izContainerChangeKind.remove, result);
+			hasChanged(izContainerChangeKind.remove, &result);
 
 			return result;	 // ! result is undefined
 		}
@@ -1435,7 +1435,7 @@ version(unittest)
  * Most of the methods are pre-implemented so that an interfacer just needs
  * to override the payload accessors.
  */
-interface izTreeItem
+public interface izTreeItem
 {
 	/**
 	 * The following methods must be implemented in an izTreeItem interfacer.
@@ -1546,9 +1546,9 @@ interface izTreeItem
 	 */
 	final IT addNewSibling(IT, A...)(A a) if (is(IT : izTreeItem))
 	{
-		IT result = izAllocObject!IT(a);
-		addSibling(result);
-		return result;
+        auto result = construct!IT(a);
+        addSibling(result);
+        return result;
 	}
 
 	/**
@@ -1844,9 +1844,9 @@ interface izTreeItem
 	 */
 	final IT addNewChildren(IT,A...)(A a) if (is(IT : izTreeItem))
 	{
-		IT result = izAllocObject!IT(a);
-		addChild(result);
-		return result;
+        auto result = construct!IT(a);
+        addChild(result);
+        return result;
 	}
 
 	/**
@@ -2138,7 +2138,7 @@ mixin template izTreeItemAccessors()
  * Helper template designed to make a sub class C inherit from izTreeItem.
  * The class C must have a default ctor and only this default ctor is generated.
  */
-class izMakeTreeItem(C): C, izTreeItem
+public class izMakeTreeItem(C): C, izTreeItem
 if ((is(C==class)))
 {
 	mixin izTreeItemAccessors;
@@ -2160,7 +2160,7 @@ version(unittest)
 	}
 }
 
-private class foo: izObject, izTreeItem
+private class foo: izTreeItem
 {
 	int member;
 	mixin izTreeItemAccessors;
