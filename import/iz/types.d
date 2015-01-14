@@ -1,11 +1,8 @@
 module iz.types;
 
-import 
-	core.exception, core.memory: GC;
-
-import 
-	std.stdio, std.c.stdlib,
-	std.traits, std.typetuple, std.typecons;
+import core.exception, core.memory: GC;
+import std.stdio, std.c.stdlib;
+import std.traits, std.typetuple;
     
 /// iz pointer.
 alias izPtr = void*;
@@ -29,7 +26,7 @@ static bool isConstantSize(T)()
 	return (
 	    staticIndexOf!(T,izConstantSizeTypes) != -1) || 
 		(is(T==struct) & (__traits(isPOD, T))
-	);
+    );
 }
 ///
 unittest
@@ -44,7 +41,7 @@ unittest
 
 
 /// void version of the init type property.
-@property void reset(T)(ref T t)
+void reset(T)(ref T t)
 {
     t = T.init;
 }
@@ -129,8 +126,7 @@ unittest
 	foo.destruct;
     bar.destruct;
 
-	writeln("izObject passed the tests");    
-    
+	writeln("construct/destruct passed the tests");
 }
 
 /**  
@@ -152,7 +148,7 @@ if(is(ST==struct))
 /** 
  * The static function destruct frees the memory allocated for a struct.
  * Params:
- * ST = a struct type, likely to be infered by the *instance* parameter
+ * ST = a struct type, likely to be infered by the *instance* parameter.
  * instance = an instance of type *CT*.
  */
 static void destruct(ST)(ref ST * instance) 
@@ -190,9 +186,9 @@ unittest
 }
 
 /**
- * Helper struct for reading data as ubyte array.
+ * Helper struct for reading a chunk as ubyte array.
  */
-struct ubyteArray
+struct UbyteArray
 {
     private
     {
@@ -209,7 +205,7 @@ struct ubyteArray
             fSize = aSize;
         }
 
-        const(ubyte) opIndex(size_t index)
+        ubyte opIndex(size_t index)
         {
             return *cast(ubyte*) (fMemory + index);
         }
@@ -241,34 +237,43 @@ struct ubyteArray
 			return result;
         }
 
-        const(size_t) opDollar()
+        size_t opDollar()
         {
             return fSize;
         }
 
-        @property const kength()
+        @property size_t length()
         {
             return fSize;
         }
     }
     unittest
     {
-        auto a = "Sundy's rock".dup;
+        ulong base = 0x11111111_11111111UL;
+        auto a = [base * 0, base * 1, base * 2, base * 3, base * 4, base * 5];
 
-        auto r0 = ubyteArray( a.ptr, a.length);
-
-        assert(r0[0] == 'S');
-        assert(r0[$-1] == 'k');
-        auto r1 = getubyteArray(a);
-        assert(r1[0] == 'S');
-        assert(r1[$-1] == 'k');
+        auto r0 = UbyteArray(a.ptr, a.length);
+        assert(r0[0] == 0x0);
+        assert(r0[7] == 0x0);
+        assert(r0[8] == 0x11);
+        assert(r0[15] == 0x11);
+        assert(r0[16] == 0x22);
+        assert(r0[23] == 0x22);
+        
+        auto r1 = ubyteArray(a);    
+        assert(r1[0] == 0x0);
+        assert(r1[7] == 0x0);
+        assert(r1[8] == 0x11);
+        assert(r1[15] == 0x11);
+        assert(r1[16] == 0x22);
+        assert(r1[23] == 0x22);        
 
         writeln("ubyteArray passed the tests");
     }
 }
 
-ubyteArray getubyteArray(T)(T t) if (isArray!T)
+UbyteArray ubyteArray(T)(T[] t)
 {
-    return ubyteArray(cast(izPtr) t.ptr, t.length);
+    return UbyteArray(cast(izPtr) t.ptr, t.length * T.sizeof);
 }
 

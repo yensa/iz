@@ -912,9 +912,9 @@ public class izMemoryStream: izStream, izStreamPersist, izFilePersist8
 
 // operators -------------------------------
 
-        ubyteArray ubytes()
+        UbyteArray ubytes()
         {
-            return ubyteArray(fMemory, fSize);
+            return UbyteArray(fMemory, fSize);
         }
 	
 // izStreamPersist -------------------------------
