@@ -54,8 +54,6 @@ object _1: TCEProject
     item
       name = 'test64'
       debugingOptions.debug = True
-      debugingOptions.addDInformations = True
-      debugingOptions.addCInformations = True
       debugingOptions.generateMapFile = True
       messagesOptions.depreciationHandling = silent
       messagesOptions.warnings = False
