@@ -11,7 +11,7 @@ import
 alias izPtr = void*;
 
 /// iz notification
-alias izEvent = void delegate(izObject aNotifier);
+alias izEvent = void delegate(Object aNotifier);
 
 /** 
  * izfixedLenTypes represents all the fixed-length types, directly representing a data.
@@ -27,22 +27,24 @@ alias izConstantSizeTypes = TypeTuple!(
 static bool isConstantSize(T)()
 {
 	return (
-		(staticIndexOf!(T,izConstantSizeTypes) != -1) | 
-		( is(T==struct) && (__traits(isPOD, T)))
+	    staticIndexOf!(T,izConstantSizeTypes) != -1) || 
+		(is(T==struct) & (__traits(isPOD, T))
 	);
 }
 ///
 unittest
 {
-	class myClass{}
+	class Foo{}
+    struct Bar{byte a,b,c,d,e,f;}
 	alias myInt = int;
-	assert( isConstantSize!myInt ); // OK
-	//assert( isConstantSize!myClass ); // FAIL
+	assert(isConstantSize!myInt);
+	assert(!isConstantSize!Foo);
+    assert(isConstantSize!Bar);
 }
 
 
 /// void version of the init type property.
-@property void reset(T)(out T t)
+@property void reset(T)(ref T t)
 {
     t = T.init;
 }
@@ -57,23 +59,6 @@ unittest
     assert(b == typeof(b).init);
 }
 
-T heapAllocate(T, Args...) (Args args)
-if (is(T == class))
-{
-	import std.conv : emplace;
-	auto size = __traits(classInstanceSize, T);
-	auto memory = malloc(size)[0..size];
-	if(!memory) throw new Exception("Out of memory");
-	return emplace!(T, Args)(memory, args);
-}
-
-void heapDeallocate(T)(ref T obj)
-if (is(T == class))
-{
-	destroy(obj);
-	free(cast(void*)obj);
-}
-
 /**  
  * The static function construct returns a new, GC-free, class instance.
  * Params:
@@ -83,16 +68,11 @@ if (is(T == class))
 static CT construct(CT, A...)(A a) 
 if (is(CT == class))
 {
-    version(none)
-    {
-        CT result = cast(CT) malloc(__traits(classInstanceSize, CT));
-        if (!result) throw new Exception("Out of memory");
-        
-        static if (__traits(hasMember, CT, "__ctor"))
-            return result.__ctor(a);
-        else return result;
-    }
-    else return heapAllocate!CT(a);
+	import std.conv : emplace;
+    auto size = __traits(classInstanceSize, CT);
+	auto memory = malloc(size)[0 .. size];
+	if(!memory) throw new Exception("Out of memory");
+	return emplace!(CT, A)(memory, a);
 }
        
 /** 
@@ -105,19 +85,13 @@ static void destruct(CT)(ref CT instance)
 if (is(CT == class))
 {
     if (!instance) return;
-    version(none)
-    {
-        static if (__traits(hasMember, CT, "__dtor"))
-            instance.__dtor();
-        free(cast(void*)instance);
-        instance = null;
-    }
-    else heapDeallocate(instance);
+	destroy(instance);
+	free(cast(void*)instance);
     instance = null;
 }   
 
 /** 
- * Frees and invalidate a list of Object. 
+ * Frees and invalidates a list of Object. 
  * *destruct()* is called for each item.
  * Params:
  * objs = variadic list of Object instances.
@@ -147,68 +121,72 @@ unittest
     assert(!a);
     assert(!b);
     assert(!c);
-}
 
+	Object foo = construct!Object;
+    Object bar = new Object;
+    assert( GC.addrOf(cast(void*)foo) == null );
+    assert( GC.addrOf(cast(void*)bar) != null );
+	foo.destruct;
+    bar.destruct;
 
-/**
- * The most simple IZ object.
- * It should always be used as ancestor for a new class to match the IZ principles.
- */
-class izObject
-{
-    /// default, forwarded, constructor.
-    //this(){}
+	writeln("izObject passed the tests");    
     
-    /// ditto
-    //this(A...)(A a){}
-    
-    /// default, forwarded, destructor.
-    //~this(){}
-
-    /// Example: creates an izObject, verifies that it's not managed and destructs it.
-	unittest
-	{
-		izObject foo = construct!izObject;
-        assert( GC.addrOf(cast(void*)foo) == null );
-		scope(exit) foo.destruct;
-		assert( GC.addrOf(cast(void*)foo) == null );
-
-		writeln("izObject passed the tests");
-	}
 }
 
-/**
- * Allocates some heap memory and creates a new T. 
- * Internally used to avoid stack-allocated objects.
+/**  
+ * The static function construct returns a new, GC-free, pointer to a struct.
+ * Params:
+ * ST = a struct type.
+ * a = variadic parameters passed to the constructor.
  */
-T izAllocObject(T,A...)(A a) if (is(T==class))
+ST * construct(ST, A...)(A a)
+if(is(ST==struct))
 {
-	T* p = cast(T*) malloc(T.sizeof);
-	if (!p) throw new OutOfMemoryError();
-	*p  = new T(a);
-	return *p;
+	import std.conv : emplace;
+    auto size = ST.sizeof;
+	auto memory = malloc(size)[0 .. size];
+	if(!memory) throw new Exception("Out of memory");
+	return emplace!(ST, A)(memory, a);
 }
 
-class OO: izObject
+/** 
+ * The static function destruct frees the memory allocated for a struct.
+ * Params:
+ * ST = a struct type, likely to be infered by the *instance* parameter
+ * instance = an instance of type *CT*.
+ */
+static void destruct(ST)(ref ST * instance) 
+if (is(ST == struct))
 {
-	int fa,fb;
-	this(int a, int b){fa = a; fb = b;}
-}
-class OOTester
+    if (!instance) return;
+	free(instance);
+    instance = null;
+}   
+
+/** 
+ * Frees a list of struct. 
+ * _destruct()_ is called for each item.
+ * Params:
+ * structs = variadic list of struct pointers.
+ */
+static void deallocate(Structs...)(ref Structs structs)
 {
-	unittest
-	{
-		auto o1 = izAllocObject!OO(1,2);
-		auto o2 = izAllocObject!OO(3,4);
-		
-		assert(o1);
-		assert(o2);
-		
-		delete o1;
-		delete o2;
-		
-		writeln("izAllocObject passed the tests");
-	}
+    foreach(ref s; structs)
+        s.destruct;
+} 
+
+unittest
+{
+    struct Foo{size_t a,b,c;}
+    Foo * foo = construct!Foo(1,2,3);
+    Foo * bar = new Foo(4,5,6);
+    assert(foo.a == 1);
+    assert(foo.b == 2);
+    assert(foo.c == 3);
+    assert( GC.addrOf(cast(void*)foo) == null );
+    assert( GC.addrOf(cast(void*)bar) != null );   
+    foo.destruct;
+    bar.destruct;   
 }
 
 /**
