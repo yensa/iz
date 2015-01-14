@@ -8,7 +8,7 @@ import
 /**
  * Flags used to describe the accessors combination.
  */
-enum izPropAccess 
+public enum izPropAccess 
 {
 	none, /// denotes an error, no accessors.
 	ro,	  /// read-only, has only a getter.
@@ -24,7 +24,7 @@ enum izPropAccess
  * <li> a declarator: the Object declaring the props. the declarator is automatically set
  *		when the descriptor uses at least one accessor method.</li>
  */
-struct izPropDescriptor(T)
+public struct izPropDescriptor(T)
 {
 	public
 	{
@@ -317,19 +317,19 @@ private char[] genStandardPropDescriptors()
 /// Property descriptors for the built-in types defined in izConstantSizeTypes.
 mixin(genStandardPropDescriptors);
 
-
 /**
  * Property synchronizer.
  *
- * This binder can be used to implement
- * some Master/Slave links but also some
- * interdependent links. In the last case
- * it's mandatory for a setter to filter any duplicated value.
+ * This binder can be used to link a collection of izPropertyDescriptor between
+ * themselves.
  *
- * Properties to add must be described according to the the izPropDescriptor format.
- * The izPropDescriptor name field can be omitted.
+ * The properties to add must be described according to the the izPropDescriptor 
+ * format. The izPropDescriptor *name* field can be omitted.
+ *
+ * Params:
+ * T = the type of the properties to synchronize.
  */
-class izPropertyBinder(T): izObject
+public class izPropertyBinder(T)
 {
 	private
 	{
@@ -349,14 +349,19 @@ class izPropertyBinder(T): izObject
 			for(auto i = 0; i < fToFree.count; i++)
 			{
 				auto descr = fToFree[i];
-				if (descr) delete(descr);
+				if (descr) free(descr);
 			}
 			fItems.destruct;
 			fToFree.destruct;
 		}
 		/**
-		 * Add a property to the list.
-		 * If the binder is not local then aProp should neither be a stack allocated descriptor.
+		 * Adds a property to the list.
+		 * If the binder is not local then aProp should neither be a local descriptor,
+         * otherwise the descritpor reference will become invalid.
+         *
+         * Params:
+         * aProp = an izPropDescriptor of type T.
+         * isSource = optional boolean indicating if the descriptor is used as the master property.  
 		 */
 		ptrdiff_t addBinding(ref izPropDescriptor!T aProp, bool isSource = false)
 		{
@@ -365,34 +370,45 @@ class izPropertyBinder(T): izObject
 		}
 
 		/**
-		 * Add a new property to the list.
-		 * The binder handles its life-time.
+		 * Adds a new property to the list.
+		 * The life-time of the new descriptor is handled internally.
+         *
+         * Returns: 
+         * an new izPropDescriptor of type T.
 		 */
 		izPropDescriptor!T * newBinding()
 		{
-			auto result = new izPropDescriptor!T;
+			auto result = construct!(izPropDescriptor!T);
 			fItems.add(result);
 			fToFree.add(result);
 			return result;
 		}
 
 		/**
-		 * Remove the aIndex-nth property from the list.
+		 * Removes the aIndex-nth property from the list.
+         * The item is freed if it has been allocated by _newBinding_.
+         * _source_ might be invalidated if it matches the item.
+         *
+         * Params:
+         * anIndex = the index of the descriptor to remove.
 		 */
 		void removeBinding(size_t anIndex)
 		{
 			auto itm = fItems.extract(anIndex);
-			fToFree.remove(*itm);
+            if (fSource && itm == fSource) fSource = null;
+			auto managed = fToFree.remove(itm);
+            if (managed) deallocate(managed);
 		}
-		/**
+		
+        /**
 		 * Triggers the setter of each property.
-		 * This method is usually called at the end of
-		 * a setter method (the "master/source" prop).
-		 * When some interdependent bindings are used
-		 * change() must be called for each property
-		 * setter of the list.
-		 */
-		void change(T aValue)
+		 * This method is usually called at the end of a setter method 
+         * (in the _master_/_source_ setter).
+         *
+         * Params:
+         * aValue = a value of type T to send to each slave of the list.
+		 */	
+        void change(T aValue)
 		{
 			foreach(item; fItems)
 			{
@@ -401,25 +417,36 @@ class izPropertyBinder(T): izObject
 				item.setter()(aValue);
 			}
 		}
-		/**
-		 * Call change() using the value of source.
+		
+        /**
+		 * Call _change()_ using the value of _source_.
 		 */
-		void UpdateFromSource()
+		void updateFromSource()
 		{
 			if (!fSource) return;
 			change(fSource.getter()());
 		}
-		/**
-		 * Sets the property used as source in UpdateFromSource().
+		
+        /**
+		 * Sets the property used as source in _updateFromSource().
+         * Params:
+         * aSource = the property to be used as source.
 		 */
-		@property void source(ref izPropDescriptor!T aSource){fSource = &aSource;}
+		@property void source(ref izPropDescriptor!T aSource)
+        {fSource = &aSource;}
+        
+        /**
+		 * Returns the property used as source in _updateFromSource().
+		 */        
+        @property izPropDescriptor!T * source()
+        {return fSource;}
+        
 		/**
-		 * access to the items for additional izList operations.
+		 * Provides an access to the property descriptors for additional _izList_ operations.
+         * Note that the items whose life-time is managed should not be modified.
 		 */
 		@property izList!(izPropDescriptor!T *) items()
-		{
-			return fItems;
-		}	
+		{return fItems;}	
 	}
 }	
 
@@ -430,7 +457,7 @@ private class izPropertyBinderTester
 		alias intprops = izPropertyBinder!int;
 		alias floatprops = izPropertyBinder!float;
 
-		class Foo : izObject
+		class Foo
 		{
 			private
 			{
@@ -479,7 +506,7 @@ private class izPropertyBinderTester
 			}
 		}
 
-		class FooSync: izObject
+		class FooSync
 		{
 			private
 			{
@@ -495,7 +522,7 @@ private class izPropertyBinderTester
 			}
 		}
 
-		class Bar: izObject
+		class Bar
 		{
 			public int A;
 			public float B;
@@ -585,7 +612,7 @@ unittest
 {
 	auto strSync = construct!(izPropertyBinder!int);
 
-	class A : izObject
+	class A
 	{
 		private int fStr;
 		public @property str(int aValue){fStr = aValue;}
