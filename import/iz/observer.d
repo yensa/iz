@@ -357,7 +357,7 @@ version(unittest)
  * interface for an observer based on an enum.
  * Params:
  * E = an enum.
- * T = the type of the parameter an observer is monitoring.
+ * T = variadic type of the parameters an observer monitors.
  */
 interface izEnumBasedObserver(E, T...)
 if (is(E == enum))
@@ -438,7 +438,10 @@ unittest
 {
     enum DocumentNotification{opening, closing, saving, changed}
     
-    class DocSubject : izCustomSubject!(DocumentNotification, izPtr, izPtr)
+    class Document {}
+    class Highlighter {}
+    
+    class DocSubject : izCustomSubject!(DocumentNotification, Document, Highlighter)
     {
         void notify(DocumentNotification dn)
         {
@@ -447,10 +450,10 @@ unittest
                     .subjectNotification(dn, null, null);
         }
     }
-    class DocObserver: izEnumBasedObserver!(DocumentNotification, izPtr, izPtr)
+    class DocObserver: izEnumBasedObserver!(DocumentNotification, Document, Highlighter)
     {
         DocumentNotification lastNotification;
-        void subjectNotification(DocumentNotification notification, izPtr data1, izPtr data2)
+        void subjectNotification(DocumentNotification notification, Document doc, Highlighter hl)
         {
             lastNotification = notification;
         }

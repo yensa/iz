@@ -579,6 +579,7 @@ public class izSerializer
             fCurrSerializable = fRootSerializable;
             fParentNode = fRootNode;
             fCurrNode = fRootNode;
+            fMustWrite = false;
             fCurrSerializable.declareProperties(this);
         }
         
@@ -912,11 +913,11 @@ void main()
     auto bc = new classB;
     
     ser.buildAndStoreIST(bc, str, izSerFormat.text);
-    str.saveToFile(r"C:\newser.txt");
+    str.saveToFile("newser.txt");
     
     auto treeStr = new izMemoryStream;
     ser.serializationTree.saveToStream(treeStr);
-    treeStr.saveToFile(r"C:\NativeTreeItems.txt");
+    treeStr.saveToFile("NativeTreeItems.txt");
     delete treeStr;
     
     

@@ -28,6 +28,11 @@ static bool isConstantSize(T)()
 		(is(T==struct) & (__traits(isPOD, T))
     );
 }
+
+//harbored[/-mod]empty DDoc comments generate:
+// "Could not generate documentation for xxx.d: outdent: Inconsistent indentation"
+
+
 ///
 unittest
 {
