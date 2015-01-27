@@ -1,34 +1,36 @@
 module iz.referencable;
 
 import std.stdio;
+import iz.types;
 
 /**
- *
+ * interface for a class reference.
  */
 interface izReferenced
 {
-    /// the ID, as provided by the referenceMan.
+    /// the ID, as set when added as reference.
     ulong refID();
-    /// the type, as registered in the referenceMan ( typeof(this).stringof )
+    /// the type, as registered in the referenceMan ( typeString!typeof(this) )
     string refType();
 }
 
 /**
- * Items (void*) referenced by ID (ulong).
- * First entry is always invalid.
+ * Associates an pointer (a reference) to an unique ID (ulong).
  */
 private alias itemsById = void*[ulong];
 
 /**
- * itemsById for the type(string)
+ * itemsById for a type (identified by a string).
  */
 private alias refStore = itemsById[string];
 
 
 /**
- * Referencable manager.
- * - for a type, the first entry is always null.
- * - it's not responssible for providing an uniqueID, ID's are just suggested.
+ * The Referencable manager associates a variable of a particular type to 
+ * an unique identifier.
+ * For example, in a setting file, it allows to store the unique identifier
+ * associated to a class instance, rather than storing all its properties, as
+ * the instance settings may be saved elsewhere.
  */
 static class referenceMan
 {
@@ -41,27 +43,62 @@ static class referenceMan
 
 // Helpers ---------------------------------------------------------------------
 
-        /// returns true if the type RT is a (already) referencable type
+        /**
+         * Indicates if a type is referenced.
+         * Params:
+         * RT = a referencable type
+         * Returns:
+         * true if the type is referenced otherwise false.
+         */
         static bool isTypeStored(RT)()
         {
-            return ((RT.stringof in fStore) !is null);
+            return ((typeString!RT in fStore) !is null);
         }
 
-        /// returns true if the variable of type RT is already referenced
+        /**
+         * Indicates if a variable is referenced.
+         * Params:
+         * RT = a referencable type. Optional, likely to be infered.
+         * aReference = a pointer to a RT.
+         * Returns:
+         * true if the variable is referenced otherwise false.
+         */
         static bool isReferenced(RT)(RT* aReference)
         {
             return (referenceID!RT(aReference) != 0UL);
         }
+        
+        /**
+         * Empties the references and the types.
+         */
+        static void reset()
+        {
+            fStore = fStore.init;
+        }
 
 // Add stuff -------------------------------------------------------------------
 
-        /// puts the type RT in the store. It Allows the variables of type RT to be referencable.
+        /** 
+         * References a type. This is a convenience function since
+         * storeReference() automatically stores a type when needed.
+         * Params:
+         * RT = a type to reference.
+         */
         static void storeType(RT)()
         {
-            fStore[RT.stringof][0] = null;
+            fStore[typeString!RT][0] = null;
         }
 
-        /// proposes an unique ID for the variable of type RT.
+        /** 
+         * Proposes an unique ID for a particular reference.
+         * This is a convenience function which will not return the same values for each software cession.
+         * A better user solution is to use the hash of an identifier chain (e.g the hash of "wizard.lefthand.magicwand")
+         * Params:
+         * RT = a referencable type. Optional, likely to be infered.
+         * aReference = a pointer to a RT.
+         * Returns:
+         * the unique ulong value used to identify the reference.
+         */
         static ulong getIDProposal(RT)(RT* aReference)
         {
             // already stored ? returns current ID
@@ -76,23 +113,31 @@ static class referenceMan
             }
 
             // try to get an available ID in the existing range
-            for(ulong i = 0; fStore[RT.stringof].length; i++)
+            for(ulong i = 0; i < fStore[typeString!RT].length; i++)
             {
-                if (fStore[RT.stringof][i] == null)
+                if (fStore[typeString!RT][i] == null)
                     return i-1;
             }
 
             // otherwise returns the next ID after the current range.
             for(ulong i = 0; i < ulong.max; i++)
             {
-                if (i > fStore[RT.stringof].length)
+                if (i > fStore[typeString!RT].length)
                     return i-1;
             }
 
             assert(0, "referenceMan is full for this type");
         }
 
-        /// try to store the variable aReference, of type RT with a given ID anID.
+        /**
+         * Tries to store a reference.
+         * Params:
+         * RT = the type of the reference.
+         * aReference = a pointer to a RT
+         * anID = the unique identifier for this reference.
+         * Return:
+         * true if the reference is added otherwise false.
+         */
         static bool storeReference(RT)(RT* aReference, ulong anID)
         {
             if (anID == 0) return false;
@@ -101,58 +146,77 @@ static class referenceMan
             if (curr == aReference) return true;
             if (curr != null) return false;
             //
-            fStore[RT.stringof][anID] = aReference;
+            fStore[typeString!RT][anID] = aReference;
             return true;
         }
 
 // Remove stuff ----------------------------------------------------------------
 
         /**
-         * tries to remove the reference of type RT and with ID anID from the store.
-         * result: the reference if it's found otherwise null.
+         * Tries to remove a reference identified by its ID.
+         * Return: returns the reference if it's found otherwise returns null.
          */
         static RT* removeReference(RT)(ulong anID)
         {
             auto result = reference!RT(anID);
-            if (result) fStore[RT.stringof][anID] = null;
+            if (result) fStore[typeString!RT][anID] = null;
             return result;
         }
 
 
-        /// tries to remove the reference aReference of type RT.
+        /** 
+         * Tries to remove a reference.
+         * Params:
+         * RT = the type of the reference. Optional, likely to be infered.
+         * aReference = a pointer to the RT to be removed.
+         */
         static void removeReference(RT)(RT* aReference)
         {
-            auto id = referenceID!RT(aReference);
-            if (id) fStore[RT.stringof][id] = null;
+            if (auto id = referenceID!RT(aReference))
+                fStore[typeString!RT][id] = null;
         }
 
 // Query stuff -----------------------------------------------------------------
 
-        /// returns the ID of the variable of type RT if it is already referenced
+        /**
+         * Indicates if a variable is referenced.
+         * Params:
+         * RT = the type of the reference. Optional, likely to be infered.
+         * aReference = a pointer to a RT.
+         * Returns:
+         * Returns an ulong different from 0 if the variable is referenced.
+         * Returns 0 if the variable is not referenced.
+         */
         static ulong referenceID(RT)(RT* aReference)
         {
             if (!isTypeStored!RT) return 0UL;
-            foreach (k; fStore[RT.stringof].keys)
+            foreach (k; fStore[typeString!RT].keys)
             {
-                if (fStore[RT.stringof][k] == aReference)
+                if (fStore[typeString!RT][k] == aReference)
                     return k;
             }
             return 0UL;
         }
 
-        /// returns the reference of the variable of type RT referenced by anID
+        /**
+         * Retrieves a reference.
+         * Params:
+         * RT = the type of the reference to retrieve.
+         * anID = the unique identifier of the reference to retrieve.
+         * Returns:
+         * Returns null if the operation fails otherwise a pointer to a RT.
+         */
         static RT* reference(RT)(ulong anID)
         {
             if (anID == 0) return null;
             if (!isTypeStored!RT) return null;
-            return cast(RT*) fStore[RT.stringof].get(anID,null);
+            return cast(RT*) fStore[typeString!RT].get(anID, null);
         }
     }
 }
 
 unittest
 {
-    import iz.types;
     
     alias delegate1 = ubyte delegate(long param);
     alias delegate2 = short delegate(uint param);
@@ -210,6 +274,13 @@ unittest
     referenceMan.removeReference!Foo(10UL);
     referenceMan.removeReference(&f2);
     referenceMan.removeReference!Foo(20UL);
+    
+    referenceMan.reset;
+    assert( !referenceMan.isTypeStored!Foo );
+    
+    referenceMan.storeReference( &f1, 10UL );
+    assert( referenceMan.isTypeStored!Foo );
+    
 
     writeln("referenceMan passed the tests");
 }
