@@ -10,6 +10,22 @@ alias izPtr = void*;
 /// iz notification
 alias izEvent = void delegate(Object aNotifier);
 
+
+/// returns the accurate type string representation of te template parameter.
+string typeString(T)()
+{
+    return typeid(T).toString;
+}
+
+version(unittest) class TestModuleScope{}
+
+unittest
+{
+    class Foo{}
+    assert( typeString!int == "int");
+    assert( typeString!TestModuleScope == __MODULE__ ~ ".TestModuleScope" );
+}
+
 /** 
  * izfixedLenTypes represents all the fixed-length types, directly representing a data.
  */
