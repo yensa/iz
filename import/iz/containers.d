@@ -2005,7 +2005,11 @@ public interface izTreeItem
 
 			auto _next = current.nextSibling;
 			current.parent = null;
-			delete current;
+			
+            delete current;
+            
+            // TODO-cbubgfix: to use destruct crash the test runners
+            //destruct(current);
 
 			// o.k but outside ptr is dangling.
 			assert(current is null);
@@ -2333,7 +2337,7 @@ private class foo: izTreeItem
 
         auto str = construct!izMemoryStream;
         Root.saveToStream(str);
-        //str.saveToFile(r"C:\izTreeNodes.txt");
+        //str.saveToFile("izTreeNodes.txt");
         str.destruct;
 
 		Root.deleteChildren;
