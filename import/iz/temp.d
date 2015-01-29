@@ -9,6 +9,7 @@ public interface izSerializable
     string className();
 	void declareProperties(izSerializer aSerializer);
 }
+// TODO-cfeature: serializable structures, using isCompatible()/delegatedInterface
 
 private enum izSerType
 {
@@ -117,44 +118,64 @@ char[] del_dqe(char[] input)
     return result;
 }    
 
+/// Restores the raw value contained in a izSerNodeInfo using the associated setter.
+void nodeInfo2Declarator(const izSerNodeInfo * nodeInfo)
+{
+    void toDecl1(T)()  {
+        auto descr = cast(izPropDescriptor!T *) nodeInfo.descriptor;
+        descr.setter()( *cast(T*) nodeInfo.value.ptr );
+    }
+    void toDecl2(T)() {
+        auto descr = cast(izPropDescriptor!(T[]) *) nodeInfo.descriptor;
+        descr.setter()(cast(T[]) nodeInfo.value[]);
+    } 
+    void toDecl(T)() {
+        (!nodeInfo.isArray) ? toDecl1!T : toDecl2!T;
+    }
+    //
+    final switch(nodeInfo.type)
+    {
+        case izSerType._invalid,izSerType._izSerializable,izSerType._Object: break;
+        case izSerType._byte: toDecl!byte; break;
+        case izSerType._ubyte: toDecl!ubyte; break;
+        case izSerType._short: toDecl!short; break;
+        case izSerType._ushort: toDecl!ushort; break;
+        case izSerType._int: toDecl!int; break;
+        case izSerType._uint: toDecl!uint; break;
+        case izSerType._long: toDecl!long; break;
+        case izSerType._ulong: toDecl!ulong; break;    
+        case izSerType._float: toDecl!float; break;
+        case izSerType._double: toDecl!double; break;
+        case izSerType._char: toDecl!char; break;   
+        case izSerType._wchar: toDecl!wchar; break;   
+        case izSerType._dchar: toDecl!dchar; break;                                                                                                                                   
+    }
+}
+
 /// Converts the raw data contained in a izSerNodeInfo to its string representation.
 char[] value2text(const izSerNodeInfo * nodeInfo)
 {
     char[] v2t_1(T)(){return to!string(*cast(T*)nodeInfo.value.ptr).dup;}
     char[] v2t_2(T)(){return to!string(cast(T[])nodeInfo.value[]).dup;}
-
+    char[] v2t(T)(){if (!nodeInfo.isArray) return v2t_1!T; else return v2t_2!T;}
+    //
     final switch(nodeInfo.type)
     {
-        case izSerType._invalid:
-            return "invalid".dup;
-        case izSerType._izSerializable, izSerType._Object:
-            return cast(char[])(nodeInfo.value);
-        case izSerType._ubyte:
-            if (!nodeInfo.isArray) return v2t_1!ubyte; else return v2t_2!ubyte;
-        case izSerType._byte:
-            if (!nodeInfo.isArray) return v2t_1!byte; else return v2t_2!byte;
-        case izSerType._ushort:
-            if (!nodeInfo.isArray) return v2t_1!ushort; else return v2t_2!ushort;
-        case izSerType._short:
-            if (!nodeInfo.isArray) return v2t_1!short; else return v2t_2!short;
-        case izSerType._uint:
-            if (!nodeInfo.isArray) return v2t_1!uint; else return v2t_2!uint;
-        case izSerType._int:
-            if (!nodeInfo.isArray) return v2t_1!int; else return v2t_2!int;
-        case izSerType._ulong:
-            if (!nodeInfo.isArray) return v2t_1!ulong; else return v2t_2!ulong;
-        case izSerType._long:
-            if (!nodeInfo.isArray) return v2t_1!long; else return v2t_2!long;
-        case izSerType._float:
-            if (!nodeInfo.isArray) return v2t_1!float; else return v2t_2!float;
-        case izSerType._double:
-            if (!nodeInfo.isArray) return v2t_1!double; else return v2t_2!double;
-        case izSerType._char:
-            if (!nodeInfo.isArray) return v2t_1!char; else return v2t_2!char;
-        case izSerType._wchar:
-            if (!nodeInfo.isArray) return v2t_1!wchar; else return v2t_2!wchar;
-        case izSerType._dchar:
-            if (!nodeInfo.isArray) return v2t_1!dchar; else return v2t_2!dchar;
+        case izSerType._invalid: return "invalid".dup;
+        case izSerType._izSerializable, izSerType._Object: return cast(char[])(nodeInfo.value);
+        case izSerType._ubyte: return v2t!ubyte;
+        case izSerType._byte: return v2t!byte;
+        case izSerType._ushort: return v2t!ushort;
+        case izSerType._short: return v2t!short;
+        case izSerType._uint: return v2t!uint;
+        case izSerType._int: return v2t!int;
+        case izSerType._ulong: return v2t!ulong;
+        case izSerType._long: return v2t!long;
+        case izSerType._float: return v2t!float;
+        case izSerType._double: return v2t!double;
+        case izSerType._char: return v2t!char;
+        case izSerType._wchar: return v2t!wchar;
+        case izSerType._dchar: return v2t!dchar;
     }
 }
 
@@ -172,39 +193,29 @@ ubyte[] text2value(in char[] text, izSerType type, bool isArray)
         memmove(res.ptr, v.ptr, res.length);
         return res;
     }
-    
+    ubyte[] t2v(T)(){
+        if (!isArray) return t2v_1!T; else return t2v_2!T;
+    }
+    //    
     final switch(type)
     {
         case izSerType._invalid:
             return cast(ubyte[])"invalid".dup;
         case izSerType._izSerializable, izSerType._Object: 
             return cast(ubyte[])(text);
-        case izSerType._ubyte:
-            if (!isArray) return t2v_1!ubyte; else return t2v_2!ubyte;
-        case izSerType._byte:
-            if (!isArray) return t2v_1!byte; else return t2v_2!byte;
-        case izSerType._ushort:
-            if (!isArray) return t2v_1!ushort; else return t2v_2!ushort;
-        case izSerType._short:
-            if (!isArray) return t2v_1!short; else return t2v_2!short;
-        case izSerType._uint:
-            if (!isArray) return t2v_1!uint; else return t2v_2!uint;
-        case izSerType._int:
-            if (!isArray) return t2v_1!int; else return t2v_2!int;
-        case izSerType._ulong:
-            if (!isArray) return t2v_1!ulong; else return t2v_2!ulong;
-        case izSerType._long:
-            if (!isArray) return t2v_1!long; else return t2v_2!long;
-        case izSerType._float:
-            if (!isArray) return t2v_1!float; else return t2v_2!float;
-        case izSerType._double:
-            if (!isArray) return t2v_1!double; else return t2v_2!double;
-        case izSerType._char:
-            if (!isArray) return t2v_1!char; else return t2v_2!char;
-        case izSerType._wchar:
-            return t2v_2!wchar;
-        case izSerType._dchar:
-            if (!isArray) return t2v_1!dchar; else return t2v_2!dchar;
+        case izSerType._ubyte: return t2v!ubyte;
+        case izSerType._byte: return t2v!byte;
+        case izSerType._ushort: return t2v!ushort;
+        case izSerType._short: return t2v!short;
+        case izSerType._uint: return t2v!uint;
+        case izSerType._int: return t2v!int;
+        case izSerType._ulong: return t2v!ulong;
+        case izSerType._long: return t2v!long;
+        case izSerType._float: return t2v!float;
+        case izSerType._double: return t2v!double;
+        case izSerType._char: return t2v!char;
+        case izSerType._wchar: return t2v_2!wchar;
+        case izSerType._dchar: return t2v!dchar;
     }
 }
 
@@ -494,7 +505,23 @@ izSerReader newReader(P...)(izSerFormat format, P params)
         return construct!izSerTextReader(params);
     assert(false);
 }
+/*
 
+Features:
+
+ - flexible because based on an intermediate, in-memory, tree representation, aka the "IST"
+ - serialize object, according to its declaration
+ - deserialize object, according to its declaration
+ - convert serialized stream to another format without the declarations
+ - object randomly restores some properties, without using declarations
+ 
+ - not based on compile time traits: 
+    - properties can be renamed and reloaded even from an obsolete stream (renamed field, renamed option)
+    - properties to be saved or reloaded can be arbitrarly chosen at run-time    
+    
+ - in case of errors in sequential restoration the process can be finished manually.
+
+*/
 public class izSerializer
 {
     private
@@ -505,6 +532,8 @@ public class izSerializer
         izIstNode fCurrNode;
         // the current parent node, always representing an izSerializable
         izIstNode fParentNode;
+        // the last created node 
+        izIstNode fPreviousNode;
         
         // the izSerializable linked to fRootNode
         izSerializable fRootSerializable;
@@ -530,7 +559,7 @@ public class izSerializer
             fRootNode.setDescriptor(&fRootDescr);
         }
         
-        /// creates a writer object which renders a node into a stream
+        /// IST -> stream
         void writeNode(izIstNode node)
         {
             auto writer = newWriter(fFormat, fCurrNode, fStream);
@@ -548,6 +577,18 @@ public class izSerializer
         /// IST -> declarator
         void readNode(izIstNode node)
         {
+            auto reader = newReader(fFormat, fCurrNode, fStream);
+            scope(exit) destruct(reader);
+            //
+            if (isSerObjectType(node.nodeInfo.type))
+                reader.readObjectBeg;            
+            //
+            reader.readProp;
+            //
+            nodeInfo2Declarator(node.nodeInfo); 
+            //
+            if (!node.nextSibling)
+                reader.readObjectEnd;
         }        
         
     }
@@ -575,6 +616,7 @@ public class izSerializer
         {
             fStoreMode = izStoreMode.bulk;
             fRootNode.deleteChildren;
+            fPreviousNode = null;
             setRoot(root);
             fCurrSerializable = fRootSerializable;
             fParentNode = fRootNode;
@@ -595,6 +637,7 @@ public class izSerializer
             fMustWrite = true;
             //
             fRootNode.deleteChildren;
+            fPreviousNode = null;
             setRoot(root);
             fCurrSerializable = fRootSerializable;
             fCurrNode = fRootNode;
@@ -638,7 +681,8 @@ public class izSerializer
 //---- deserialization ---------------------------------------------------------         
             
         /**
-         * Builds the IST from a stream, 1st deserialization phase.
+         * Builds the IST from a stream, 1st deserialization phase. 
+         * The IST nodes are not linked to a declarator.
          * stream -> IST
          */
         void buildIST(izStream inputStream, izSerFormat format)
@@ -656,7 +700,13 @@ public class izSerializer
                 reader.readProp;
                 std.stdio.writeln( *fCurrNode.nodeInfo );
                 fCurrNode = new izIstNode;
-                
+            }
+            
+            if (unorderNodes.length > 1)
+            foreach(i; 1 .. unorderNodes.length)
+            {
+                unorderNodes[i-1].nodeInfo.isLastChild = 
+                  unorderNodes[i].nodeInfo.level < unorderNodes[i-1].nodeInfo.level;       
             }
             
             parents ~= fRootNode;
@@ -664,17 +714,18 @@ public class izSerializer
             {
                 auto node = unorderNodes[i];
                 parents[$-1].addChild(node);
+                
+                if (node.nodeInfo.isLastChild)
+                    parents.length -= 1;
+                 
                 if (isSerObjectType(node.nodeInfo.type))
                     parents ~= node;
-                if (node.nodeInfo.isLastChild) // isLastChild is not yet set.
-                    parents.length = parents.length-1; 
-                
-            }
-            
+            }    
         }
         
         /** 
-         * Builds the IST from a stream and restore sequentially to rootObject, merged deserialization phases, the declarations lead the process.
+         * Builds the IST from a stream and restore sequentially to rootObject, 
+         * merged deserialization phases, the declarations lead the process.
          * stream -> IST -> declarator
          */
         void buildAndRestoreIST(izSerializable root, izStream inputStream, izSerFormat format)
@@ -682,30 +733,43 @@ public class izSerializer
             fSerState = izSerState.restore;
             fRestoreMode = izRestoreMode.sequential;
             fMustRead = true;
+            //
             fRootNode.deleteChildren;
+            fPreviousNode = null;
             setRoot(root);
+            fCurrSerializable = fRootSerializable;
+            fCurrNode = fRootNode;
+            readNode(fCurrNode);
+            //
+            fParentNode = fRootNode;
             fCurrSerializable = fRootSerializable;
             fCurrSerializable.declareProperties(this);        
         }   
         
         /**
-         * Restores sequentially from the IST to root, 2nd deserialization phase, the declarations lead the the process.
+         * Restores sequentially from the IST to root, 2nd deserialization phase, 
+         * the declarations lead the the process.
          * IST -> declarator
          */
-        void restoreIST(izSerializable root)   
+        void restoreIST(izSerializable root, izSerFormat format)   
         {
-            fSerState = izSerState.restore;
-            fRestoreMode = izRestoreMode.sequential;
-            fMustRead = true;
-            fRootNode.deleteChildren;
-            setRoot(root);
-            fCurrSerializable = fRootSerializable;
-            fCurrSerializable.declareProperties(this);
+            //TODO-cfeature : restoreIST().
+            
+            /*
+                IST nodes don't always have a descriptor in their infos.
+                for example after a call to buildIST.
+            */ 
         }    
         
-        /// find the node named according to descriptorName, deserialization utility, 2nd phase 
+        /**
+         * Finds the node named according to descriptorName.
+         * Deserialization utility, 2nd phase.
+         */ 
         izIstNode findNode(in char[] descriptorName)
         {
+        
+            //TODO-cfeature : optimize random access by caching in an AA, "à la JSON"
+            
             if (fRootNode.nodeInfo.name == descriptorName)
                 return fRootNode;
             
@@ -730,17 +794,19 @@ public class izSerializer
         /// restores the IST from node in rootObject. node can be determined by a call to findNode(), partial deserialization, 2nd phase  
         void restoreFromNode(izIstNode node, izSerializable rootObject, bool recursive = false)
         {
-            fMustRead = true;
-            fSerState = izSerState.restore;
-            fRestoreMode = izRestoreMode.sequential;
+            //TODO-cfeature : restoreFromNode().
         }
         
         ///restores the single property from node using aDescriptor setter. node can be determined by a call to findNode(), partial deserialization, 2nd phase
         void restoreProperty(T)(izIstNode node, izPropDescriptor!T * aDescriptor)
         {
-            fMustRead = true;
+            import std.stdio;
+            writeln(T.stringof);
+        
             fSerState = izSerState.restore;
             fRestoreMode = izRestoreMode.random;
+            node.nodeInfo.descriptor = aDescriptor;
+            nodeInfo2Declarator(node.nodeInfo); 
         }        
     
 
@@ -752,8 +818,7 @@ public class izSerializer
         
         /// an izSerializable declare a property descibed by aDescriptor
         void addProperty(T)(izPropDescriptor!T * aDescriptor)
-        {
-            
+        {    
             fCurrNode = fParentNode.addNewChildren!izIstNode;
             fCurrNode.setDescriptor(aDescriptor);
             
@@ -765,6 +830,11 @@ public class izSerializer
             
             static if (isSerObjectType!T)
             {
+                if (fPreviousNode)
+                {
+                    fPreviousNode.nodeInfo.isLastChild = true;
+                }
+            
                 auto oldSerializable = fCurrSerializable;
                 auto oldParentNode = fParentNode;
                 fParentNode = fCurrNode;
@@ -775,7 +845,9 @@ public class izSerializer
                 fCurrSerializable.declareProperties(this);
                 fParentNode = oldParentNode;
                 fCurrSerializable = oldSerializable;
-            }          
+            }    
+            
+            fPreviousNode = fCurrNode;      
         }
         
         /// state is set visible to an izSerializable to let it know how the properties will be used (store: getter, restore: setter)
@@ -798,9 +870,9 @@ public class izSerializer
 
 private template genAllAdders()
 {
-    char[] genAllAdders()
+    string genAllAdders()
     {
-        char[] result;
+        string result;
         foreach(t; izSerTypeTuple) if (!(is(t  == struct)))
             result ~= "alias add" ~ t.stringof ~ "Property =" ~ "addProperty!" ~ t.stringof ~";"; 
         return result;
@@ -872,6 +944,7 @@ void main()
                 aSerializer.addProperty(&aDescr);
                 aSerializer.addProperty(&bDescr);
             }
+            void clear(){reset(a); reset(b);}
     }
     
     class classB : classA
@@ -906,32 +979,60 @@ void main()
             aSerializer.addProperty(&dDescr);
             aSerializer.addProperty(&eDescr);
         }
+        override void clear(){super.clear; c.clear; d.clear; reset(e);}
     }
     
-    izMemoryStream str = new izMemoryStream;
-    izSerializer ser = new izSerializer;
-    auto bc = new classB;
+    auto str = construct!izMemoryStream;
+    auto ser = construct!izSerializer;
+    auto bc  = construct!classB;
+    scope(exit) destruct(str, ser, bc);
     
     ser.buildAndStoreIST(bc, str, izSerFormat.text);
     str.saveToFile("newser.txt");
     
-    auto treeStr = new izMemoryStream;
+    auto treeStr = construct!izMemoryStream;
     ser.serializationTree.saveToStream(treeStr);
     treeStr.saveToFile("NativeTreeItems.txt");
-    delete treeStr;
+    destruct(treeStr);
     
+// find node ----------------------    
     
     writeln( ser.findNode("Root.property_c.property_a"));
     writeln( ser.findNode("Root.property_e"));
     writeln( ser.findNode("Root.property_e.nil"));
     writeln( ser.findNode("Root.property_d.property_b"));
-    writeln( ser.findNode("Root.property_e."));
+    writeln( ser.findNode("Root.property_e") !is null);
     writeln( ser.findNode("Root"));
     
+// sequential deser ----------------    
+    
     str.position = 0;
+    bc.clear;
+    writeln( bc.a, " ", bc.b, " ", bc.e, " ",bc.c.a, " ", bc.c.b, " ", bc.d.a, " ", bc.d.b, " ");    
+    
+    ser.buildAndRestoreIST(bc, str, izSerFormat.text);
+    writeln( bc.a, " ", bc.b, " ", bc.e, " ",bc.c.a, " ", bc.c.b, " ", bc.d.a, " ", bc.d.b, " ");
+    
+// random deser --------------------    
+    
+    str.position = 0;
+    bc.clear;
+    writeln( bc.a, " ", bc.b,);    
+    
     ser.buildIST(str, izSerFormat.text);
     
-    delete str;
-    delete ser;
-        
+    izIstNode nd;
+    nd = ser.findNode("Root.property_a");
+    if (nd) ser.restoreProperty(nd, &bc.aDescr);
+    if (nd) writeln( nd.nodeInfo.type );
+    nd = ser.findNode("Root.property_b");
+    if (nd) ser.restoreProperty(nd, &bc.bDescr);
+    if (nd) writeln( nd.nodeInfo.type );
+    nd = ser.findNode("Root.property_e");
+    if (nd) ser.restoreProperty(nd, &bc.eDescr);
+    if (nd) writeln( nd.nodeInfo.type );
+    
+    writeln( bc.a, " ", bc.b, " ", bc.e);
+    
+           
 }
