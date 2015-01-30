@@ -317,6 +317,158 @@ private char[] genStandardPropDescriptors()
 /// Property descriptors for the built-in types defined in izConstantSizeTypes.
 mixin(genStandardPropDescriptors);
 
+/// annotate a virtual method as setter
+struct set{}
+/// annotate a virtual method as getter 
+struct get{}
+
+/**
+ * When mixed in a class, several analyzer can be used to automatically create
+ * some izPropertyDescriptors.
+ */
+mixin template izPropertiesAnalyzer(){
+
+    /**
+     * Contains the list of izPropDesrcriptors created by the different analyzers.
+     * getDescriptor() can be used to correctly cast an item.
+     */
+    private void * [] descriptors;
+    
+    /** 
+     * Returns a pointer to the descriptor whose property name is set to name.
+     * Params:
+     * name = the identifier used for the setter/getter.
+     * createIfMissing = when set to true, the result is never null.
+     */
+    protected izPropDescriptor!T * getDescriptor(T)(string name, bool createIfMissing = false)
+    {
+        izPropDescriptor!T * descr;
+        
+        for(auto i = 0; i < descriptors.length; i++)
+        {
+            auto maybe = cast(izPropDescriptor!T *) descriptors[i];
+            if (maybe.name != name) continue;
+            descr = maybe; break; 
+        }
+        
+        if (createIfMissing && !descr) 
+        {   
+            descr = new izPropDescriptor!T;
+            descr.name = name;
+            descriptors ~= descr;
+        }
+        return descr;
+    }
+    
+    /**
+     * Performs all the possible analysis.
+     */
+    private void analyzeAll()
+    {
+        analyzeFields([]);
+        analyzeVirtualSetGet;
+    }
+    
+    private void analyzeFields(string[] prefixedFieldNames)
+    {
+        // TODO-cfeature: create descriptors directly-accessed-fields
+        // []: all private/protected fiels prefixed with '_' or 'f'
+        // otherwise, only matching fields
+    }
+    
+    /**
+     * Creates the property descriptors for the setter/getter pairs maked with @get / @set.
+     * The methods must be virtual. 
+     */
+    private void analyzeVirtualSetGet()
+    {
+        struct Delegate {void* ptr, funcptr;}
+        // TODO-cfeature: find a way to create the descriptors when set/get are final.
+        auto virtualTable = typeid(this).vtbl;
+
+        foreach(member; __traits(allMembers, typeof(this))) 
+        foreach(overload; __traits(getOverloads, typeof(this), member)) 
+        foreach(attribute; __traits(getAttributes, overload))
+        {
+            static if (is(attribute == get) && isCallable!overload && __traits(isVirtualMethod, overload))
+            {
+                alias DescriptorType = izPropDescriptor!(ReturnType!overload);
+                auto descriptor = getDescriptor!(ReturnType!overload)(member,true);
+                auto virtualIndex = __traits(getVirtualIndex, overload);
+                // setup the getter   
+                Delegate dg;
+                dg.ptr = cast(void*)this;
+                dg.funcptr = virtualTable[virtualIndex];
+                descriptor.getter = *cast(DescriptorType.izPropGetter *) &dg;
+                //
+                version(none) writeln(attribute.stringof, " < ", member);
+            }
+            else static if (is(attribute == set) && isCallable!overload && __traits(isVirtualMethod, overload))
+            {
+                alias DescriptorType = izPropDescriptor!(ParameterTypeTuple!overload);
+                auto descriptor = getDescriptor!(ParameterTypeTuple!overload)(member,true);
+                auto virtualIndex = __traits(getVirtualIndex, overload);                        
+                // setup the setter   
+                Delegate dg;
+                dg.ptr = cast(void*)this;
+                dg.funcptr = virtualTable[virtualIndex];
+                descriptor.setter = *cast(DescriptorType.izPropSetter *) &dg;     
+                //    
+                version(none) writeln(attribute.stringof, " > ", member);
+            }                
+        }
+    }
+}
+
+version(unittest){
+class Foo{
+
+        mixin izPropertiesAnalyzer;
+        this(A...)(A a){
+            analyzeVirtualSetGet;
+        }
+        
+        private uint _a, _b;
+        private char[] _c;
+        
+        @get uint propA(){return _a;}
+        @set void propA(uint aValue){_a = aValue;}
+        
+        @get uint propB(){return _b;} 
+        @set void propB(uint aValue){_b = aValue;}
+        
+        @get char[] propC(){return _c;} 
+        @set void propC(char[] aValue){_c = aValue;}
+        
+        void use()
+        {
+            assert(propA == 0);
+            auto aDescriptor = getDescriptor!uint("propA");
+            aDescriptor.setter()(123456789);
+            assert(propA == 123456789);
+            
+            assert(propB == 0);
+            auto bDescriptor = getDescriptor!uint("propB");
+            bDescriptor.setter()(987654321);
+            assert(propB == 987654321);
+            
+            assert(!propC.length);
+            auto cDescriptor = getDescriptor!(char[])("propC");
+            cDescriptor.setter()("too good to be true".dup);
+            assert(propC == "too good to be true");
+            
+            writeln("izPropertiesAnalyzer passed the analyzeVirtualSetGet() test");
+        }
+    }
+}
+
+unittest
+{
+    auto foo = new Foo;
+    foo.use;
+}
+
+
 /**
  * Property synchronizer.
  *
