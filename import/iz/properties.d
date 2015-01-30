@@ -454,8 +454,10 @@ class Foo{
             
             assert(!propC.length);
             auto cDescriptor = getDescriptor!(char[])("propC");
-            cDescriptor.setter()("too good to be true".dup);
-            assert(propC == "too good to be true");
+            cDescriptor.setter()("Too Strange To Be Good".dup);
+            assert(propC == "Too Strange To Be Good");
+            propC = "Too Good To Be Strange".dup;
+            assert( getDescriptor!(char[])("propC").getter()() == "Too Good To Be Strange");
             
             writeln("izPropertiesAnalyzer passed the analyzeVirtualSetGet() test");
         }
