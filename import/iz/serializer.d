@@ -37,7 +37,7 @@ unittest
 	class test1: izSerializable
 	{
 		void declareProperties(izMasterSerializer aSerializer){}
-		void getDescriptor(const unreadProperty infos, out izPtr aDescriptor){}
+		void unreadDescriptor(const unreadProperty infos, out izPtr aDescriptor){}
         string className(){return typeof(this).stringof;}
 	}
 	static assert(isTypeSerializable!byte);
@@ -135,7 +135,7 @@ interface izSerializable
 	 * This can be used, for example, if since the last serialization, the
 	 * declarations have changed (new property name, new order, new type, ...)
 	 */
-	void getDescriptor(const unreadProperty infos, out izPtr aDescriptor);
+	void unreadDescriptor(const unreadProperty infos, out izPtr aDescriptor);
 }
 
 /**
@@ -182,7 +182,7 @@ class izSerializableReference: izSerializable
 
         mixin(genPropFromField!(char[], "Type", "fType"));
         mixin(genPropFromField!(ulong, "ID", "fID"));
-        void getDescriptor(const unreadProperty infos, out izPtr aDescriptor){}
+        void unreadDescriptor(const unreadProperty infos, out izPtr aDescriptor){}
         string className(){return typeof(this).stringof;}
         void declareProperties(izMasterSerializer aSerializer)
         {
@@ -946,7 +946,7 @@ version(unittest)
                 aSerializer.addProperty!(ubyte[])(&DDescr);
 				aSerializer.addProperty!(ubyte[4])(&EDescr);
 			}
-			void getDescriptor(const unreadProperty infos, out izPtr aDescriptor){}
+			void unreadDescriptor(const unreadProperty infos, out izPtr aDescriptor){}
             string className(){return typeof(this).stringof;}
 	}
 	class bar: foo
