@@ -840,7 +840,7 @@ public class izSerializer
                     node.nodeInfo.descriptor = descr;
                     if (node.nodeInfo.descriptor)
                         nodeInfo2Declarator(node.nodeInfo);
-                    result ^= result;         
+                    result = !result;         
                 }
                 return result;    
             }
