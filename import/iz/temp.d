@@ -779,11 +779,6 @@ public class izSerializer
         void istToObject(izSerializable root, izSerFormat format)   
         {
             //TODO-cfeature : istToObject, using declarations().
-            
-            /*
-                IST nodes don't always have a descriptor in their infos.
-                for example after a call to buildIST.
-            */ 
         }    
         
         /**
@@ -820,14 +815,14 @@ public class izSerializer
          * Restores the IST from node. 
          * The process is lead by the nodeInfo associated to the node.
          * If the descriptor is not defined then wantDescriptorEvent is called.
+         * It means that this method can be used to deserialize to an arbitrary descriptor,
+         * for example after a call to streamToIst().
          * Params:
          * node = the IST node from where the restoration begins. It can be determined by a call to findNode().
          * recursive = when set to true the restoration is recursive.
          */  
         void istToObject(izIstNode node, bool recursive = false)
         {
-            // TODO-ctest: istToObject, using nodeINfo and WantDescriptorEvent
-            // try to restore, returns true if must continue
             bool restore(izIstNode node)
             {
                 bool result = true;
@@ -1104,5 +1099,29 @@ void main()
     ser.objectToIst(bc);
     ser.istToStream(str, izSerFormat.text);
     str.saveToFile("serialized_bulk.txt");
+    
+// istToObject with event ------------------------------------------------------
+
+    str.loadFromFile("serialized_sequential.txt");   
+    auto binstance = construct!classB;
+    scope(exit) destruct(binstance);
+    
+    
+    uint commona;
+    uintprop aprop = uintprop(&commona, "commonuint");
+    
+    void restoreEvent(const(izSerNodeInfo*) nodeInfo, out void * matchingDescriptor, out bool stop)
+    {
+        if (nodeInfo.name == "property_a")
+            matchingDescriptor = &aprop;
+    }
+    
+    ser.streamToIst(str, izSerFormat.text);
+    auto rootnode = ser.findNode("Root");
+    assert(rootnode);
+    ser.onWantDescriptor = &restoreEvent;
+    ser.istToObject(rootnode, true);
+    assert(commona == 512);
+    
               
 }
