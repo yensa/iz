@@ -292,15 +292,20 @@ version(unittest)
 	}
 }
 
+/// annotate a virtual method as setter
+struct set{} struct Set{}
+/// annotate a virtual method as getter 
+struct get{} struct Get{}
+
 
 public template genPropFromField(propType, string propName, string propField)
 {
 	string genPropFromField()
 	{
 		return
-			"@property void "~ propName ~ "(" ~ propType.stringof ~ " aValue)" ~
+			"@Set @property void "~ propName ~ "(" ~ propType.stringof ~ " aValue)" ~
 			"{ " ~ propField ~ " = aValue;} " ~
-			"@property " ~ propType.stringof ~ " " ~ propName ~
+			"@Get @property " ~ propType.stringof ~ " " ~ propName ~
 			"(){ return " ~ propField ~ ";}" ;
 	}
 }
@@ -317,10 +322,6 @@ private char[] genStandardPropDescriptors()
 /// Property descriptors for the built-in types defined in izConstantSizeTypes.
 mixin(genStandardPropDescriptors);
 
-/// annotate a virtual method as setter
-struct set{}
-/// annotate a virtual method as getter 
-struct get{}
 
 /**
  * When mixed in a class, several analyzer can be used to automatically create
