@@ -1119,4 +1119,50 @@ version(unittest)
         writeln( "izSerializer passed the text format tests");
 
     }
+
+
+    class AutoDecl : izSerializable
+    {
+        mixin izPropertiesAnalyzer;
+        private:
+            uint _ia, _ib, _ic;
+            float _fa, _fb, _fc;
+        public:
+            this()
+            {
+                analyzeVirtualSetGet;
+                assert(descriptorCount == 6);
+            }
+            
+	        string className()
+            {return typeof(this).stringof;}
+            
+            mixin(genPropFromField!(uint,"ia","_ia"));
+            mixin(genPropFromField!(uint,"ib","_ib"));
+            mixin(genPropFromField!(uint,"ic","_ic"));
+            mixin(genPropFromField!(float,"fa","_fa"));
+            mixin(genPropFromField!(float,"fb","_fb"));
+            mixin(genPropFromField!(float,"fc","_fc"));
+	        
+            void declareProperties(izMasterSerializer aSerializer)
+            {
+                aSerializer.addProperty!uint( getDescriptor!uint("ia"));
+                aSerializer.addProperty!uint( getDescriptor!uint("ib") );
+                aSerializer.addProperty!uint( getDescriptor!uint("ic") );
+                aSerializer.addProperty!float( getDescriptor!float("fa") );
+                aSerializer.addProperty!float( getDescriptor!float("fb") );
+                aSerializer.addProperty!float( getDescriptor!float("fc") );
+            }
+	        
+            void unreadDescriptor(const unreadProperty infos, out izPtr aDescriptor){}
+    }
+    
+    unittest
+    {
+        izMemoryStream str = construct!izMemoryStream;
+        izMasterSerializer ser = construct!izMasterSerializer;
+        AutoDecl ad = construct!AutoDecl;
+        scope(exit){destruct(str, ser, ad);}
+        ser.serialize(ad, str, izSerializationFormat.text);
+    }
 }
