@@ -335,6 +335,8 @@ mixin template izPropertiesAnalyzer(){
      */
     private void * [] descriptors;
     
+    public size_t descriptorCount(){return descriptors.length;}
+    
     /** 
      * Returns a pointer to the descriptor whose property name is set to name.
      * Params:
@@ -372,7 +374,7 @@ mixin template izPropertiesAnalyzer(){
     
     private void analyzeFields(string[] prefixedFieldNames)
     {
-        // TODO-cfeature: create descriptors directly-accessed-fields
+        // TODO-cfeature: create descriptors for directly-accessed-fields
         // []: all private/protected fiels prefixed with '_' or 'f'
         // otherwise, only matching fields
     }
@@ -391,7 +393,7 @@ mixin template izPropertiesAnalyzer(){
         foreach(overload; __traits(getOverloads, typeof(this), member)) 
         foreach(attribute; __traits(getAttributes, overload))
         {
-            static if (is(attribute == get) && isCallable!overload && __traits(isVirtualMethod, overload))
+            static if (is(attribute == Get) && isCallable!overload && __traits(isVirtualMethod, overload))
             {
                 alias DescriptorType = izPropDescriptor!(ReturnType!overload);
                 auto descriptor = getDescriptor!(ReturnType!overload)(member,true);
@@ -404,7 +406,7 @@ mixin template izPropertiesAnalyzer(){
                 //
                 version(none) writeln(attribute.stringof, " < ", member);
             }
-            else static if (is(attribute == set) && isCallable!overload && __traits(isVirtualMethod, overload))
+            else static if (is(attribute == Set) && isCallable!overload && __traits(isVirtualMethod, overload))
             {
                 alias DescriptorType = izPropDescriptor!(ParameterTypeTuple!overload);
                 auto descriptor = getDescriptor!(ParameterTypeTuple!overload)(member,true);
@@ -432,14 +434,14 @@ class Foo{
         private uint _a, _b;
         private char[] _c;
         
-        @get uint propA(){return _a;}
-        @set void propA(uint aValue){_a = aValue;}
+        @Get uint propA(){return _a;}
+        @Set void propA(uint aValue){_a = aValue;}
         
-        @get uint propB(){return _b;} 
-        @set void propB(uint aValue){_b = aValue;}
+        @Get uint propB(){return _b;} 
+        @Set void propB(uint aValue){_b = aValue;}
         
-        @get char[] propC(){return _c;} 
-        @set void propC(char[] aValue){_c = aValue;}
+        @Get char[] propC(){return _c;} 
+        @Set void propC(char[] aValue){_c = aValue;}
         
         void use()
         {
