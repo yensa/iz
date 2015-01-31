@@ -511,9 +511,9 @@ Features:
  - serialize object, according to its declaration
  - deserialize object, according to its declaration
  - convert serialized stream to another format without the declarations
- - object randomly restores some properties, without using declarations
+ - randomly restores some properties, without using declarations
  
- - not based on compile time traits: 
+ - not based on compile-time traits: 
     - properties can be renamed and reloaded even from an obsolete stream (renamed field, renamed option)
     - properties to be saved or reloaded can be arbitrarly chosen at run-time    
     
@@ -825,9 +825,12 @@ public class izSerializer
     
         mixin(genAllAdders);
         
-        /// an izSerializable declare a property descibed by aDescriptor
+        /// an izSerializable declare a property described by aDescriptor
         void addProperty(T)(izPropDescriptor!T * aDescriptor)
         {    
+            if (!aDescriptor) return;
+            if (!aDescriptor.name.length) return;
+            
             fCurrNode = fParentNode.addNewChildren!izIstNode;
             fCurrNode.setDescriptor(aDescriptor);
             
