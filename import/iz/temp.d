@@ -884,7 +884,16 @@ public class izSerializer
                 
             if (fMustRead) {
                 readNode(fCurrNode);
-                nodeInfo2Declarator(fCurrNode.nodeInfo);
+                if (fCurrNode.nodeInfo.descriptor)
+                    nodeInfo2Declarator(fCurrNode.nodeInfo);
+                else if(fOnWantDescriptor) 
+                {   
+                    void * descr; bool b;
+                    fOnWantDescriptor(cast(const(izSerNodeInfo*)) fCurrNode.nodeInfo, descr, b);
+                    fCurrNode.nodeInfo.descriptor = descr;
+                    if (fCurrNode.nodeInfo.descriptor)
+                        nodeInfo2Declarator(fCurrNode.nodeInfo);    
+                }
             }
             
             static if (isSerObjectType!T)
