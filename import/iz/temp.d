@@ -89,6 +89,15 @@ public struct izSerNodeInfo
     bool    isLastChild;
 }
 
+/** 
+ * Event triggered when a serializer needs a particulat property descriptor.
+ * Params:
+ * nodeInfo = the information the callee can use to determine the descriptor to return.
+ * matchingDescriptor = the callee can set a pointer to the izPropertyDescriptor matching to the info.
+ * stop = the callee can set this value to false in order to stop the restoration process.
+ */
+alias WantDescriptorEvent = void delegate(const(izSerNodeInfo*) nodeInfo, out void * matchingDescriptor, out bool stop);
+
 /// add double quotes escape 
 char[] add_dqe(char[] input)
 {
@@ -538,6 +547,8 @@ public class izSerializer
         // the izSerializable linked to fParentNode
         izSerializable fCurrSerializable;
         
+        WantDescriptorEvent fOnWantDescriptor;
+        
         izSerState fSerState;
         izStoreMode fStoreMode;
         izRestoreMode fRestoreMode;
@@ -767,7 +778,7 @@ public class izSerializer
          */
         void istToObject(izSerializable root, izSerFormat format)   
         {
-            //TODO-cfeature : restoreIST().
+            //TODO-cfeature : istToObject, using declarations().
             
             /*
                 IST nodes don't always have a descriptor in their infos.
@@ -805,10 +816,49 @@ public class izSerializer
             return scanNode(fRootNode, fRootNode.nodeInfo.name);
         }
         
-        /// restores the IST from node in rootObject. node can be determined by a call to findNode(), partial deserialization, 2nd phase  
-        void istToObject(izIstNode node, izSerializable root, bool recursive = false)
+        /**
+         * Restores the IST from node. 
+         * The process is lead by the nodeInfo associated to the node.
+         * If the descriptor is not defined then wantDescriptorEvent is called.
+         * Params:
+         * node = the IST node from where the restoration begins. It can be determined by a call to findNode().
+         * recursive = when set to true the restoration is recursive.
+         */  
+        void istToObject(izIstNode node, bool recursive = false)
         {
-            //TODO-cfeature : restoreFromNode().
+            // TODO-ctest: istToObject, using nodeINfo and WantDescriptorEvent
+            // try to restore, returns true if must continue
+            bool restore(izIstNode node)
+            {
+                bool result = true;
+                if (node.nodeInfo.descriptor)
+                    nodeInfo2Declarator(node.nodeInfo);
+                else if(fOnWantDescriptor) 
+                {   
+                    void * descr;
+                    fOnWantDescriptor(cast(const(izSerNodeInfo*)) node.nodeInfo, descr, result);
+                    node.nodeInfo.descriptor = descr;
+                    if (node.nodeInfo.descriptor)
+                        nodeInfo2Declarator(node.nodeInfo);
+                    result ^= result;         
+                }
+                return result;    
+            }
+            
+            bool restoreLoop(izIstNode node)
+            {
+                if (!restore(node)) return false;
+                foreach(child; node.children)
+                {
+                    auto childNode = cast(izIstNode) child;
+                    if (!restore(childNode)) return false; 
+                    if (isSerObjectType(childNode.nodeInfo.type) && recursive)
+                        if (!restoreLoop(childNode)) return false;  
+                }
+                return true;
+            }
+            
+            restoreLoop(node);
         }
         
         ///restores the single property from node using aDescriptor setter. node can be determined by a call to findNode(), partial deserialization, 2nd phase
@@ -876,6 +926,11 @@ public class izSerializer
         
         /// The IST can be modified, build, cleaned from the root node
         izIstNode serializationTree(){return fRootNode;}
+        
+        /// Event triggered when the serializer needs a particulat property descriptor.
+        WantDescriptorEvent onWantDescriptor(){return fOnWantDescriptor;}
+        /// ditto
+        void onWantDescriptor(WantDescriptorEvent aValue){fOnWantDescriptor = aValue;}
     } 
 }
 
