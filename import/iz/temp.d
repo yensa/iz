@@ -615,6 +615,7 @@ public class izSerializer
         void objectToIst(izSerializable root)
         {
             fStoreMode = izStoreMode.bulk;
+            fSerState = izSerState.store;
             fMustWrite = false;
             //
             fRootNode.deleteChildren;
@@ -625,6 +626,7 @@ public class izSerializer
             //
             fParentNode = fRootNode;
             fCurrSerializable.declareProperties(this);
+            fSerState = izSerState.none;
         }
         
         /** 
@@ -636,6 +638,7 @@ public class izSerializer
             fFormat = format;
             fStream = outputStream;
             fStoreMode = izStoreMode.sequential;
+            fSerState = izSerState.store;
             fMustWrite = true;
             //
             fRootNode.deleteChildren;
@@ -649,6 +652,7 @@ public class izSerializer
             fCurrSerializable.declareProperties(this);
             //
             fMustWrite = false;
+            fSerState = izSerState.none;
             fStream = null;
         }
         
@@ -752,6 +756,7 @@ public class izSerializer
             fCurrSerializable.declareProperties(this);   
             //   
             fMustRead = false;
+            fSerState = izSerState.none;
             fStream = null;  
         }   
         
