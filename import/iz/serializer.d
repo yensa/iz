@@ -861,6 +861,8 @@ class izMasterSerializer
 		 */
 		void addProperty(T)(izPropDescriptor!T * aDescriptor) if(isTypeSerializable!T)
 		{
+            if (!aDescriptor)
+                throw new Error("serializer error, null property descriptor");
 			if (aDescriptor.name == "")
 				throw new Error("serializer error, unnamed property descriptor");
 
