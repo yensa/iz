@@ -2008,7 +2008,7 @@ public interface izTreeItem
 			
             delete current;
             
-            // TODO-cbubgfix: to use destruct crash the test runners
+            // TODO-cbugfix: to use destruct crash the test runners
             //destruct(current);
 
 			// o.k but outside ptr is dangling.
