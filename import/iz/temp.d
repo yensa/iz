@@ -9,7 +9,6 @@ public interface izSerializable
     string className();
 	void declareProperties(izSerializer aSerializer);
 }
-// TODO-cfeature: serializable structures, using isCompatible()/delegatedInterface
 
 private enum izSerType
 {
@@ -83,7 +82,7 @@ public struct izSerNodeInfo
     izPtr   descriptor;
     ubyte[] value;
     char[]  name;
-    size_t  level;
+    uint    level;
     bool    isArray;
     bool    isDamaged;
     bool    isLastChild;
@@ -411,7 +410,7 @@ private final class izSerTextReader : izSerReader
         // level
         i = 0;
         while (propText[i] == '\t') i++;
-        fNode.nodeInfo.level = i;
+        fNode.nodeInfo.level = cast(uint) i;
         
         // type
         identifier = identifier.init;
@@ -458,7 +457,37 @@ private final class izSerBinaryWriter : izSerWriter
     {super(istNode, stream);}
     final override void writeObjectBeg(){}
     final override void writeObjectEnd(){}
-    final override void writeProp(){}  
+    final override void writeProp()
+    {
+        ubyte bin;
+        ubyte[] data;
+        uint datalength;
+        //header
+        bin = 0x99;
+        fStream.write(&bin, bin.sizeof);
+        // level
+        datalength = cast(uint) fNode.level;
+        fStream.write(&datalength, datalength.sizeof);
+        // type
+        bin = cast(ubyte) fNode.nodeInfo.type; 
+        fStream.write(&bin, bin.sizeof);
+        // as array
+        bin = fNode.nodeInfo.isArray; 
+        fStream.write(&bin, bin.sizeof);  
+        // name length then name
+        data = cast(ubyte[]) fNode.nodeInfo.name;
+        datalength = cast(uint) data.length;
+        fStream.write(&datalength, datalength.sizeof);
+        fStream.write(data.ptr, datalength);
+        // value length then value
+        data = fNode.nodeInfo.value;
+        datalength = cast(uint) data.length;
+        fStream.write(&datalength, datalength.sizeof);
+        fStream.write(data.ptr, datalength); 
+        //footer
+        bin = 0xA0;
+        fStream.write(&bin, bin.sizeof); 
+    }  
 }
 
 private final class izSerBinaryReader : izSerReader
@@ -467,7 +496,38 @@ private final class izSerBinaryReader : izSerReader
     {super(istNode, stream);}
     final override bool readObjectBeg(){return false;}
     final override bool readObjectEnd(){return false;}
-    final override void readProp(){}  
+    final override void readProp()
+    {
+        ubyte bin;
+        ubyte[] prop;
+        ubyte[] data;
+        uint datalength;
+        uint beg, end;
+        // cache property
+        do fStream.read(&bin, bin.sizeof);
+            while (bin != 0x99 && fStream.position != fStream.size);
+        beg = cast(uint) fStream.position;
+        do fStream.read(&bin, bin.sizeof);
+            while (bin != 0xA0 && fStream.position != fStream.size);
+        end = cast(uint) fStream.position;
+        if (end <= beg) return;
+        fStream.position = beg;
+        data.length = end - beg;
+        fStream.read(data.ptr, data.length);
+        // level
+        datalength = *cast(uint*) data.ptr;
+        fNode.nodeInfo.level = datalength;                
+        // type and array
+        fNode.nodeInfo.type = cast(izSerType) data[4];
+        fNode.nodeInfo.isArray = cast(bool) data[5];      
+        // name length then name;
+        datalength = *cast(uint*) (data.ptr + 6);
+        fNode.nodeInfo.name = cast(char[]) (data[10.. 10 + datalength].dup); 
+        beg =  10 +  datalength;      
+        // value length then value
+        datalength = *cast(uint*) (data.ptr + beg);
+        fNode.nodeInfo.value = data[beg + 4 .. beg + 4 + datalength].dup;
+    }  
 }
 
 // High end serializer ---------------------------------------------------------
@@ -1055,7 +1115,7 @@ void main()
     
 // sequential ser --------------------------------------------------------------      
     
-    ser.objectToStream(bc, str, izSerFormat.text);
+    ser.objectToStream(bc, str, izSerFormat.binary);
     str.saveToFile("serialized_sequential.txt");
     
 // find node ----------------------    
@@ -1066,16 +1126,17 @@ void main()
     writeln( ser.findNode("Root.property_d.property_b"));
     writeln( ser.findNode("Root.property_e") !is null);
     writeln( ser.findNode("Root"));
-    
+  
 // sequential deser ------------------------------------------------------------    
     
+    writeln( bc.a, " ", bc.b, " ", bc.e, " ",bc.c.a, " ", bc.c.b, " ", bc.d.a, " ", bc.d.b, " ");
     str.position = 0;
     bc.clear;
     writeln( bc.a, " ", bc.b, " ", bc.e, " ",bc.c.a, " ", bc.c.b, " ", bc.d.a, " ", bc.d.b, " ");    
     
-    ser.streamToObject(str, bc, izSerFormat.text);
+    ser.streamToObject(str, bc, izSerFormat.binary);
     writeln( bc.a, " ", bc.b, " ", bc.e, " ",bc.c.a, " ", bc.c.b, " ", bc.d.a, " ", bc.d.b, " ");
-    
+   
 // random deser ----------------------------------------------------------------    
     
     str.position = 0;
@@ -1106,7 +1167,7 @@ void main()
 
     str.clear;
     ser.objectToIst(bc);
-    ser.istToStream(str, izSerFormat.text);
+    ser.istToStream(str, izSerFormat.binary);
     str.saveToFile("serialized_bulk.txt");
     
 // istToObject with event ------------------------------------------------------
@@ -1130,7 +1191,6 @@ void main()
     assert(rootnode);
     ser.onWantDescriptor = &restoreEvent;
     ser.istToObject(rootnode, true);
-    assert(commona == 512);
-    
+    assert(commona == 512);    
               
 }

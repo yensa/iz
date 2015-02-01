@@ -95,7 +95,6 @@ object _1: TCEProject
     'import\iz\serializer.d'
     'import\iz\observer.d'
     'import\iz\temp.d'
-    'import\iz\traits.d'
   )
-  ConfigurationIndex = 2
+  ConfigurationIndex = 4
 end
