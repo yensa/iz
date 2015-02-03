@@ -4,6 +4,8 @@ import std.stdio;
 import std.traits;
 import std.conv;
 
+// TODO: apply latest changes from enumset (formely "bitSet")
+
 import iz.types;
 
 /// container for a izBitSet based on an enum which has up to 8 members.
