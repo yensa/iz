@@ -20,9 +20,6 @@ version (Windows)
     private immutable READ_WRITE =  GENERIC_READ | GENERIC_WRITE;
     private immutable FILE_SHARE_ALL = FILE_SHARE_READ | FILE_SHARE_WRITE;
 
-    private immutable uint PIPE_ACCESS_INBOUND = 1;
-    private immutable uint PIPE_ACCESS_OUTBOUND = 2;
-
     extern(Windows) export BOOL SetEndOfFile(in HANDLE hFile);
 
     extern(Windows) export HANDLE CreateNamedPipeA(
@@ -35,25 +32,6 @@ version (Windows)
        DWORD nDefaultTimeOut,
        LPSECURITY_ATTRIBUTES lpSecurityAttributes
     );
-
-    extern(Windows) export BOOL ConnectNamedPipe(
-        in HANDLE hNamedPipe,
-        LPOVERLAPPED lpOverlapped = null
-    );
-
-    extern(Windows) export BOOL PeekNamedPipe(
-         in HANDLE hNamedPipe,
-         out LPVOID lpBuffer,
-         in DWORD nBufferSize,
-         LPDWORD lpBytesRead,
-         LPDWORD lpTotalBytesAvail,
-         LPDWORD lpBytesLeftThisMessage
-    );
-
-    extern(Windows) export BOOL DisconnectNamedPipe(
-        in HANDLE hNamedPipe
-    );
-
 
     public alias izStreamHandle = HANDLE;
 
@@ -72,12 +50,6 @@ version (Windows)
     public immutable uint acRead = GENERIC_READ;
     public immutable uint acWrite= GENERIC_WRITE;
     public immutable uint acAll  = acRead | acWrite;
-
-    /// pipe direction
-    public immutable uint pdIn  = PIPE_ACCESS_INBOUND;
-    public immutable uint pdOut = PIPE_ACCESS_OUTBOUND;
-    public immutable uint pdAll = pdIn | pdOut;
-
 
     /// returns true if aHandle is valid.
     public bool isHandleValid(izStreamHandle aHandle)
@@ -627,117 +599,6 @@ public class izFileStream: izSystemStream
 }
 
 
-public uint pipeServer = 0;
-public uint pipeClient = 1;
-
-public class izPipeStream: izSystemStream
-{
-    private
-    {
-        izStreamHandle fServer;
-        string fPipeName;
-        bool fAsServer;
-    }
-    public
-    {
-        static izPipeStream createAsServer(in char[] aPipeName, uint pipeAccess = pdAll)
-        {
-            return construct!izPipeStream(aPipeName, pipeAccess, pipeServer);
-        }
-
-        static izPipeStream createAsClient(in char[] aPipeName, uint pipeAccess = acAll)
-        {
-            return construct!izPipeStream(aPipeName, pipeAccess, pipeClient);
-        }
-
-        /**
-         * Creates a pipe with the role pipeRole.
-         */
-        this(in char[] aPipeName, uint pipeAccess, uint pipeRole = pipeClient)
-        {
-            version(Windows)
-            {
-                if (pipeRole == pipeServer)
-                {
-                    uint BufSz = 4096;
-                    fHandle = CreateNamedPipeA(
-                        aPipeName.toStringz,
-                        pipeAccess,
-                        0, 255,
-                        BufSz, BufSz,
-                        0,
-                        (SECURITY_ATTRIBUTES*).init
-                    );
-                    fAsServer = isHandleValid(fHandle);
-
-                    if (!fAsServer)
-                        throw new Error("stream exception: pipe server not created");
-
-                    waitNewClient;
-                }
-                else
-                {
-                    fHandle = CreateFileA(aPipeName.toStringz, pipeAccess, shAll,
-			            (SECURITY_ATTRIBUTES*).init, cmToSystem(cmThere),
-                        FILE_ATTRIBUTE_NORMAL, HANDLE.init);
-                    if (!fHandle.isHandleValid)
-                        throw new Error("stream exception: pipe client not created");
-                }
-            }
-            version(Posix)
-            {
-            }
-        }
-
-        ~this()
-        {
-            if (!fHandle.isHandleValid) return;
-            version(Windows)
-            {
-                if (fAsServer)
-                    CloseHandle(fServer);
-                else
-                    DisconnectNamedPipe(fHandle);
-            }
-            version(Posix)
-            {
-            }
-        }
-
-        bool waitNewClient()
-        {
-            version(Windows)
-            {
-                if (!fAsServer) return false;
-                while(true)
-                {
-                    if (ConnectNamedPipe(fServer, null) == 0)
-                        return false;
-                }
-            }
-            version(Posix)
-            {
-                return false;
-            }
-        }
-
-        size_t peek(izPtr aBuffer, size_t aCount)
-        {
-            uint lCount = cast(uint) aCount;
-            uint cnt;
-            uint nothing;
-            version(Windows)
-            {
-                PeekNamedPipe(fHandle, aBuffer, lCount, &cnt, &nothing, &nothing);
-            }
-            version(Posix)
-            {
-            }
-            return cnt;
-        }
-    }
-}
-
 /**
  * Implements a stream of contiguous, GC-free, heap-memory.
  * Its maximal theoretical size is 2^32 bytes (x86) or 2^64 bytes (x86_64).
@@ -1093,19 +954,6 @@ version(unittest)
         huge.size = sz;
         huge.position = 0;
         assert(huge.size == sz);
-    }
-
-    version(Windows) unittest
-    {
-        // must be tested with several processes
-        auto pipename = r"\\.\pipe\apipenname";
-        auto srv = izPipeStream.createAsServer(pipename);
-        auto clt1 = izPipeStream.createAsClient(pipename);
-        scope(exit)
-        {
-            clt1.destruct;
-            srv.destruct;
-        }
     }
 
 	class commonStreamTester(T, A...)
