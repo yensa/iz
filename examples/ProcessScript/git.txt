@@ -1,6 +1,0 @@
-izSerializable Root = ""
-	char[] Executable = "git"
-	char[] WorkingDirectory = ""
-	char[] Parameter = "--help"
-	bool WaitOnExit = "true"
-	uint ParameterCount = "1"
