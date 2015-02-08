@@ -16,14 +16,19 @@ public interface izSerializable
      * during the deserialization process for type-safety or to create an
      * new class instance.
      */
-    string className();
+    final string className()
+    {
+        import std.conv, std.array;
+        return to!string(this)
+            .split('.')[1..$]
+            .join;
+    }
     /**
      * Called by an izSerializer during the de/serialization phase.
-     * In this method, the implementer declares its properties to
-     * the serializer.
+     * In this method, the implementer declares its properties to the serializer.
      * Params:
-     * aSerializer = the serializer. the implementer can call aSerializer.addProperty
-     * to arbitrarly declare some descriptors.
+     * aSerializer = the serializer. The implementer calls aSerializer.addProperty
+     * to arbitrarly (run-time decision) declare some izPropDescriptor.
      */
 	void declareProperties(izSerializer aSerializer);
 }
@@ -68,7 +73,6 @@ class izSerializableReference: izSerializable
 
         mixin(genPropFromField!(char[], "type", "_tp"));
         mixin(genPropFromField!(ulong,  "id",   "_id"));
-        string className(){return typeof(this).stringof;}
         void declareProperties(izSerializer aSerializer)
         {
             aSerializer.addProperty(getDescriptor!(char[])("type"));
@@ -78,7 +82,7 @@ class izSerializableReference: izSerializable
 }
 
 /**
- * Represents the types automatically handled by an izSerializer.
+ * Enumerates the types automatically handled by an izSerializer.
  */
 enum izSerType
 {
@@ -163,11 +167,11 @@ public struct izSerNodeInfo
  * Params:
  * nodeInfo = the information the callee can use to determine the descriptor to return.
  * matchingDescriptor = the callee can set a pointer to the izPropertyDescriptor matching to the info.
- * stop = the callee can set this value to false in order to stop the restoration process. According to the serialization context, this value can be noop.
+ * stop = the callee can set this value to true in order to stop the restoration process. According to the serialization context, this value can be noop.
  */
-alias WantDescriptorEvent = void delegate(const(izSerNodeInfo*) nodeInfo, out void * matchingDescriptor, out bool);
+alias WantDescriptorEvent = void delegate(const(izSerNodeInfo*) nodeInfo, out void * matchingDescriptor, out bool stop);
 
-/// add double quotes escape 
+// add double quotes escape 
 char[] add_dqe(char[] input)
 {
     char[] result;
@@ -178,7 +182,7 @@ char[] add_dqe(char[] input)
     return result;
 }
 
-/// remove double quotes escape
+// remove double quotes escape
 char[] del_dqe(char[] input)
 {
     if (input.length < 2) return input;
@@ -258,24 +262,24 @@ char[] value2text(const izSerNodeInfo * nodeInfo)
 }
 
 /// Converts the literal representation to a ubyte array according to type.
-ubyte[] text2value(in char[] text, izSerType type, bool isArray)
+ubyte[] text2value(char[] text, const izSerNodeInfo * nodeInfo)
 {
     ubyte[] t2v_1(T)(){
-        auto res = new ubyte[](type2size[type]);  
+        auto res = new ubyte[](type2size[nodeInfo.type]);  
         *cast(T*) res.ptr = to!T(text);
         return res; 
     }
     ubyte[] t2v_2(T)(){
         auto v = to!(T[])(text);
-        auto res = new ubyte[](v.length * type2size[type]);
+        auto res = new ubyte[](v.length * type2size[nodeInfo.type]);
         memmove(res.ptr, v.ptr, res.length);
         return res;
     }
     ubyte[] t2v(T)(){
-        if (!isArray) return t2v_1!T; else return t2v_2!T;
+        if (!nodeInfo.isArray) return t2v_1!T; else return t2v_2!T;
     }
     //    
-    final switch(type)
+    final switch(nodeInfo.type)
     {
         case izSerType._invalid:
             return cast(ubyte[])"invalid".dup;
@@ -298,7 +302,6 @@ ubyte[] text2value(in char[] text, izSerType type, bool isArray)
 }
 
 /// Fills an izSerNodeInfo according to an izPropDescriptor
-//!\ generate all the possible instance /!\ 
 void setNodeInfo(T)(izSerNodeInfo * nodeInfo, izPropDescriptor!T * descriptor)
 {
     scope(failure) nodeInfo.isDamaged = true;
@@ -373,234 +376,170 @@ public class izIstNode : izTreeItem
     }
 }
 
-// format reader/writer template -----------------------------------------------
-private class izSerWriter
+/// Propotype of a function which writes the representation of an izIstNode in an izStream.
+alias izSerWriter = void function(izIstNode istNode, izStream stream);
+
+/// Propotype of a function which reads the representation of an izIstNode from an izStream.
+alias izSerReader = void function(izStream stream, izIstNode istNode);
+
+// Text format ----------------------------------------------------------------+
+void writeText(izIstNode istNode, izStream stream)
 {
-    protected
+    char separator = ' ';
+    // indentation
+    char tabulation = '\t';
+    foreach(i; 0 .. istNode.level)
+        stream.write(&tabulation, tabulation.sizeof);
+    // type
+    char[] type = type2text[istNode.nodeInfo.type].dup;
+    stream.write(type.ptr, type.length);
+    // array
+    char[2] arr = "[]";
+    if (istNode.nodeInfo.isArray) stream.write(arr.ptr, arr.length); 
+    stream.write(&separator, separator.sizeof);
+    // name
+    char[] name = istNode.nodeInfo.name.dup;
+    stream.write(name.ptr, name.length);
+    stream.write(&separator, separator.sizeof);
+    // name value separators
+    char[] name_value = " = \"".dup;
+    stream.write(name_value.ptr, name_value.length);
+    // value
+    char[] classname = value2text(istNode.nodeInfo); // add_dqe
+    stream.write(classname.ptr, classname.length);
+    char[] eol = "\"\n".dup;
+    stream.write(eol.ptr, eol.length);
+}  
+
+void readText(izStream stream, izIstNode istNode)
+{
+    size_t i;
+    char[] identifier;
+    char reader;   
+    // cache the property
+    char[] propText;
+    char[2] eop;
+    auto initPos = stream.position;
+    while((eop != "\"\n") & (stream.position != stream.size)) 
     {
-        izIstNode fNode; 
-        izStream fStream; 
+        stream.read(eop.ptr, 2);
+        stream.position = stream.position -1;
     }
-    public
+    auto endPos = stream.position;
+    propText.length = cast(ptrdiff_t)(endPos - initPos);
+    stream.position = initPos;
+    stream.read(propText.ptr, propText.length);
+    stream.position = endPos + 1;
+        
+    // level
+    i = 0;
+    while (propText[i] == '\t') i++;
+    istNode.nodeInfo.level = cast(uint) i;
+    
+    // type
+    identifier = identifier.init;
+    while(propText[i] != ' ') 
+        identifier ~= propText[i++];
+    char[2] arr;
+    if (identifier.length > 2) 
     {
-        this(izIstNode istNode, izStream stream)
-        {
-            fNode = istNode;
-            fStream = stream;
-        }
-        abstract void writeObjectBeg();
-        abstract void writeObjectEnd();
-        //!\ endianism /!\
-        abstract void writeProp();
-    }  
-}
-
-private class izSerReader
-{
-    protected
-    {
-        izIstNode fNode; 
-        izStream fStream; 
+        arr = identifier[$-2 .. $];
+        istNode.nodeInfo.isArray = (arr == "[]");
     }
-    public
-    {
-        this(izIstNode istNode, izStream stream)
-        {
-            fNode = istNode;
-            fStream = stream;
-        }
-        abstract bool readObjectBeg();
-        abstract bool readObjectEnd();
-        //!\ endianism /!\
-        abstract void readProp();
-    }  
-}
-
-// Text format -----------------------------------------------------------------
-private final class izSerTextWriter : izSerWriter 
+    if (istNode.nodeInfo.isArray) 
+        identifier = identifier[0 .. $-2];
+    if (identifier in text2type) 
+        istNode.nodeInfo.type = text2type[identifier];
+         
+    // name
+    i++;
+    identifier = identifier.init;
+    while(propText[i] != ' ') 
+        identifier ~= propText[i++];
+    istNode.nodeInfo.name = identifier; 
+    
+    // name value separators
+    i++;
+    while(propText[i] != ' ') i++; 
+    i++;
+    //std.stdio.writeln(propText[i]); 
+    i++; 
+    while(propText[i] != ' ') i++;
+    
+    // value     
+    i++;
+    identifier = propText[i..$];
+    identifier = identifier[1..$-1];
+    istNode.nodeInfo.value = text2value(identifier, istNode.nodeInfo);
+}  
+//----
+// Binary format --------------------------------------------------------------+
+void writeBin(izIstNode istNode, izStream stream)
 {
-    this(izIstNode istNode, izStream stream)
-    {super(istNode, stream);}
-    final override void writeObjectBeg(){}
-    final override void writeObjectEnd(){}
-    final override void writeProp()
-    {
-        char separator = ' ';
-        // indentation
-        char tabulation = '\t';
-        foreach(i; 0 .. fNode.level)
-            fStream.write(&tabulation, tabulation.sizeof);
-        // type
-        char[] type = type2text[fNode.nodeInfo.type].dup;
-        fStream.write(type.ptr, type.length);
-        // array
-        char[2] arr = "[]";
-        if (fNode.nodeInfo.isArray) fStream.write(arr.ptr, arr.length); 
-        fStream.write(&separator, separator.sizeof);
-        // name
-        char[] name = fNode.nodeInfo.name.dup;
-        fStream.write(name.ptr, name.length);
-        fStream.write(&separator, separator.sizeof);
-        // name value separators
-        char[] name_value = " = \"".dup;
-        fStream.write(name_value.ptr, name_value.length);
-        // value
-        char[] classname = value2text(fNode.nodeInfo); // add_dqe
-        fStream.write(classname.ptr, classname.length);
-        char[] eol = "\"\n".dup;
-        fStream.write(eol.ptr, eol.length);
-    }  
-}
+    ubyte bin;
+    ubyte[] data;
+    uint datalength;
+    //header
+    bin = 0x99;
+    stream.write(&bin, bin.sizeof);
+    // level
+    datalength = cast(uint) istNode.level;
+    stream.write(&datalength, datalength.sizeof);
+    // type
+    bin = cast(ubyte) istNode.nodeInfo.type; 
+    stream.write(&bin, bin.sizeof);
+    // as array
+    bin = istNode.nodeInfo.isArray; 
+    stream.write(&bin, bin.sizeof);  
+    // name length then name
+    data = cast(ubyte[]) istNode.nodeInfo.name;
+    datalength = cast(uint) data.length;
+    stream.write(&datalength, datalength.sizeof);
+    stream.write(data.ptr, datalength);
+    // value length then value
+    data = istNode.nodeInfo.value;
+    datalength = cast(uint) data.length;
+    stream.write(&datalength, datalength.sizeof);
+    stream.write(data.ptr, datalength); 
+    //footer
+    bin = 0xA0;
+    stream.write(&bin, bin.sizeof); 
+}  
 
-private final class izSerTextReader : izSerReader
+void readBin(izStream stream, izIstNode istNode)
 {
-    this(izIstNode istNode, izStream stream){super(istNode, stream);}
-    final override bool readObjectBeg(){return false;}
-    final override bool readObjectEnd(){return false;}
-    final override void readProp()
-    {
-        size_t i;
-        char[] identifier;
-        char reader;   
-        // cache the property
-        char[] propText;
-        char[2] eop;
-        auto initPos = fStream.position;
-        while((eop != "\"\n") & (fStream.position != fStream.size)) 
-        {
-            fStream.read(eop.ptr, 2);
-            fStream.position = fStream.position -1;
-        }
-        auto endPos = fStream.position;
-        propText.length = cast(ptrdiff_t)(endPos - initPos);
-        fStream.position = initPos;
-        fStream.read(propText.ptr, propText.length);
-        fStream.position = endPos + 1;
-            
-        // level
-        i = 0;
-        while (propText[i] == '\t') i++;
-        fNode.nodeInfo.level = cast(uint) i;
-        
-        // type
-        identifier = identifier.init;
-        while(propText[i] != ' ') 
-            identifier ~= propText[i++];
-        char[2] arr;
-        if (identifier.length > 2) 
-        {
-            arr = identifier[$-2 .. $];
-            fNode.nodeInfo.isArray = (arr == "[]");
-        }
-        if (fNode.nodeInfo.isArray) 
-            identifier = identifier[0 .. $-2];
-        if (identifier in text2type) 
-            fNode.nodeInfo.type = text2type[identifier];
-             
-        // name
-        i++;
-        identifier = identifier.init;
-        while(propText[i] != ' ') 
-            identifier ~= propText[i++];
-        fNode.nodeInfo.name = identifier; 
-        
-        // name value separators
-        i++;
-        while(propText[i] != ' ') i++; 
-        i++;
-        //std.stdio.writeln(propText[i]); 
-        i++; 
-        while(propText[i] != ' ') i++;
-        
-        // value     
-        i++;
-        identifier = propText[i..$];
-        identifier = identifier[1..$-1];
-        fNode.nodeInfo.value = text2value(identifier, fNode.nodeInfo.type, fNode.nodeInfo.isArray);
-    }  
-}
-
-// Binary format ---------------------------------------------------------------
-private final class izSerBinaryWriter : izSerWriter 
-{
-    this(izIstNode istNode, izStream stream)
-    {super(istNode, stream);}
-    final override void writeObjectBeg(){}
-    final override void writeObjectEnd(){}
-    final override void writeProp()
-    {
-        ubyte bin;
-        ubyte[] data;
-        uint datalength;
-        //header
-        bin = 0x99;
-        fStream.write(&bin, bin.sizeof);
-        // level
-        datalength = cast(uint) fNode.level;
-        fStream.write(&datalength, datalength.sizeof);
-        // type
-        bin = cast(ubyte) fNode.nodeInfo.type; 
-        fStream.write(&bin, bin.sizeof);
-        // as array
-        bin = fNode.nodeInfo.isArray; 
-        fStream.write(&bin, bin.sizeof);  
-        // name length then name
-        data = cast(ubyte[]) fNode.nodeInfo.name;
-        datalength = cast(uint) data.length;
-        fStream.write(&datalength, datalength.sizeof);
-        fStream.write(data.ptr, datalength);
-        // value length then value
-        data = fNode.nodeInfo.value;
-        datalength = cast(uint) data.length;
-        fStream.write(&datalength, datalength.sizeof);
-        fStream.write(data.ptr, datalength); 
-        //footer
-        bin = 0xA0;
-        fStream.write(&bin, bin.sizeof); 
-    }  
-}
-
-private final class izSerBinaryReader : izSerReader
-{
-    this(izIstNode istNode, izStream stream)
-    {super(istNode, stream);}
-    final override bool readObjectBeg(){return false;}
-    final override bool readObjectEnd(){return false;}
-    final override void readProp()
-    {
-        ubyte bin;
-        ubyte[] prop;
-        ubyte[] data;
-        uint datalength;
-        uint beg, end;
-        // cache property
-        do fStream.read(&bin, bin.sizeof);
-            while (bin != 0x99 && fStream.position != fStream.size);
-        beg = cast(uint) fStream.position;
-        do fStream.read(&bin, bin.sizeof);
-            while (bin != 0xA0 && fStream.position != fStream.size);
-        end = cast(uint) fStream.position;
-        if (end <= beg) return;
-        fStream.position = beg;
-        data.length = end - beg;
-        fStream.read(data.ptr, data.length);
-        // level
-        datalength = *cast(uint*) data.ptr;
-        fNode.nodeInfo.level = datalength;                
-        // type and array
-        fNode.nodeInfo.type = cast(izSerType) data[4];
-        fNode.nodeInfo.isArray = cast(bool) data[5];      
-        // name length then name;
-        datalength = *cast(uint*) (data.ptr + 6);
-        fNode.nodeInfo.name = cast(char[]) (data[10.. 10 + datalength].dup); 
-        beg =  10 +  datalength;      
-        // value length then value
-        datalength = *cast(uint*) (data.ptr + beg);
-        fNode.nodeInfo.value = data[beg + 4 .. beg + 4 + datalength].dup;
-    }  
-}
-
-// High end serializer ---------------------------------------------------------
+    ubyte bin;
+    ubyte[] prop;
+    ubyte[] data;
+    uint datalength;
+    uint beg, end;
+    // cache property
+    do stream.read(&bin, bin.sizeof);
+        while (bin != 0x99 && stream.position != stream.size);
+    beg = cast(uint) stream.position;
+    do stream.read(&bin, bin.sizeof);
+        while (bin != 0xA0 && stream.position != stream.size);
+    end = cast(uint) stream.position;
+    if (end <= beg) return;
+    stream.position = beg;
+    data.length = end - beg;
+    stream.read(data.ptr, data.length);
+    // level
+    datalength = *cast(uint*) data.ptr;
+    istNode.nodeInfo.level = datalength;                
+    // type and array
+    istNode.nodeInfo.type = cast(izSerType) data[4];
+    istNode.nodeInfo.isArray = cast(bool) data[5];      
+    // name length then name;
+    datalength = *cast(uint*) (data.ptr + 6);
+    istNode.nodeInfo.name = cast(char[]) (data[10.. 10 + datalength].dup); 
+    beg =  10 +  datalength;      
+    // value length then value
+    datalength = *cast(uint*) (data.ptr + beg);
+    istNode.nodeInfo.value = data[beg + 4 .. beg + 4 + datalength].dup;
+}  
+//----
+// High end serializer --------------------------------------------------------+
 public enum izSerState
 {
     none,
@@ -622,24 +561,24 @@ public enum izRestoreMode
 
 public enum izSerFormat
 {
-    binary,
-    text
+    izbin,
+    iztxt,
     // OGDL
 }
 
-private izSerWriter newWriter(P...)(izSerFormat format, P params)
+private izSerWriter writeFormat(izSerFormat format)
 {
     with(izSerFormat) final switch(format) {
-        case binary: return construct!izSerBinaryWriter(params);
-        case text:   return construct!izSerTextWriter(params);   
+        case izbin: return &writeBin;
+        case iztxt: return &writeText;   
     }
 }
 
-private izSerReader newReader(P...)(izSerFormat format, P params)
+private izSerReader readFormat(izSerFormat format)
 {
     with(izSerFormat) final switch(format) {
-        case binary: return construct!izSerBinaryReader(params);
-        case text:   return construct!izSerTextReader(params);   
+        case izbin: return &readBin;
+        case iztxt: return &readText;   
     }
 }
 /*
@@ -697,42 +636,6 @@ public class izSerializer
             fRootDescr.define(&fRootSerializable, "Root");
             fRootNode.setDescriptor(&fRootDescr);
         }
-        
-        // IST -> stream
-        void writeNode(izIstNode node)
-        in 
-        {
-            assert(fStream);
-            assert(node);
-        }
-        body
-        {
-            auto writer = newWriter(fFormat, node, fStream);
-            scope(exit) destruct(writer);
-            //
-            if (isSerObjectType(node.nodeInfo.type))
-                writer.writeObjectBeg;
-            writer.writeProp;
-            if (!node.nextSibling) writer.writeObjectEnd;
-        }
-
-        // stream -> IST
-        void readNode(izIstNode node)
-        in 
-        {
-            assert(fStream);
-            assert(node);
-        }
-        body
-        {
-            auto reader = newReader(fFormat, node, fStream);
-            scope(exit) destruct(reader);
-            //
-            if (isSerObjectType(node.nodeInfo.type))
-                reader.readObjectBeg;            
-            reader.readProp;
-            if (!node.nextSibling) reader.readObjectEnd;
-        }    
     }
     
     public 
@@ -747,7 +650,7 @@ public class izSerializer
             destruct(fRootNode);
         }         
               
-//---- serialization -----------------------------------------------------------  
+//---- serialization ----------------------------------------------------------+
         
         /** 
          * Builds the IST from an izSerializable, 1st serialization phase.
@@ -787,7 +690,7 @@ public class izSerializer
             setRoot(root);
             fCurrSerializable = fRootSerializable;
             fCurrNode = fRootNode;
-            writeNode(fCurrNode);
+            writeFormat(fFormat)(fCurrNode, fStream);
             //
             fParentNode = fRootNode;
             fCurrSerializable.declareProperties(this);
@@ -810,13 +713,13 @@ public class izSerializer
             //
             void writeNodesFrom(izIstNode parent)
             {
-                writeNode(parent);
+                writeFormat(fFormat)(parent, fStream); 
                 for (auto i = 0; i < parent.childrenCount; i++)
                 {
                     auto child = cast(izIstNode) parent.children[i];           
                     if (isSerObjectType(child.nodeInfo.type))
                         writeNodesFrom(child);
-                    else writeNode(child);
+                    else writeFormat(fFormat)(child, fStream); 
                 }
             }
             writeNodesFrom(fRootNode);
@@ -824,8 +727,9 @@ public class izSerializer
             fMustWrite = false;
             fStream = null;
         }
-               
-//---- deserialization ---------------------------------------------------------         
+ 
+//------------------------------------------------------------------------------
+//---- deserialization --------------------------------------------------------+
             
         /**
          * Builds the IST from a stream, 1st deserialization phase. 
@@ -845,7 +749,7 @@ public class izSerializer
             while(inputStream.position < inputStream.size)
             {
                 unorderNodes ~= fCurrNode;      
-                readNode(fCurrNode);
+                readFormat(fFormat)(fStream, fCurrNode);
                 fCurrNode = construct!izIstNode;
             }
             destruct(fCurrNode);
@@ -890,7 +794,7 @@ public class izSerializer
             setRoot(root);
             fCurrSerializable = fRootSerializable;
             fCurrNode = fRootNode;
-            readNode(fCurrNode);
+            readFormat(fFormat)(fStream, fCurrNode);
             //
             fParentNode = fRootNode;
             fCurrSerializable = fRootSerializable;
@@ -995,7 +899,8 @@ public class izSerializer
             nodeInfo2Declarator(node.nodeInfo); 
         }        
 
-//---- declaration from an izSerializable --------------------------------------    
+//------------------------------------------------------------------------------
+//---- declaration from an izSerializable -------------------------------------+
     
     
         mixin(genAllAdders);
@@ -1010,10 +915,10 @@ public class izSerializer
             fCurrNode.setDescriptor(aDescriptor);
             
             if (fMustWrite && fStoreMode == izStoreMode.sequential)
-                writeNode(fCurrNode); 
+                writeFormat(fFormat)(fCurrNode, fStream); 
                 
             if (fMustRead) {
-                readNode(fCurrNode);
+                readFormat(fFormat)(fStream, fCurrNode);
                 if (fCurrNode.nodeInfo.descriptor)
                     nodeInfo2Declarator(fCurrNode.nodeInfo);
                 else if(fOnWantDescriptor) 
@@ -1065,8 +970,10 @@ public class izSerializer
         WantDescriptorEvent onWantDescriptor(){return fOnWantDescriptor;}
         /// ditto
         void onWantDescriptor(WantDescriptorEvent aValue){fOnWantDescriptor = aValue;}
+//------------------------------------------------------------------------------
     } 
 }
+//----
 
 private static string genAllAdders()
 {
@@ -1091,7 +998,7 @@ version(unittest)
         inf.value = value ;
         inf.isArray = false;
         assert(value2text(&inf) == text);
-        assert(text2value(text, inf.type, inf.isArray) == value);
+        assert(text2value(text, &inf) == value);
         //
         value = [13,14];
         text = "[13, 14]".dup;
@@ -1099,7 +1006,7 @@ version(unittest)
         inf.value = value ;
         inf.isArray = true;
         assert(value2text(&inf) == text);
-        assert(text2value(text, inf.type, inf.isArray) == value); 
+        assert(text2value(text, &inf) == value); 
         //
         
         // TODO-ctest: write a template for testing all types  
@@ -1109,8 +1016,8 @@ version(unittest)
 
     unittest 
     {
-        templatedTest!(izSerFormat.text)();
-        templatedTest!(izSerFormat.binary)();
+        templatedTest!(izSerFormat.iztxt)();
+        templatedTest!(izSerFormat.izbin)();
     }
     
     void templatedTest(izSerFormat format)()
