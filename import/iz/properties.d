@@ -293,9 +293,9 @@ version(unittest)
 }
 
 /// annotate a virtual method as setter
-struct set{} struct Set{}
+struct Set{}
 /// annotate a virtual method as getter 
-struct get{} struct Get{}
+struct Get{}
 
 
 public template genPropFromField(propType, string propName, string propField)
