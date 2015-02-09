@@ -27,7 +27,7 @@ public interface izSerializable
      * In this method, the implementer declares its properties to the serializer.
      * Params:
      * aSerializer = the serializer. The implementer calls aSerializer.addProperty
-     * to arbitrarly (run-time decision) declare some izPropDescriptor.
+     * to arbitrary (run-time decision) declare some izPropDescriptor.
      */
 	void declareProperties(izSerializer aSerializer);
 }
@@ -35,9 +35,8 @@ public interface izSerializable
 /**
  * Makes a reference serializable.
  * The reference must be stored in the referenceMan.
- * A "referenced variable" is typically something that is modified
+ * A "referenced variable" is typically something that is assigned
  * at the run-time, such as the source of a delegate, a pointer to an Object, etc.
- * It can also be used to serialize a custom type.
  */
 class izSerializableReference: izSerializable
 {
@@ -560,30 +559,43 @@ void readBin(izStream stream, izIstNode istNode)
 }  
 //----
 // High end serializer --------------------------------------------------------+
+
+/// Enumerates the possible state of an izSerializer.
 public enum izSerState
 {
+    /// the serializer is idle
     none,
-    store,      /// from declarator to serializer
-    restore     /// from serializer to declarator
+    /// the serializer is storing (from declarator to serializer)
+    store,  
+    /// the serializer is restoring (from serializer to declarator)
+    restore     
 }
 
+/// Enumerates the possible storing mode.
 public enum izStoreMode
 {
-    sequential, /// store directly after declaration. order is granted. a single property descriptor can be used for several properties. 
-    bulk        /// store when eveything is declared. a single property descriptor cannot be used for several properties.
+    /// stores directly after declaration. order is granted. a single property descriptor can be used for several properties.
+    sequential,
+    /// stores when eveything is declared. a single property descriptor cannot be used for several properties.  
+    bulk        
 }
 
+/// Enumerates the possible restoring mode.
 public enum izRestoreMode
 {
-    sequential, /// restore following declaration. order is granted.
-    random      /// restore without declaration, or according to a custom query.
+    /// restore following declaration. order is granted.
+    sequential, 
+    /// restore without declaration, or according to a custom query.
+    random      
 }
 
+/// Enumerates the possible serialization format
 public enum izSerFormat
 {
+    /// native binary format
     izbin,
-    iztxt,
-    // OGDL
+    /// native readable text format 
+    iztxt
 }
 
 private izSerWriter writeFormat(izSerFormat format)
@@ -601,23 +613,19 @@ private izSerReader readFormat(izSerFormat format)
         case iztxt: return &readText;   
     }
 }
-/*
-
-Features:
-
- - flexible because based on an intermediate, in-memory, tree representation, aka the "IST"
- - serialize object, according to its declaration
- - deserialize object, according to its declaration
- - convert serialized stream to another format without the declarations
- - randomly restores some properties, without using declarations
- 
- - not based on compile-time traits: 
-    - properties can be renamed and reloaded even from an obsolete stream (renamed field, renamed option)
-    - properties to be saved or reloaded can be arbitrarly determined at run-time    
-    
- - in case of  sequential restoration error the process can be finished manually.
-
-*/
+/**
+ * Native iz Serializer.
+ * An izSerializer is specialized to store and restore from any classes heriting
+ * from the interface izSerializable. An izSerializable arbitralry exposes some
+ * properties to serialize using the izPropDescriptor format.
+ *
+ * The serializer uses an intermediate serialization tree (IST) which grants a certain
+ * flexibilty. As expected for a serializer, some objects trees can be stored or 
+ * restored by a simple an single call (_objectToStream()_ and _streamToObject()_) 
+ * but the IST also allows to convert a data stream, to randomly find and restores 
+ * some properties and to handle compatibility errors.
+ * Even the IST can be build manually, without using the automatic mechanism.
+ */
 public class izSerializer
 {
     private
@@ -958,6 +966,7 @@ public class izSerializer
 //------------------------------------------------------------------------------
 //---- declaration from an izSerializable -------------------------------------+
     
+        /*( the following methods are designed to be only used by an izSerializable !)*/
     
         mixin(genAllAdders);
         
@@ -1013,24 +1022,25 @@ public class izSerializer
         }
         
         /// state is set visible to an izSerializable to let it know how the properties will be used (store: getter, restore: setter)
-        izSerState state() {return fSerState;}
+        @property izSerState state() {return fSerState;}
         
         /// storeMode is set visible to an izSerializable to let it adjust the way to declare the properties. 
-        izStoreMode storeMode() {return fStoreMode;}
+        @property izStoreMode storeMode() {return fStoreMode;}
         
         /// restoreMode is set visible to an izSerializable to let it adjust the way to declare the properties. 
-        izRestoreMode restoreMode() {return fRestoreMode;}
+        @property izRestoreMode restoreMode() {return fRestoreMode;}
          
         /// serializationFormat is set visible to an izSerializable to let it adjust the way to declare the properties. 
-        izSerFormat serializationFormat() {return fFormat;} 
+        @property izSerFormat serializationFormat() {return fFormat;} 
         
         /// The IST can be modified, build, cleaned from the root node
-        izIstNode serializationTree(){return fRootNode;}
+        @property izIstNode serializationTree(){return fRootNode;}
         
         /// Event triggered when the serializer needs a particulat property descriptor.
-        WantDescriptorEvent onWantDescriptor(){return fOnWantDescriptor;}
+        @property WantDescriptorEvent onWantDescriptor(){return fOnWantDescriptor;}
+        
         /// ditto
-        void onWantDescriptor(WantDescriptorEvent aValue){fOnWantDescriptor = aValue;}
+        @property void onWantDescriptor(WantDescriptorEvent aValue){fOnWantDescriptor = aValue;}
 //------------------------------------------------------------------------------
     } 
 }
