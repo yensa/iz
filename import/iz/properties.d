@@ -328,7 +328,7 @@ mixin(genStandardPropDescriptors);
 
 
 /**
- * When mixed in a class, several analyzer can be used to automatically create
+ * When mixed in a class, several analyzers can be used to automatically create
  * some izPropertyDescriptors.
  */
 mixin template izPropertiesAnalyzer(){
@@ -339,13 +339,18 @@ mixin template izPropertiesAnalyzer(){
      */
     private void * [] descriptors;
     
+    /**
+     * Returns the count of descriptor the analyzers have created.
+     */
     public size_t descriptorCount(){return descriptors.length;}
     
     /** 
-     * Returns a pointer to the descriptor whose property name is set to name.
+     * Returns a pointer to a descriptor according to its name.
      * Params:
-     * name = the identifier used for the setter/getter.
+     * name = the identifier used for the setter and the getter.
      * createIfMissing = when set to true, the result is never null.
+     * Returns:
+     * null if the operation fails otherwise a pointer to an izPropDescriptor!T.
      */
     protected izPropDescriptor!T * getDescriptor(T)(string name, bool createIfMissing = false)
     {
@@ -376,7 +381,7 @@ mixin template izPropertiesAnalyzer(){
         analyzeVirtualSetGet;
     }
     
-    private void analyzeFields(string[] prefixedFieldNames)
+    private void analyzeFields(string[] prefixedFieldNames, string prefixes = "_fF")
     {
         // TODO-cfeature: create descriptors for directly-accessed-fields
         // []: all private/protected fiels prefixed with '_' or 'f'
