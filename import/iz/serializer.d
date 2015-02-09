@@ -673,8 +673,11 @@ public class izSerializer
 //---- serialization ----------------------------------------------------------+
         
         /** 
-         * Builds the IST from an izSerializable, 1st serialization phase.
-         * declarator -> IST
+         * Builds the IST from an izSerializable.
+         * The process starts by a call to .declaraPropties() in the root then
+         * the process is leaded by the the subsequent declarations.
+         * Params:
+         * root = the izSerializable from where the declarations starts.
          */
         void objectToIst(izSerializable root)
         {
@@ -694,8 +697,14 @@ public class izSerializer
         }
         
         /** 
-         * Builds the IST from an izSerializable and store sequentially, merged serialization phases.
-         * declarator -> IST -> stream
+         * Builds the IST from an izSerializable and stores sequentially in a stream.
+         * The process starts by a call to .declaraPropties() in the root then
+         * the process is leaded by the the subsequent declarations.
+         * The data are written straight after a descriptor declaration.
+         * Params:
+         * root = the izSerializable from where the declarations starts.
+         * outputStream = the stream where te data are written.
+         * format = the format of the serialized data.
          */
         void objectToStream(izSerializable root, izStream outputStream, izSerFormat format)
         {
@@ -721,8 +730,12 @@ public class izSerializer
         }
         
         /** 
-         * Saves the IST to outputStream, bulk, 2nd serialization phase.
-         * IST -> stream
+         * Saves the IST to a stream. 
+         * Data are grabbed in bulk hence the descriptor linked to each
+         * tree node cannot share a common descriptor.
+         * Params:
+         * outputStream = the stream where te data are written.
+         * format = the format of the serialized data.
          */
         void istToStream(izStream outputStream, izSerFormat format)
         {
@@ -752,9 +765,13 @@ public class izSerializer
 //---- deserialization --------------------------------------------------------+
             
         /**
-         * Builds the IST from a stream, 1st deserialization phase. 
-         * The IST nodes are not linked to a declarator.
-         * stream -> IST
+         * Builds the IST from a stream.
+         * After the call the properties can only be restored manually 
+         * by using findNode() and restoreProperty(). 
+         * This function is also usefull to convert from a format to another.
+         * Params:
+         * inputStream = a stream containing the serialized data.
+         * format = the format of the serialized data.
          */
         void streamToIst(izStream inputStream, izSerFormat format)
         {
@@ -798,9 +815,12 @@ public class izSerializer
         }
         
         /** 
-         * Builds the IST from a stream and restore sequentially to root, 
-         * merged deserialization phases, the declarations lead the process.
-         * stream -> IST -> declarator
+         * Builds the IST from a stream and restores sequentially to a root.
+         * The process starts by a call to .declaraPropties() in the root.
+         * Params:
+         * inputStream = the stream containing the serialized data.
+         * root = the izSerializable from where the declarations and the restoration starts.
+         * format = the format of the serialized data.
          */
         void streamToObject(izStream inputStream, izSerializable root, izSerFormat format)
         {
@@ -825,19 +845,17 @@ public class izSerializer
             fStream = null;  
         }   
         
-        /**
-         * Restores sequentially from the IST to root, 2nd deserialization phase, 
-         * the declarations lead the the process.
-         * IST -> declarator
-         */
         void istToObject(izSerializable root, izSerFormat format)   
         {
             //TODO-cfeature : istToObject, using declarations().
         }    
         
         /**
-         * Finds the node named according to descriptorName.
-         * Deserialization utility, 2nd phase.
+         * Finds the tree node matching to a property names chain.
+         * Params:
+         * descriptorName = the property names chain which identifies the interesting node.
+         * Returns:
+         * A reference to the node which matches to the property if the call succeeds otherwise nulll.
          */ 
         izIstNode findNode(in char[] descriptorName)
         {
@@ -866,7 +884,7 @@ public class izSerializer
         }
         
         /**
-         * Restores the IST from node. 
+         * Restores the IST from an arbitrary tree node. 
          * The process is lead by the nodeInfo associated to the node.
          * If the descriptor is not defined then wantDescriptorEvent is called.
          * It means that this method can be used to deserialize to an arbitrary descriptor,
@@ -925,7 +943,12 @@ public class izSerializer
     
         mixin(genAllAdders);
         
-        /// an izSerializable declare a property described by aDescriptor
+        /**
+         * Designed to be called by an izSerializable when it needs to declare 
+         * a property in its declarePropeties() method.
+         *
+         * This can also be called in an exotic serialization scheme.
+         */
         void addProperty(T)(izPropDescriptor!T * aDescriptor)
         {    
             if (!aDescriptor) return;
