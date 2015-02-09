@@ -297,17 +297,21 @@ struct Set{}
 /// annotate a virtual method as getter 
 struct Get{}
 
-
-public template genPropFromField(propType, string propName, string propField)
+/**
+ * When mixed in an agregate, generates a property. This property is detectable
+ * by a izPropertiesAnalyzer.
+ * Params:
+ * T = the type of the property.
+ * propName = the name of the property.
+ * propField = the identifier of the existing field of type T.
+ */
+public string genPropFromField(T, string propName, string propField)()
 {
-	string genPropFromField()
-	{
-		return
-			"@Set @property void "~ propName ~ "(" ~ propType.stringof ~ " aValue)" ~
-			"{ " ~ propField ~ " = aValue;} " ~
-			"@Get @property " ~ propType.stringof ~ " " ~ propName ~
-			"(){ return " ~ propField ~ ";}" ;
-	}
+    return
+	"@Set @property void "~ propName ~ "(" ~ T.stringof ~ " aValue)" ~
+	"{ " ~ propField ~ " = aValue;} " ~
+	"@Get @property " ~ T.stringof ~ " " ~ propName ~
+	"(){ return " ~ propField ~ ";}" ;
 }
 
 private char[] genStandardPropDescriptors()
