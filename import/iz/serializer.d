@@ -918,9 +918,9 @@ public class izSerializer
                 foreach(child; node.children)
                 {
                     auto childNode = cast(izIstNode) child;
-                    if (!restore(childNode)) return false; 
+                    if (!restore(childNode)) return false;
                     if (isSerObjectType(childNode.nodeInfo.type) && recursive)
-                        if (!restoreLoop(childNode)) return false;  
+                        if (!restoreLoop(childNode)) return false;
                 }
                 return true;
             }
@@ -928,13 +928,31 @@ public class izSerializer
             restoreLoop(node);
         }
         
-        ///restores the single property from node using aDescriptor setter. node can be determined by a call to findNode(), partial deserialization, 2nd phase
-        void restoreProperty(T)(izIstNode node, izPropDescriptor!T * aDescriptor)
+        /**
+         * Restores a single property from a tree node using the setter of a descriptor.
+         * Params:
+         * node = an izIstNode. Can be determined by a call to findNode()
+         * aDescriptor = the izPropDescriptor whose setter is used to restore the node data.
+         * If not specified then the onWantDescriptor event may be called.
+         */
+        void restoreProperty(T)(izIstNode node, izPropDescriptor!T * aDescriptor = null)
         {
             fSerState = izSerState.restore;
             fRestoreMode = izRestoreMode.random;
-            node.nodeInfo.descriptor = aDescriptor;
-            nodeInfo2Declarator(node.nodeInfo); 
+            if (aDescriptor)
+            {
+                node.nodeInfo.descriptor = aDescriptor;
+                nodeInfo2Declarator(node.nodeInfo);
+            }
+            else if(fOnWantDescriptor)
+            {
+                bool noop;
+                void * descr;
+                fOnWantDescriptor(cast(const(izSerNodeInfo*)) node.nodeInfo, descr, noop);
+                node.nodeInfo.descriptor = descr;
+                if (node.nodeInfo.descriptor)
+                    nodeInfo2Declarator(node.nodeInfo);
+            }
         }        
 
 //------------------------------------------------------------------------------
