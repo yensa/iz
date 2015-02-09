@@ -3,8 +3,7 @@ module iz.serializer;
 import std.stdio, std.typetuple, std.conv, std.traits;
 import iz.types, iz.properties, iz.containers, iz.streams;
 
-// Serializable types ----------------------------------------------------------
-
+// Serializable types ---------------------------------------------------------+
 
 /**
  * Allows an implementer to be serialized by an izSerializer.
@@ -136,18 +135,36 @@ private static bool isSerSimpleType(T)()
 
 private bool isSerArrayType(T)()
 {
-    static if (is(T : izSerializable)) return false;
-    else static if (isSerObjectType!T) return false;
+    static if (!isArray!T) return false;
+    else static if (is(T : izSerializable)) return false;
+    else static if (isSerObjectType!(typeof(T.init[0]))) return false;
     else static if (staticIndexOf!(typeof(T.init[0]), izSerTypeTuple) == -1) return false;
     else return true;
+}
+
+public bool isSerializable(T)()
+{
+    return (isSerSimpleType!T || isSerArrayType!T || isSerObjectType!T);
+}
+
+unittest
+{
+    struct S{}
+    static assert( isSerializable!ubyte );
+    static assert( isSerializable!double );
+    static assert( isSerializable!(ushort[]) );
+    static assert( isSerializable!Object );
+    static assert( !(isSerializable!(Object[])) );
+    static assert( !(isSerializable!S) );
 }
 
 private string getElemStringOf(T)() if (isArray!T)
 {
     return typeof(T.init[0]).stringof;
 }
+// -----------------------------------------------------------------------------
 
-// Tree representation ---------------------------------------------------------
+// Tree representation --------------------------------------------------------
 
 /// Represents a serializable property without genericity.
 public struct izSerNodeInfo
@@ -165,9 +182,12 @@ public struct izSerNodeInfo
 /** 
  * Event triggered when a serializer needs a particular property descriptor.
  * Params:
- * nodeInfo = the information the callee can use to determine the descriptor to return.
- * matchingDescriptor = the callee can set a pointer to the izPropertyDescriptor matching to the info.
- * stop = the callee can set this value to true in order to stop the restoration process. According to the serialization context, this value can be noop.
+ * nodeInfo = the information the callee can use to determine the descriptor 
+ * to return.
+ * matchingDescriptor = the callee can set a pointer to the izPropertyDescriptor 
+ * matching to the info.
+ * stop = the callee can set this value to true in order to stop the restoration 
+ * process. According to the serialization context, this value can be noop.
  */
 alias WantDescriptorEvent = void delegate(const(izSerNodeInfo*) nodeInfo, out void * matchingDescriptor, out bool stop);
 
@@ -593,9 +613,9 @@ Features:
  
  - not based on compile-time traits: 
     - properties can be renamed and reloaded even from an obsolete stream (renamed field, renamed option)
-    - properties to be saved or reloaded can be arbitrarly chosen at run-time    
+    - properties to be saved or reloaded can be arbitrarly determined at run-time    
     
- - in case of errors in sequential restoration the process can be finished manually.
+ - in case of  sequential restoration error the process can be finished manually.
 
 */
 public class izSerializer
@@ -973,6 +993,7 @@ public class izSerializer
 //------------------------------------------------------------------------------
     } 
 }
+
 //----
 
 private static string genAllAdders()
@@ -985,7 +1006,6 @@ private static string genAllAdders()
 
 version(unittest)
 {
-
     unittest
     {
         char[] text;
@@ -1007,9 +1027,36 @@ version(unittest)
         inf.isArray = true;
         assert(value2text(&inf) == text);
         assert(text2value(text, &inf) == value); 
-        //
-        
-        // TODO-ctest: write a template for testing all types  
+        //  
+        void testType(T)(T t)
+        {
+            char[] asText;
+            T value = t;
+            izSerNodeInfo inf;
+            izPropDescriptor!T descr;
+            //
+            descr.define(&value, "property");
+            setNodeInfo!T(&inf, &descr);
+            //
+            asText = to!string(value).dup;
+            assert(value2text(&inf) == asText);
+            static if (!isArray!T) 
+                assert( * cast(T*)(text2value(asText, &inf)).ptr == value, T.stringof);
+            static if (isArray!T) 
+                assert( cast(ubyte[])text2value(asText, &inf) == cast(ubyte[])value, T.stringof);
+        }
+        testType('c');
+        testType("azertyuiop".dup);
+        testType(cast(byte)8);      testType(cast(byte[])[8,8]);
+        testType(cast(ubyte)8);     testType(cast(ubyte[])[8,8]);
+        testType(cast(short)8);     testType(cast(short[])[8,8]); 
+        testType(cast(ushort)8);    testType(cast(ushort[])[8,8]);
+        testType(cast(int)8);       testType(cast(int[])[8,8]);     
+        testType(cast(uint)8);      testType(cast(uint[])[8,8]);    
+        testType(cast(long)8);      testType(cast(long[])[8,8]);    
+        testType(cast(ulong)8);     testType(cast(ulong[])[8,8]);
+        testType(cast(float).8f);   testType(cast(float[])[.8f,.8f]); 
+        testType(cast(double).8);   testType(cast(double[])[.8,.8]);
         
         writeln("izSerializer passed the text-value conversions test");     
     }
@@ -1020,204 +1067,81 @@ version(unittest)
         templatedTest!(izSerFormat.izbin)();
     }
     
+    class ClassB : izSerializable
+    {
+        mixin izPropertiesAnalyzer;
+        private:
+            int[]  _anIntArray;
+            float  _afloat;
+            char[] _someChars;
+        public:
+            this()
+            {
+                analyzeVirtualSetGet;
+                _anIntArray = [0, 1, 2, 3];
+                _afloat = 0.123456f;
+                _someChars = "azertyuiop".dup;
+            }
+            void reset() 
+            {
+                iz.types.reset(_anIntArray);
+                _afloat = 0.0f;
+                iz.types.reset(_someChars);
+            }
+            
+            mixin(genPropFromField!(typeof(_anIntArray), "anIntArray", "_anIntArray"));
+            mixin(genPropFromField!(typeof(_afloat), "afloat", "_afloat"));
+            mixin(genPropFromField!(typeof(_someChars), "someChars", "_someChars")); 
+            
+            void declareProperties(izSerializer aSerializer)
+            {
+                aSerializer.addProperty(getDescriptor!(typeof(_anIntArray))("anIntArray"));
+                aSerializer.addProperty(getDescriptor!(typeof(_afloat))("afloat"));
+                aSerializer.addProperty(getDescriptor!(typeof(_someChars))("someChars"));
+            }
+    }
+    
     void templatedTest(izSerFormat format)()
     {
+        izMemoryStream str  = construct!izMemoryStream;
+        izSerializer ser    = construct!izSerializer;
+        ClassB b = construct!ClassB;
+        scope(exit) destruct(str, ser, b);
+        
+        // basic sequential store/restore
+        ser.objectToStream(b,str,format);
+        b.reset;
+        assert(b.anIntArray == []);
+        assert(b.afloat == 0.0f);
+        assert(b.someChars == "");
+        str.position = 0;
+        ser.streamToObject(str,b,format);
+        assert(b.anIntArray == [0, 1, 2, 3]);
+        assert(b.afloat == 0.123456f);
+        assert(b.someChars == "azertyuiop");
+        
+        // find arbitrary prop
+        assert(ser.findNode("Root.anIntArray"));
+        assert(ser.findNode("Root.afloat"));
+        assert(ser.findNode("Root.someChars"));
+        assert(!ser.findNode("Root."));
+        assert(!ser.findNode("afloat"));
+        assert(!ser.findNode("Root.someChar"));
+        assert(!ser.findNode(""));
+        
+        // restore elsewhere than in the declarator
+        float outside;
+        auto node = ser.findNode("Root.afloat");
+        auto afloatDescr = izPropDescriptor!float(&outside, "dontcare");
+        ser.restoreProperty(node, &afloatDescr);
+        assert(outside == 0.123456f);
+        
+        //TODO-ctest: restore event
+        //TODO-ctest: nested declarations with super.declarations
+        //TODO-ctest: alternative schemes: bulk, 2 phases, random deser
+        //TODO-ctest: izSerializableReference
     
     
         writeln("izSerializer passed the " ~ to!string(format) ~ " format test");
     }
-}
-
-
-
-
-
-
-version(devnewser)
-void main()
-{
-    writeln(type2text);
-    writeln(text2type);
-    writeln(type2size);
-    
-    izSerNodeInfo inf;
-    uint a = 8;
-    float[] b = [0.1f, 0.2f];
-    int[2] c = [1,2];
-    
-    
-    class D: izSerializable
-    {
-        void declareProperties(izSerializer serializer){}
-        string className(){return "DEF";} // 68..70
-    }
-    auto d = new D;
-    
-    auto aDescr = izPropDescriptor!uint(&a, "prop_a");
-    setNodeInfo!uint(&inf, &aDescr);
-    writeln(inf);
-    
-    auto bDescr = izPropDescriptor!(float[])(&b, "prop_b");
-    setNodeInfo!(float[])(&inf, &bDescr);
-    writeln(inf);    
-    
-    auto cDescr = izPropDescriptor!(int[2])(&c, "prop_c");
-    setNodeInfo!(int[2])(&inf, &cDescr);
-    writeln(inf);    
-    
-    izSerializable asSer = cast(izSerializable) d;
-    auto dDescr = izPropDescriptor!izSerializable(&asSer, "prop_d");
-    setNodeInfo!izSerializable(&inf, &dDescr);
-    writeln(inf);  
-    
-    Object e =  d;
-    auto eDescr = izPropDescriptor!Object(&e, "prop_e");
-    setNodeInfo!Object(&inf, &eDescr);
-    writeln(inf);
-    
-     
-    class classA : izSerializable
-    {
-        private:
-            izPropDescriptor!uint aDescr;
-            izPropDescriptor!uint bDescr;
-            uint a;
-            uint b;
-        public:
-            this()
-            {
-                a = 512;
-                b = 1024;
-                aDescr.define(&a, "property_a");
-                bDescr.define(&b, "property_b");
-            }
-            string className(){return "classA";}
-	        void declareProperties(izSerializer aSerializer)
-            {
-                aSerializer.addProperty(&aDescr);
-                aSerializer.addProperty(&bDescr);
-            }
-            void clear(){reset(a); reset(b);}
-    }
-    
-    class classB : classA
-    {
-        private
-        {
-            float[] e;
-            classA c, d;
-            izSerializable ciz, diz;
-            izPropDescriptor!izSerializable cDescr;
-            izPropDescriptor!Object dDescr;
-            izPropDescriptor!(float[]) eDescr;
-        }
-        this()
-        {
-            a = 88;
-            b = 99;
-            c = new classA;
-            d = new classA;
-            e = [0.1f,0.2f];
-            ciz = cast(izSerializable) c;
-            diz = cast(izSerializable) d;
-            cDescr.define(&ciz, "property_c");
-            dDescr.define(cast(Object*)&d, "property_d");
-            eDescr.define(&e, "property_e");
-        }
-        override string className(){return "classB";}
-	    override void declareProperties(izSerializer aSerializer)
-        {
-            super.declareProperties(aSerializer);
-            aSerializer.addProperty(&cDescr);
-            aSerializer.addProperty(&dDescr);
-            aSerializer.addProperty(&eDescr);
-        }
-        override void clear(){super.clear; c.clear; d.clear; reset(e);}
-    }
-    
-    auto str = construct!izMemoryStream;
-    auto ser = construct!izSerializer;
-    auto bc  = construct!classB;
-    scope(exit) destruct(str, ser, bc);
-    
-// sequential ser --------------------------------------------------------------      
-    
-    ser.objectToStream(bc, str, izSerFormat.binary);
-    str.saveToFile("serialized_sequential.txt");
-    
-// find node ----------------------    
-    
-    writeln( ser.findNode("Root.property_c.property_a"));
-    writeln( ser.findNode("Root.property_e"));
-    writeln( ser.findNode("Root.property_e.nil"));
-    writeln( ser.findNode("Root.property_d.property_b"));
-    writeln( ser.findNode("Root.property_e") !is null);
-    writeln( ser.findNode("Root"));
-  
-// sequential deser ------------------------------------------------------------    
-    
-    writeln( bc.a, " ", bc.b, " ", bc.e, " ",bc.c.a, " ", bc.c.b, " ", bc.d.a, " ", bc.d.b, " ");
-    str.position = 0;
-    bc.clear;
-    writeln( bc.a, " ", bc.b, " ", bc.e, " ",bc.c.a, " ", bc.c.b, " ", bc.d.a, " ", bc.d.b, " ");    
-    
-    ser.streamToObject(str, bc, izSerFormat.binary);
-    writeln( bc.a, " ", bc.b, " ", bc.e, " ",bc.c.a, " ", bc.c.b, " ", bc.d.a, " ", bc.d.b, " ");
-   
-// random deser ----------------------------------------------------------------    
-    
-    str.position = 0;
-    bc.clear;
-    writeln( bc.a, " ", bc.b,);    
-    
-    ser.streamToIst(str, izSerFormat.text);
-    
-    izIstNode nd;
-    nd = ser.findNode("Root.property_a");
-    if (nd) ser.restoreProperty(nd, &bc.aDescr);
-    nd = ser.findNode("Root.property_b");
-    if (nd) ser.restoreProperty(nd, &bc.bDescr);
-    nd = ser.findNode("Root.property_e");
-    if (nd) ser.restoreProperty(nd, &bc.eDescr);
-    
-    writeln( bc.a, " ", bc.b, " ", bc.e);
-    
-// bulk ser --------------------------------------------------------------------
-
-    bc.a = 777;
-    bc.b = 888;
-    bc.e = [0.111f,0.222f,0.333f,0.444f];
-    bc.c.a = 777;
-    bc.c.b = 888;
-    bc.d.a = 951;
-    bc.d.b = 846;
-
-    str.clear;
-    ser.objectToIst(bc);
-    ser.istToStream(str, izSerFormat.binary);
-    str.saveToFile("serialized_bulk.txt");
-    
-// istToObject with event ------------------------------------------------------
-
-    str.loadFromFile("serialized_sequential.txt");   
-    auto binstance = construct!classB;
-    scope(exit) destruct(binstance);
-    
-    
-    uint commona;
-    uintprop aprop = uintprop(&commona, "commonuint");
-    
-    void restoreEvent(const(izSerNodeInfo*) nodeInfo, out void * matchingDescriptor, out bool stop)
-    {
-        if (nodeInfo.name == "property_a")
-            matchingDescriptor = &aprop;
-    }
-    
-    ser.streamToIst(str, izSerFormat.text);
-    auto rootnode = ser.findNode("Root");
-    assert(rootnode);
-    ser.onWantDescriptor = &restoreEvent;
-    ser.istToObject(rootnode, true);
-    assert(commona == 512);    
-              
 }
