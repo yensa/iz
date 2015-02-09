@@ -1114,8 +1114,35 @@ version(unittest)
 
     unittest 
     {
-        templatedTest!(izSerFormat.iztxt)();
-        templatedTest!(izSerFormat.izbin)();
+        testByFormat!(izSerFormat.iztxt)();
+        testByFormat!(izSerFormat.izbin)();
+    }
+    
+    class ClassA: ClassB
+    {
+        private:
+            ClassB _aB1, _aB2;
+            izPropDescriptor!Object aB1descr, aB2descr;
+        public:
+            this() {
+                _aB1 = construct!ClassB;
+                _aB2 = construct!ClassB;
+                aB1descr.define(cast(Object*)&_aB1, "aB1");
+                aB2descr.define(cast(Object*)&_aB2, "aB2");
+            }
+            ~this() {
+                destruct(_aB1, _aB2);
+            }
+            override void reset() {
+                super.reset;
+                _aB1.reset;
+                _aB2.reset;
+            }
+            override void declareProperties(izSerializer aSerializer) {
+                super.declareProperties(aSerializer);
+                aSerializer.addProperty(&aB1descr);
+                aSerializer.addProperty(&aB2descr);
+            }
     }
     
     class ClassB : izSerializable
@@ -1126,15 +1153,13 @@ version(unittest)
             float  _afloat;
             char[] _someChars;
         public:
-            this()
-            {
+            this() {
                 analyzeVirtualSetGet;
                 _anIntArray = [0, 1, 2, 3];
                 _afloat = 0.123456f;
                 _someChars = "azertyuiop".dup;
             }
-            void reset() 
-            {
+            void reset() {
                 iz.types.reset(_anIntArray);
                 _afloat = 0.0f;
                 iz.types.reset(_someChars);
@@ -1144,20 +1169,20 @@ version(unittest)
             mixin(genPropFromField!(typeof(_afloat), "afloat", "_afloat"));
             mixin(genPropFromField!(typeof(_someChars), "someChars", "_someChars")); 
             
-            void declareProperties(izSerializer aSerializer)
-            {
+            void declareProperties(izSerializer aSerializer) {
                 aSerializer.addProperty(getDescriptor!(typeof(_anIntArray))("anIntArray"));
                 aSerializer.addProperty(getDescriptor!(typeof(_afloat))("afloat"));
                 aSerializer.addProperty(getDescriptor!(typeof(_someChars))("someChars"));
             }
     }
     
-    void templatedTest(izSerFormat format)()
+    void testByFormat(izSerFormat format)()
     {
         izMemoryStream str  = construct!izMemoryStream;
         izSerializer ser    = construct!izSerializer;
         ClassB b = construct!ClassB;
-        scope(exit) destruct(str, ser, b);
+        ClassA a = construct!ClassA;
+        scope(exit) destruct(str, ser, b, a);
         
         // basic sequential store/restore
         ser.objectToStream(b,str,format);
@@ -1171,7 +1196,7 @@ version(unittest)
         assert(b.afloat == 0.123456f);
         assert(b.someChars == "azertyuiop");
         
-        // find arbitrary prop
+        // arbitrary find a prop
         assert(ser.findNode("Root.anIntArray"));
         assert(ser.findNode("Root.afloat"));
         assert(ser.findNode("Root.someChars"));
@@ -1183,9 +1208,34 @@ version(unittest)
         // restore elsewhere than in the declarator
         float outside;
         auto node = ser.findNode("Root.afloat");
-        auto afloatDescr = izPropDescriptor!float(&outside, "dontcare");
+        auto afloatDescr = izPropDescriptor!float(&outside, "namedoesnotmatter");
         ser.restoreProperty(node, &afloatDescr);
         assert(outside == 0.123456f);
+        
+        // nested declarations with super.declarations
+        str.clear;
+        ser.objectToStream(a,str,format);
+        a.reset;
+        assert(a.anIntArray == []);
+        assert(a.afloat == 0.0f);
+        assert(a.someChars == "");
+        assert(a._aB1.anIntArray == []);
+        assert(a._aB1.afloat == 0.0f);
+        assert(a._aB1.someChars == "");
+        assert(a._aB2.anIntArray == []);
+        assert(a._aB2.afloat == 0.0f);
+        assert(a._aB2.someChars == "");
+        str.position = 0;
+        ser.streamToObject(str,a,format);
+        assert(a.anIntArray == [0, 1, 2, 3]);
+        assert(a.afloat ==  0.123456f);
+        assert(a.someChars == "azertyuiop");
+        assert(a._aB1.anIntArray == [0, 1, 2, 3]);
+        assert(a._aB1.afloat ==  0.123456f);
+        assert(a._aB1.someChars == "azertyuiop");
+        assert(a._aB2.anIntArray == [0, 1, 2, 3]);
+        assert(a._aB2.afloat ==  0.123456f);
+        assert(a._aB2.someChars == "azertyuiop");
         
         //TODO-ctest: restore event
         //TODO-ctest: nested declarations with super.declarations
