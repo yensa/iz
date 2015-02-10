@@ -60,7 +60,7 @@ unittest
  * CT = a class type.
  * a = variadic parameters passed to the constructor.
  */
-static CT construct(CT, A...)(A a) 
+CT construct(CT, A...)(A a) 
 if (is(CT == class))
 {
 	import std.conv : emplace;
@@ -69,24 +69,40 @@ if (is(CT == class))
 	if(!memory) throw new Exception("Out of memory");
 	return emplace!(CT, A)(memory, a);
 }
+
+/**  
+ * The static function construct returns a new, GC-free, pointer to a struct.
+ * Params:
+ * ST = a struct type.
+ * a = variadic parameters passed to the constructor.
+ */
+ST * construct(ST, A...)(A a)
+if(is(ST==struct))
+{
+	import std.conv : emplace;
+    auto size = ST.sizeof;
+	auto memory = malloc(size)[0 .. size];
+	if(!memory) throw new Exception("Out of memory");
+	return emplace!(ST, A)(memory, a);
+}
        
 /** 
- * The static function destruct frees and invalidate a class instance.
+ * Destructs or frees a class instance or a struct pointer 
+ * previously constructed with construct().
  * Params:
- * CT = a class type, likely to be infered by the *instance* parameter
- * instance = an instance of type *CT*.
+ * T = a class type or a struct pointer type, likely to be infered by the *instance* parameter
+ * instance = an instance of type *T*.
  */
-static void destruct(CT)(ref CT instance) 
-if (is(CT == class))
+static void destruct(T)(ref T instance) 
+if (is(T == class) || (isPointer!T && is(PointerTarget!T == struct)))
 {
     if (!instance) return;
 	destroy(instance);
-	free(cast(void*)instance);
     instance = null;
 }   
 
 /** 
- * Frees and invalidates a list of Object. 
+ * Frees and invalidates a list of classes instances or struct pointers. 
  * *destruct()* is called for each item.
  * Params:
  * objs = variadic list of Object instances.
@@ -123,155 +139,20 @@ unittest
     assert( GC.addrOf(cast(void*)bar) != null );
 	foo.destruct;
     bar.destruct;
+    
+    struct Foo{size_t a,b,c;}
+    Foo * foos = construct!Foo(1,2,3);
+    Foo * bars = new Foo(4,5,6);
+    assert(foos.a == 1);
+    assert(foos.b == 2);
+    assert(foos.c == 3);
+    assert( GC.addrOf(cast(void*)foos) == null );
+    assert( GC.addrOf(cast(void*)bars) != null );   
+    foos.destruct;
+    bars.destruct;   
+    assert(!foos);
+    foos.destruct;
+    assert(!foos);
 
 	writeln("construct/destruct passed the tests");
 }
-
-/**  
- * The static function construct returns a new, GC-free, pointer to a struct.
- * Params:
- * ST = a struct type.
- * a = variadic parameters passed to the constructor.
- */
-ST * construct(ST, A...)(A a)
-if(is(ST==struct))
-{
-	import std.conv : emplace;
-    auto size = ST.sizeof;
-	auto memory = malloc(size)[0 .. size];
-	if(!memory) throw new Exception("Out of memory");
-	return emplace!(ST, A)(memory, a);
-}
-
-/** 
- * The static function destruct frees the memory allocated for a struct.
- * Params:
- * ST = a struct type, likely to be infered by the *instance* parameter.
- * instance = an instance of type *CT*.
- */
-static void destruct(ST)(ref ST * instance) 
-if (is(ST == struct))
-{
-    if (!instance) return;
-	free(instance);
-    instance = null;
-}   
-
-/** 
- * Frees a list of struct. 
- * _destruct()_ is called for each item.
- * Params:
- * structs = variadic list of struct pointers.
- */
-static void deallocate(Structs...)(ref Structs structs)
-{
-    foreach(ref s; structs)
-        s.destruct;
-} 
-
-unittest
-{
-    struct Foo{size_t a,b,c;}
-    Foo * foo = construct!Foo(1,2,3);
-    Foo * bar = new Foo(4,5,6);
-    assert(foo.a == 1);
-    assert(foo.b == 2);
-    assert(foo.c == 3);
-    assert( GC.addrOf(cast(void*)foo) == null );
-    assert( GC.addrOf(cast(void*)bar) != null );   
-    foo.destruct;
-    bar.destruct;   
-}
-
-/**
- * Helper struct for reading a chunk as ubyte array.
- */
-struct UbyteArray
-{
-    private
-    {
-        izPtr fMemory;
-        size_t fSize;
-    }
-    public
-    {
-        @disable this();
-
-        this(izPtr someData, size_t aSize)
-        {
-            fMemory = someData;
-            fSize = aSize;
-        }
-
-        ubyte opIndex(size_t index)
-        {
-            return *cast(ubyte*) (fMemory + index);
-        }
-
-        void opIndexAssign(ubyte aValue, size_t index)
-        {
-            *cast(ubyte*) (fMemory + index) = aValue;
-        }
-
-        int opApply(int delegate(ubyte aValue) dg)
-        {
-            int result = 0;
-			for (auto i = 0; i < fSize; i++)
-			{
-				result = dg(*cast(ubyte*)(fMemory + i));
-				if (result) break;
-			}
-			return result;
-        }
-
-        int opApplyReverse(int delegate(ubyte aValue) dg)
-        {
-            int result = 0;
-			for (ptrdiff_t i = fSize-1; i >= 0; i--)
-			{
-				result = dg(*cast(ubyte*)(fMemory + i));
-				if (result) break;
-			}
-			return result;
-        }
-
-        size_t opDollar()
-        {
-            return fSize;
-        }
-
-        @property size_t length()
-        {
-            return fSize;
-        }
-    }
-    unittest
-    {
-        ulong base = 0x11111111_11111111UL;
-        auto a = [base * 0, base * 1, base * 2, base * 3, base * 4, base * 5];
-
-        auto r0 = UbyteArray(a.ptr, a.length);
-        assert(r0[0] == 0x0);
-        assert(r0[7] == 0x0);
-        assert(r0[8] == 0x11);
-        assert(r0[15] == 0x11);
-        assert(r0[16] == 0x22);
-        assert(r0[23] == 0x22);
-        
-        auto r1 = ubyteArray(a);    
-        assert(r1[0] == 0x0);
-        assert(r1[7] == 0x0);
-        assert(r1[8] == 0x11);
-        assert(r1[15] == 0x11);
-        assert(r1[16] == 0x22);
-        assert(r1[23] == 0x22);        
-
-        writeln("ubyteArray passed the tests");
-    }
-}
-
-UbyteArray ubyteArray(T)(T[] t)
-{
-    return UbyteArray(cast(izPtr) t.ptr, t.length * T.sizeof);
-}
-

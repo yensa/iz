@@ -242,7 +242,7 @@ public interface izStream
             auto buff = malloc(buff_sz);
             scope(exit)
             {
-            rhs.position = stored;
+                rhs.position = stored;
                 free(buff);
             }
 
@@ -609,10 +609,22 @@ public class izMemoryStream: izStream, izStreamPersist, izFilePersist8
 {
 	private
 	{
+        size_t fSize;
 		izPtr fMemory;
-		size_t fSize;
+		
 		size_t fPosition;
         string fFilename;
+        
+        struct Ubytes{size_t length; void* ptr;}
+        Ubytes fBytes;
+        
+        void freeNonGc(ref izPtr ptr)
+        {
+            import core.memory : GC;
+            if (!ptr) return;
+            if (GC.addrOf(ptr)) return;
+            free(ptr);
+        }
 	}
 	public
 	{
@@ -625,7 +637,7 @@ public class izMemoryStream: izStream, izStreamPersist, izFilePersist8
 		
 		~this()
 		{
-			if(fMemory) std.c.stdlib.free(fMemory);
+			freeNonGc(fMemory);
 		}
 		
 // read -------------------------------
@@ -756,7 +768,7 @@ public class izMemoryStream: izStream, izStreamPersist, izFilePersist8
         {
             izPtr result = fMemory;
             if (!aPtr) return result;
-            if (freeCurrent) free(fMemory);
+            if (freeCurrent) freeNonGc(fMemory);
             fPosition = 0;
             fSize = aSize;
             fMemory = aPtr; 
@@ -773,9 +785,11 @@ public class izMemoryStream: izStream, izStreamPersist, izFilePersist8
 
 // operators -------------------------------
 
-        UbyteArray ubytes()
+        const(ubyte[]) ubytes()
         {
-            return UbyteArray(fMemory, fSize);
+            fBytes.length = fSize;
+            fBytes.ptr = fMemory;
+            return * cast(ubyte[] *) &fBytes;
         }
 	
 // izStreamPersist -------------------------------
@@ -1049,8 +1063,6 @@ version(unittest)
               str.clear;
               for(ubyte i = 0; i < 100; i++) str.write(&i, 1);
               for(ubyte i = 0; i < 100; i++) assert( str.ubytes[i] == i );
-              for(ubyte i = 0; i < 100; i++) str.ubytes[i] = cast(ubyte) (99 - i);
-              for(ubyte i = 0; i < 100; i++) assert( str.ubytes[i] == 99 - i  );
             }
 
             static if (is(T == izFileStream))
