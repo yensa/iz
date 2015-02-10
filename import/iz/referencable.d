@@ -3,6 +3,20 @@ module iz.referencable;
 import std.stdio;
 import iz.types;
 
+private string typeString(T)()
+{
+    return typeid(T).toString;
+}
+
+version(unittest) class TestModuleScope{}
+
+unittest
+{
+    class Foo{}
+    assert( typeString!int == "int");
+    assert( typeString!TestModuleScope == __MODULE__ ~ ".TestModuleScope" );
+}
+
 /**
  * interface for a class reference.
  */

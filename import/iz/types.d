@@ -7,24 +7,6 @@ import std.traits, std.typetuple;
 /// iz pointer.
 alias izPtr = void*;
 
-/// iz notification
-alias izEvent = void delegate(Object aNotifier);
-
-
-/// returns the accurate type string representation of te template parameter.
-string typeString(T)()
-{
-    return typeid(T).toString;
-}
-
-version(unittest) class TestModuleScope{}
-
-unittest
-{
-    class Foo{}
-    assert( typeString!int == "int");
-    assert( typeString!TestModuleScope == __MODULE__ ~ ".TestModuleScope" );
-}
 
 /** 
  * izfixedLenTypes represents all the fixed-length types, directly representing a data.
@@ -45,11 +27,6 @@ static bool isConstantSize(T)()
     );
 }
 
-//harbored[/-mod]empty DDoc comments generate:
-// "Could not generate documentation for xxx.d: outdent: Inconsistent indentation"
-
-
-///
 unittest
 {
 	class Foo{}
