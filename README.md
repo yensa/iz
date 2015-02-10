@@ -1,10 +1,10 @@
-Iz
+iz
 ==
 
 Introduction
 ------------
 iz (pronounced _easy_) is a general purpose framework for the D programming language. 
-It includes streams, containers, serialization and more.
+It includes streams, containers, serialization, property binder and more.
 It's based on a previous framework called [_**LLClasses**_](https://github.com/jsmdnq/LLClasses).
 
 Setup
