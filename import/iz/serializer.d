@@ -666,13 +666,14 @@ private izSerReader readFormat(izSerFormat format)
 /**
  * Native iz Serializer.
  * An izSerializer is specialized to store and restore from any classes heriting
- * from the interface izSerializable. An izSerializable arbitralry exposes some
+ * from the interface izSerializable. An izSerializable arbitrarily exposes some
  * properties to serialize using the izPropDescriptor format.
  *
- * The serializer uses an intermediate serialization tree (IST) which grants a certain
- * flexibilty. As expected for a serializer, some objects trees can be stored or 
- * restored by a simple an single call (_objectToStream()_ and _streamToObject()_) 
- * but the IST also allows to convert a data stream, to randomly find and restores 
+ * The serializer uses an intermediate serialization tree (IST) which grants a 
+ * certain flexibilty. 
+ * As expected for a serializer, some objects trees can be stored or restored by 
+ * a simple an single call (_objectToStream()_ and _streamToObject()_) but the 
+ * IST also allows to convert a data stream, to randomly find and restores 
  * some properties and to handle compatibility errors.
  * Even the IST can be build manually, without using the automatic mechanism.
  */
