@@ -27,7 +27,7 @@ public interface izSerializable
      * In this method, the implementer declares its properties to the serializer.
      * Params:
      * aSerializer = the serializer. The implementer calls aSerializer.addProperty
-     * to arbitrary (run-time decision) declare some izPropDescriptor.
+     * to declare arbitrarily some izPropDescriptors (run-time decision).
      */
 	void declareProperties(izSerializer aSerializer);
 }
@@ -325,6 +325,8 @@ void setNodeInfo(T)(izSerNodeInfo * nodeInfo, izPropDescriptor!T * descriptor)
 {
     scope(failure) nodeInfo.isDamaged = true;
     
+    // TODO: nodeInfo.value, try to use an union instead of an array 
+    
     // simple, fixed-length, types
     static if (isSerSimpleType!T)
     {
@@ -610,7 +612,7 @@ public enum izSerState : ubyte
 }
 
 /// Enumerates the possible storing mode.
-public enum izStoreMode
+public enum izStoreMode : ubyte
 {
     /// stores directly after declaration. order is granted. a single property descriptor can be used for several properties.
     sequential,
@@ -619,7 +621,7 @@ public enum izStoreMode
 }
 
 /// Enumerates the possible restoring mode.
-public enum izRestoreMode
+public enum izRestoreMode : ubyte
 {
     /// restore following declaration. order is granted.
     sequential, 
@@ -628,7 +630,7 @@ public enum izRestoreMode
 }
 
 /// Enumerates the possible serialization format
-public enum izSerFormat
+public enum izSerFormat : ubyte
 {
     /// native binary format
     izbin,
@@ -688,6 +690,7 @@ public class izSerializer
         izStoreMode fStoreMode;
         izRestoreMode fRestoreMode;
         izSerFormat fFormat;
+        
         izStream fStream;
         izPropDescriptor!izSerializable fRootDescr;
         
@@ -1234,7 +1237,7 @@ version(unittest)
         assert(b.afloat == 0.123456f);
         assert(b.someChars == "azertyuiop");
         
-        // arbitrary find a prop
+        // arbitrarily find a prop
         assert(ser.findNode("Root.anIntArray"));
         assert(ser.findNode("Root.afloat"));
         assert(ser.findNode("Root.someChars"));
