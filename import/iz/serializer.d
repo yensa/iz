@@ -493,6 +493,43 @@ void readText(izStream stream, izIstNode istNode)
 }  
 //----
 // Binary format --------------------------------------------------------------+
+private ubyte[] swapBE(const ref ubyte[] input, size_t div)
+{
+    version(LittleEndian) 
+        return input.dup;
+    else
+    {
+        if (div == 1) return input.dup;
+             
+        auto result = new ubyte[](input.length);
+        ushort _2; uint _4; ulong _8;
+        switch(div) {
+            default: break;
+            case 2: foreach(immutable i; 0 .. input.length / div) {
+                result[i*2+0] = input[i*2+1];
+                result[i*2+1] = input[i*2+0];
+            } break;
+            case 4: foreach(immutable i; 0 .. input.length / div) {
+                result[i*4+0] = input[i*4+3];
+                result[i*4+1] = input[i*4+2];
+                result[i*4+2] = input[i*4+1];
+                result[i*4+3] = input[i*4+0];
+            } break;           
+            case 8: foreach(immutable i; 0 .. input.length / div) {
+                result[i*8+0] = input[i*8+7];
+                result[i*8+1] = input[i*8+6];
+                result[i*8+2] = input[i*8+5];
+                result[i*8+3] = input[i*8+4];
+                result[i*8+4] = input[i*8+3];
+                result[i*8+5] = input[i*8+2];
+                result[i*8+6] = input[i*8+1];
+                result[i*8+7] = input[i*8+0];
+            } break;                           
+        }
+        return result;
+    }
+}
+
 void writeBin(izIstNode istNode, izStream stream)
 {
     ubyte bin;
@@ -516,7 +553,7 @@ void writeBin(izIstNode istNode, izStream stream)
     stream.write(&datalength, datalength.sizeof);
     stream.write(data.ptr, datalength);
     // value length then value
-    data = istNode.nodeInfo.value;
+    data = swapBE(istNode.nodeInfo.value, type2size[istNode.nodeInfo.type]);
     datalength = cast(uint) data.length;
     stream.write(&datalength, datalength.sizeof);
     stream.write(data.ptr, datalength); 
@@ -555,13 +592,14 @@ void readBin(izStream stream, izIstNode istNode)
     beg =  10 +  datalength;      
     // value length then value
     datalength = *cast(uint*) (data.ptr + beg);
-    istNode.nodeInfo.value = data[beg + 4 .. beg + 4 + datalength].dup;
+    data = data[beg + 4 .. beg + 4 + datalength];
+    istNode.nodeInfo.value = swapBE(data, type2size[istNode.nodeInfo.type]);
 }  
 //----
 // High end serializer --------------------------------------------------------+
 
 /// Enumerates the possible state of an izSerializer.
-public enum izSerState
+public enum izSerState : ubyte
 {
     /// the serializer is idle
     none,
