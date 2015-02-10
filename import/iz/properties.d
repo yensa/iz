@@ -6,15 +6,19 @@ import
 	iz.types, iz.containers;
 		
 /**
- * Flags used to describe the accessors combination.
+ * Describes the accessibility of a property.
  */
 public enum izPropAccess 
 {
-	none, /// denotes an error, no accessors.
-	ro,	  /// read-only, has only a getter.
-	wo,	  /// write-only, has only a dSetter.
-	rw	  /// read & write, has both accessors.
-};	
+    /// denotes an error.
+	none, 
+    /// read-only.
+	ro,	  
+    /// write-only.
+	wo,	  
+    /// read & write.
+	rw	  
+}	
 	
 /**
  * Describes the property of type T of an Object. Its members includes:
@@ -292,14 +296,14 @@ version(unittest)
 	}
 }
 
-/// annotate a virtual method as setter
+/// annotation for a detectable property setter.
 struct Set{}
-/// annotate a virtual method as getter 
+/// annotate for a a detectable property getter. 
 struct Get{}
 
 /**
- * When mixed in an agregate, generates a property. This property is detectable
- * by a izPropertiesAnalyzer.
+ * When mixed in an agregate this generates a property. 
+ * This property is detectable by an izPropertiesAnalyzer.
  * Params:
  * T = the type of the property.
  * propName = the name of the property.
@@ -323,7 +327,7 @@ private char[] genStandardPropDescriptors()
 	return result;
 }
 
-/// Property descriptors for the built-in types defined in izConstantSizeTypes.
+/// Property descriptors for the types defined in the izConstantSizeTypes tuple.
 mixin(genStandardPropDescriptors);
 
 
@@ -334,7 +338,7 @@ mixin(genStandardPropDescriptors);
 mixin template izPropertiesAnalyzer(){
 
     /**
-     * Contains the list of izPropDesrcriptors created by the different analyzers.
+     * Contains the list of izPropDesrcriptors created by the analyzers.
      * getDescriptor() can be used to correctly cast an item.
      */
     private void * [] descriptors;
@@ -389,8 +393,8 @@ mixin template izPropertiesAnalyzer(){
     }
     
     /**
-     * Creates the property descriptors for the setter/getter pairs maked with @get / @set.
-     * The methods must be virtual. 
+     * Creates the property descriptors for the setter/getter pairs maked with @Set/@Get.
+     * The methods must be virtual and non final.
      */
     private void analyzeVirtualSetGet()
     {
@@ -484,16 +488,13 @@ unittest
 
 
 /**
- * Property synchronizer.
+ * This container maintains a list of property synchronized between themselves.
  *
- * This binder can be used to link a collection of izPropertyDescriptor between
- * themselves.
- *
- * The properties to add must be described according to the the izPropDescriptor 
- * format. The izPropDescriptor *name* field can be omitted.
+ * The regerence to the properties are stored using the izPropDescriptor format. 
+ * The izPropDescriptor *name* field can be omitted.
  *
  * Params:
- * T = the type of the properties to synchronize.
+ * T = the common type of the properties.
  */
 public class izPropertyBinder(T)
 {
