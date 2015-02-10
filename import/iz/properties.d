@@ -562,8 +562,7 @@ public class izPropertyBinder(T)
 		{
 			auto itm = fItems.extract(anIndex);
             if (fSource && itm == fSource) fSource = null;
-			auto managed = fToFree.remove(itm);
-            if (managed) deallocate(managed);
+            if (fToFree.remove(itm)) destruct(itm);
 		}
 		
         /**
