@@ -672,7 +672,7 @@ private izSerReader readFormat(izSerFormat format)
  * The serializer uses an intermediate serialization tree (IST) which grants a 
  * certain flexibilty. 
  * As expected for a serializer, some objects trees can be stored or restored by 
- * a simple an single call (_objectToStream()_ and _streamToObject()_) but the 
+ * a simple and single call (_objectToStream()_ and _streamToObject()_) but the 
  * IST also allows to convert a data stream, to randomly find and restores 
  * some properties and to handle compatibility errors.
  * Even the IST can be build manually, without using the automatic mechanism.
@@ -734,7 +734,7 @@ public class izSerializer
         
         /** 
          * Builds the IST from an izSerializable.
-         * The process starts by a call to .declaraPropties() in the root then
+         * The process starts by a call to .declareProperties() in the root then
          * the process is leaded by the the subsequent declarations.
          * Params:
          * root = the izSerializable from where the declarations starts.

@@ -388,7 +388,7 @@ mixin template izPropertiesAnalyzer(){
     private void analyzeFields(string[] prefixedFieldNames, string prefixes = "_fF")
     {
         // TODO-cfeature: create descriptors for directly-accessed-fields
-        // []: all private/protected fiels prefixed with '_' or 'f'
+        // []: all private/protected fields prefixed with '_' or 'f'
         // otherwise, only matching fields
     }
     
