@@ -91,7 +91,8 @@ enum izSerType
     _izSerializable = 0x30, _Object
 } 
 
-private alias izSerTypeTuple = TypeTuple!(uint, 
+private alias izSerTypeTuple = TypeTuple!(
+    uint, 
     byte, ubyte, short, ushort, int, uint, long, ulong,
     float, double,
     char, wchar, dchar,
@@ -157,9 +158,16 @@ unittest
     static assert( !(isSerializable!S) );
 }
 
-private string getElemStringOf(T)() if (isArray!T)
+private static string getElemStringOf(T)() if (isArray!T)
 {
     return typeof(T.init[0]).stringof;
+}
+
+unittest
+{
+    static assert( getElemStringOf!(int[]) == int.stringof );
+    static assert( getElemStringOf!(int[1]) == int.stringof );
+    static assert( getElemStringOf!(int[0]) != "azertyui" );
 }
 // -----------------------------------------------------------------------------
 
@@ -1229,28 +1237,28 @@ version(unittest)
         mixin izPropertiesAnalyzer;
         private:
             int[]  _anIntArray;
-            float  _afloat;
+            float  _aFloat;
             char[] _someChars;
         public:
             this() {
                 analyzeVirtualSetGet;
                 _anIntArray = [0, 1, 2, 3];
-                _afloat = 0.123456f;
+                _aFloat = 0.123456f;
                 _someChars = "azertyuiop".dup;
             }
             void reset() {
                 iz.types.reset(_anIntArray);
-                _afloat = 0.0f;
+                _aFloat = 0.0f;
                 iz.types.reset(_someChars);
             }
             
             mixin(genPropFromField!(typeof(_anIntArray), "anIntArray", "_anIntArray"));
-            mixin(genPropFromField!(typeof(_afloat), "afloat", "_afloat"));
+            mixin(genPropFromField!(typeof(_aFloat), "aFloat", "_aFloat"));
             mixin(genPropFromField!(typeof(_someChars), "someChars", "_someChars")); 
             
             void declareProperties(izSerializer aSerializer) {
                 aSerializer.addProperty(getDescriptor!(typeof(_anIntArray))("anIntArray"));
-                aSerializer.addProperty(getDescriptor!(typeof(_afloat))("afloat"));
+                aSerializer.addProperty(getDescriptor!(typeof(_aFloat))("aFloat"));
                 aSerializer.addProperty(getDescriptor!(typeof(_someChars))("someChars"));
             }
     }
@@ -1267,56 +1275,56 @@ version(unittest)
         ser.objectToStream(b,str,format);
         b.reset;
         assert(b.anIntArray == []);
-        assert(b.afloat == 0.0f);
+        assert(b.aFloat == 0.0f);
         assert(b.someChars == "");
         str.position = 0;
         ser.streamToObject(str,b,format);
         assert(b.anIntArray == [0, 1, 2, 3]);
-        assert(b.afloat == 0.123456f);
+        assert(b.aFloat == 0.123456f);
         assert(b.someChars == "azertyuiop");
         //----
         
         // arbitrarily find a prop ---+
         assert(ser.findNode("Root.anIntArray"));
-        assert(ser.findNode("Root.afloat"));
+        assert(ser.findNode("Root.aFloat"));
         assert(ser.findNode("Root.someChars"));
         assert(!ser.findNode("Root."));
-        assert(!ser.findNode("afloat"));
+        assert(!ser.findNode("aFloat"));
         assert(!ser.findNode("Root.someChar"));
         assert(!ser.findNode(""));
         //----
         
         // restore elsewhere than in the declarator ---+
         float outside;
-        auto node = ser.findNode("Root.afloat");
-        auto afloatDescr = izPropDescriptor!float(&outside, "namedoesnotmatter");
-        ser.restoreProperty(node, &afloatDescr);
+        auto node = ser.findNode("Root.aFloat");
+        auto aFloatDescr = izPropDescriptor!float(&outside, "namedoesnotmatter");
+        ser.restoreProperty(node, &aFloatDescr);
         assert(outside == 0.123456f);
         //----
         
-        // nested declarations with super.declarations ----+
+        // nested declarations with super.declarations ---+
         str.clear;
         ser.objectToStream(a,str,format);
         a.reset;
         assert(a.anIntArray == []);
-        assert(a.afloat == 0.0f);
+        assert(a.aFloat == 0.0f);
         assert(a.someChars == "");
         assert(a._aB1.anIntArray == []);
-        assert(a._aB1.afloat == 0.0f);
+        assert(a._aB1.aFloat == 0.0f);
         assert(a._aB1.someChars == "");
         assert(a._aB2.anIntArray == []);
-        assert(a._aB2.afloat == 0.0f);
+        assert(a._aB2.aFloat == 0.0f);
         assert(a._aB2.someChars == "");
         str.position = 0;
         ser.streamToObject(str,a,format);
         assert(a.anIntArray == [0, 1, 2, 3]);
-        assert(a.afloat ==  0.123456f);
+        assert(a.aFloat ==  0.123456f);
         assert(a.someChars == "azertyuiop");
         assert(a._aB1.anIntArray == [0, 1, 2, 3]);
-        assert(a._aB1.afloat ==  0.123456f);
+        assert(a._aB1.aFloat ==  0.123456f);
         assert(a._aB1.someChars == "azertyuiop");
         assert(a._aB2.anIntArray == [0, 1, 2, 3]);
-        assert(a._aB2.afloat ==  0.123456f);
+        assert(a._aB2.aFloat ==  0.123456f);
         assert(a._aB2.someChars == "azertyuiop"); 
         //----
         
@@ -1351,15 +1359,38 @@ version(unittest)
         ser.objectToStream(usrr, str, format);
         usrr.fRef = &ref2;
         assert(*usrr.fRef is ref2);
-        str.saveToFile("ref_" ~ to!string(format) ~ ".txt");
         str.position = 0;
         ser.streamToObject(str, usrr, format);
         assert(usrr.fRef is null);         
         //----
           
+        // auto store, stream to ist, restores manually ---+
+        str.clear;  
+        ser.objectToStream(b,str,format);
+        b.reset;
+        assert(b.anIntArray == []);
+        assert(b.aFloat == 0.0f);
+        assert(b.someChars == "");
+        str.position = 0;
+        ser.streamToIst(str,format);
+        
+        auto node_anIntArray = ser.findNode("Root.anIntArray");
+        if(node_anIntArray) ser.restoreProperty(node_anIntArray, b.getDescriptor!(int[])("anIntArray"));
+        else assert(0);        
+        auto node_aFloat = ser.findNode("Root.aFloat");
+        if(node_aFloat) ser.restoreProperty(node_aFloat, b.getDescriptor!float("aFloat"));
+        else assert(0);  
+        auto node_someChars = ser.findNode("Root.someChars");
+        if(node_someChars) ser.restoreProperty(node_someChars, b.getDescriptor!(char[])("someChars"));
+        else assert(0);                  
+        assert(b.anIntArray == [0, 1, 2, 3]);
+        assert(b.aFloat == 0.123456f);
+        assert(b.someChars == "azertyuiop");          
+        //----
+                     
         //TODO-ctest: restore event
         //TODO-ctest: alternative schemes: bulk, 2 phases, random deser  
     
-        writeln("izSerializer passed the " ~ to!string(format) ~ " format test");
+        writeln("izSerializer passed the ", to!string(format), " format test");
     }
 }
