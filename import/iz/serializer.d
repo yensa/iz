@@ -671,6 +671,10 @@ private izSerReader readFormat(izSerFormat format)
         case iztxt: return &readText;   
     }
 }
+
+
+//TODO-cfeature: izSerializer error handling.
+
 /**
  * Native iz Serializer.
  * An izSerializer is specialized to store and restore from any classes heriting
@@ -913,10 +917,11 @@ public class izSerializer
             fStream = null;  
         }   
         
-        void istToObject(izSerializable root, izSerFormat format)   
-        {
-            //TODO-cfeature : istToObject, using declarations().
-        }    
+        /**
+         * Fully Restores the IST. Can be called after *streamToIst()*.
+         * For each ISTnode and if assigned, the onWantDesscriptor event is called.
+         */
+        void istToObject() {istToObject(fRootNode, true);}    
         
         /**
          * Finds the tree node matching to a property names chain.
@@ -1387,9 +1392,54 @@ version(unittest)
         assert(b.aFloat == 0.123456f);
         assert(b.someChars == "azertyuiop");          
         //----
-                     
-        //TODO-ctest: restore event
-        //TODO-ctest: alternative schemes: bulk, 2 phases, random deser  
+            
+        // decomposed de/serialization phases with event ---+
+        
+        string currObj = "Root";
+        
+        void wantDescr(const(izSerNodeInfo*) nodeInfo, out void * matchingDescriptor, out bool stop)
+        {
+            if (isSerObjectType(nodeInfo.type)) currObj = nodeInfo.name.idup;
+            alias TypeDoesntMatterHere = uint;
+            
+            //TODO-cfeature: a izSerializable method to get the fully qualified (parent)name of a node.
+            
+            if (currObj == "Root")
+                matchingDescriptor = a.getUntypedDescriptor(nodeInfo.name.idup);
+            if (currObj == "aB1")
+                matchingDescriptor = a._aB1.getUntypedDescriptor(nodeInfo.name.idup);
+            if (currObj == "aB2")
+                matchingDescriptor = a._aB2.getUntypedDescriptor(nodeInfo.name.idup);                      
+        }
+          
+        str.clear;
+        ser.objectToIst(a);
+        ser.istToStream(str,format);
+        a.reset;    
+        assert(a.anIntArray == []);
+        assert(a.aFloat == 0.0f);
+        assert(a.someChars == "");
+        assert(a._aB1.anIntArray == []);
+        assert(a._aB1.aFloat == 0.0f);
+        assert(a._aB1.someChars == "");
+        assert(a._aB2.anIntArray == []);
+        assert(a._aB2.aFloat == 0.0f);
+        assert(a._aB2.someChars == "");
+        str.position = 0;
+        ser.onWantDescriptor = &wantDescr;
+        ser.streamToIst(str,format);
+        ser.istToObject;
+        assert(a.anIntArray == [0, 1, 2, 3]);
+        assert(a.aFloat ==  0.123456f);
+        assert(a.someChars == "azertyuiop");
+        assert(a._aB1.anIntArray == [0, 1, 2, 3]);
+        assert(a._aB1.aFloat ==  0.123456f);
+        assert(a._aB1.someChars == "azertyuiop");
+        assert(a._aB2.anIntArray == [0, 1, 2, 3]);
+        assert(a._aB2.aFloat ==  0.123456f);
+        assert(a._aB2.someChars == "azertyuiop");
+        ser.onWantDescriptor = null;
+        //----
     
         writeln("izSerializer passed the ", to!string(format), " format test");
     }
