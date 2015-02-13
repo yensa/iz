@@ -1,7 +1,7 @@
 module iz.serializer;
 
 import std.stdio, std.typetuple, std.conv, std.traits;
-import iz.types, iz.properties, iz.containers, iz.streams;
+import iz.types, iz.properties, iz.containers, iz.streams, iz.referencable;
 
 // Serializable types ---------------------------------------------------------+
 
@@ -38,7 +38,7 @@ public interface izSerializable
  * A "referenced variable" is typically something that is assigned
  * at the run-time, such as the source of a delegate, a pointer to an Object, etc.
  */
-class izSerializableReference: izSerializable
+public class izSerializableReference: izSerializable
 {
     private
     {
@@ -56,7 +56,7 @@ class izSerializableReference: izSerializable
          */
         void storeReference(RT)(RT* aReferenced)
         {
-            _tp = RT.stringof.dup;
+            _tp = (typeString!RT).dup;
             _id = referenceMan.referenceID!RT(aReferenced);
         }
 
@@ -64,9 +64,9 @@ class izSerializableReference: izSerializable
          * Sets aReferenced according to the internal fields.
          * Usually called after the deserialization.
          */
-        void restoreReference(RT)(out RT* aReferenced)
+        RT* restoreReference(RT)()
         {
-            aReferenced = referenceMan.reference!RT(fID);
+            return referenceMan.reference!RT(_id);
         }
 
         mixin(genPropFromField!(char[], "type", "_tp"));
@@ -672,7 +672,7 @@ private izSerReader readFormat(izSerFormat format)
  * The serializer uses an intermediate serialization tree (IST) which grants a 
  * certain flexibilty. 
  * As expected for a serializer, some objects trees can be stored or restored by 
- * a simple and single call (_objectToStream()_ and _streamToObject()_) but the 
+ * a simple and single call ( *objectToStream()* and *streamToObject()* ) but the 
  * IST also allows to convert a data stream, to randomly find and restores 
  * some properties and to handle compatibility errors.
  * Even the IST can be build manually, without using the automatic mechanism.
@@ -1170,6 +1170,33 @@ version(unittest)
         testByFormat!(izSerFormat.izbin)();
     }
     
+    class Referenced1 {}
+    
+    class ReferencedUser : izSerializable
+    {
+        izPropDescriptor!Object fRefDescr;
+        izSerializableReference fSerRef;
+        Referenced1 * fRef;
+    
+        this() {
+            fSerRef = construct!izSerializableReference;
+            fRefDescr.define(cast(Object*)&fSerRef, "theReference");
+        }
+        
+        ~this() {destruct(fSerRef);}
+        
+        void declareProperties(izSerializer aSerializer)
+        {
+            if (aSerializer.state == izSerState.store)
+                fSerRef.storeReference!Referenced1(fRef);
+                
+            aSerializer.addProperty(&fRefDescr);
+            
+            if (aSerializer.state == izSerState.restore)
+                fRef = fSerRef.restoreReference!Referenced1;
+        }
+    }
+    
     class ClassA: ClassB
     {
         private:
@@ -1236,7 +1263,7 @@ version(unittest)
         ClassA a = construct!ClassA;
         scope(exit) destruct(str, ser, b, a);
         
-        // basic sequential store/restore
+        // basic sequential store/restore ---+
         ser.objectToStream(b,str,format);
         b.reset;
         assert(b.anIntArray == []);
@@ -1247,8 +1274,9 @@ version(unittest)
         assert(b.anIntArray == [0, 1, 2, 3]);
         assert(b.afloat == 0.123456f);
         assert(b.someChars == "azertyuiop");
+        //----
         
-        // arbitrarily find a prop
+        // arbitrarily find a prop ---+
         assert(ser.findNode("Root.anIntArray"));
         assert(ser.findNode("Root.afloat"));
         assert(ser.findNode("Root.someChars"));
@@ -1256,15 +1284,17 @@ version(unittest)
         assert(!ser.findNode("afloat"));
         assert(!ser.findNode("Root.someChar"));
         assert(!ser.findNode(""));
+        //----
         
-        // restore elsewhere than in the declarator
+        // restore elsewhere than in the declarator ---+
         float outside;
         auto node = ser.findNode("Root.afloat");
         auto afloatDescr = izPropDescriptor!float(&outside, "namedoesnotmatter");
         ser.restoreProperty(node, &afloatDescr);
         assert(outside == 0.123456f);
+        //----
         
-        // nested declarations with super.declarations
+        // nested declarations with super.declarations ----+
         str.clear;
         ser.objectToStream(a,str,format);
         a.reset;
@@ -1287,13 +1317,48 @@ version(unittest)
         assert(a._aB1.someChars == "azertyuiop");
         assert(a._aB2.anIntArray == [0, 1, 2, 3]);
         assert(a._aB2.afloat ==  0.123456f);
-        assert(a._aB2.someChars == "azertyuiop");
+        assert(a._aB2.someChars == "azertyuiop"); 
+        //----
         
+        // store & restore a serializable reference ---+
+        auto ref1 = construct!Referenced1;
+        auto ref2 = construct!Referenced1;
+        auto usrr = construct!ReferencedUser;
+        scope(exit) destruct(ref1, ref2, usrr);
+        
+        assert( referenceMan.storeReference!Referenced1(&ref1, 0x11223344));
+        assert( referenceMan.storeReference!Referenced1(&ref2, 0x55667788));
+        assert( referenceMan.referenceID!Referenced1(&ref1) == 0x11223344);
+        assert( referenceMan.referenceID!Referenced1(&ref2) == 0x55667788);
+        
+        str.clear;
+        usrr.fRef = &ref1;
+        ser.objectToStream(usrr, str, format);
+        usrr.fRef = &ref2;
+        assert(*usrr.fRef is ref2);
+        str.position = 0;
+        ser.streamToObject(str, usrr, format);
+        assert(*usrr.fRef is ref1);
+        
+        usrr.fRef = null;
+        assert(usrr.fRef is null);
+        str.position = 0;
+        ser.streamToObject(str, usrr, format);
+        assert(*usrr.fRef is ref1);
+        
+        str.clear;
+        usrr.fRef = null;
+        ser.objectToStream(usrr, str, format);
+        usrr.fRef = &ref2;
+        assert(*usrr.fRef is ref2);
+        str.saveToFile("ref_" ~ to!string(format) ~ ".txt");
+        str.position = 0;
+        ser.streamToObject(str, usrr, format);
+        assert(usrr.fRef is null);         
+        //----
+          
         //TODO-ctest: restore event
-        //TODO-ctest: nested declarations with super.declarations
-        //TODO-ctest: alternative schemes: bulk, 2 phases, random deser
-        //TODO-ctest: izSerializableReference
-    
+        //TODO-ctest: alternative schemes: bulk, 2 phases, random deser  
     
         writeln("izSerializer passed the " ~ to!string(format) ~ " format test");
     }
