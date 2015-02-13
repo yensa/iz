@@ -3,7 +3,7 @@ module iz.referencable;
 import std.stdio;
 import iz.types;
 
-private string typeString(T)()
+public string typeString(T)()
 {
     return typeid(T).toString;
 }
@@ -176,7 +176,6 @@ static class referenceMan
             if (result) fStore[typeString!RT][anID] = null;
             return result;
         }
-
 
         /** 
          * Tries to remove a reference.
