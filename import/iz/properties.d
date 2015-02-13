@@ -375,6 +375,16 @@ mixin template izPropertiesAnalyzer(){
         }
         return descr;
     }
+
+    /** 
+     * Returns a pointer to a descriptor according to its name.
+     * Identical to the *getDescriptor()* except that the result
+     * type has not to be specified.
+     */    
+    protected void * getUntypedDescriptor(string name)
+    {
+        return getDescriptor!size_t(name);
+    }
     
     /**
      * Performs all the possible analysis.
