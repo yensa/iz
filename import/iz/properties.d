@@ -336,6 +336,7 @@ mixin(genStandardPropDescriptors);
 /**
  * When mixed in a class, several analyzers can be used to automatically create
  * some izPropertyDescriptors.
+ * These methods can be called in every non-static methods, usually *this()*.
  */
 mixin template izPropertiesAnalyzer(){
 
