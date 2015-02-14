@@ -394,15 +394,34 @@ mixin template izPropertiesAnalyzer(){
      */
     private void analyzeAll()
     {
-        analyzeFields([]);
+        analyzeFields;
         analyzeVirtualSetGet;
     }
     
-    private void analyzeFields(string[] prefixedFieldNames, string prefixes = "_fF")
+    /**
+     * Creates the properties descriptors for each field marked with @DirectField
+     * and whose identifier starts with one of the following prefix: underscore, f, F.
+     * The resulting property descriptors names don't include the prefix.
+     */
+    private void analyzeFields()
     {
-        // TODO-cfeature: create descriptors for directly-accessed-fields
-        // []: all private/protected fields prefixed with '_' or 'f'
-        // otherwise, only matching fields
+        import std.algorithm : canFind;
+        foreach(member; __traits(allMembers, typeof(this)))
+        static if (canFind("_fF", member[0]) && (!isCallable!(__traits(getMember, typeof(this), member))))
+        {
+            static if (is(typeof(__traits(getMember, this, member))))
+            foreach(attribute; __traits(getAttributes, __traits(getMember, this, member)))
+            static if (is(attribute == DirectField)) 
+            {
+                alias propType = typeof(__traits(getMember, this, member));
+                auto propPtr = &__traits(getMember, this, member);
+                auto propName = member[1..$];
+                auto descriptor = getDescriptor!propType(propName, true); 
+                descriptor.define(propPtr, propName);
+                //
+                version(none) writeln(attribute.stringof, " : ", member);
+            }       
+        }    
     }
     
     /**
@@ -456,8 +475,11 @@ class Foo{
         mixin izPropertiesAnalyzer;
         this(A...)(A a){
             analyzeVirtualSetGet;
+            analyzeFields;
         }
         
+        @DirectField private uint _anUint;
+        @DirectField private static char[] _manyChars;
         private uint _a, _b;
         private char[] _c;
         
@@ -488,6 +510,18 @@ class Foo{
             assert(propC == "Too Strange To Be Good");
             propC = "Too Good To Be Strange".dup;
             assert( getDescriptor!(char[])("propC").getter()() == "Too Good To Be Strange");
+            
+            assert(_anUint == 0);
+            auto anUintDescriptor = getDescriptor!uint("anUint");
+            anUintDescriptor.setter()(123456789);
+            assert(_anUint == 123456789);
+            
+            assert(_manyChars == null);
+            auto manyCharsDescriptor = getDescriptor!(char[])("manyChars");
+            manyCharsDescriptor.setter()("BimBamBom".dup);
+            assert(_manyChars == "BimBamBom");
+            _manyChars = "BomBamBim".dup;  
+            assert(manyCharsDescriptor.getter()() == "BomBamBim");          
             
             writeln("izPropertiesAnalyzer passed the analyzeVirtualSetGet() test");
         }
