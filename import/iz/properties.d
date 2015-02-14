@@ -2,7 +2,7 @@ module iz.properties;
 
 import 
 	core.exception,
-	std.stdio, std.traits, std.conv, std.typetuple, std.typecons,
+	std.stdio, std.traits,
 	iz.types, iz.containers;
 		
 /**
