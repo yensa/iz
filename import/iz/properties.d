@@ -412,17 +412,17 @@ mixin template izPropertiesAnalyzer(){
     private void analyzeVirtualSetGet()
     {
         struct Delegate {void* ptr, funcptr;}
-        // TODO-cfeature: find a way to create the descriptors when set/get are final.
         auto virtualTable = typeid(this).vtbl;
 
         foreach(member; __traits(allMembers, typeof(this))) 
         foreach(overload; __traits(getOverloads, typeof(this), member)) 
         foreach(attribute; __traits(getAttributes, overload))
         {
-            static if (is(attribute == Get) && isCallable!overload && __traits(isVirtualMethod, overload))
+            static if (is(attribute == Get) && isCallable!overload && 
+                __traits(isVirtualMethod, overload))
             {
                 alias DescriptorType = izPropDescriptor!(ReturnType!overload);
-                auto descriptor = getDescriptor!(ReturnType!overload)(member,true);
+                auto descriptor = getDescriptor!(ReturnType!overload)(member, true);
                 auto virtualIndex = __traits(getVirtualIndex, overload);
                 // setup the getter   
                 Delegate dg;
@@ -432,10 +432,11 @@ mixin template izPropertiesAnalyzer(){
                 //
                 version(none) writeln(attribute.stringof, " < ", member);
             }
-            else static if (is(attribute == Set) && isCallable!overload && __traits(isVirtualMethod, overload))
+            else static if (is(attribute == Set) && isCallable!overload && 
+                __traits(isVirtualMethod, overload))
             {
                 alias DescriptorType = izPropDescriptor!(ParameterTypeTuple!overload);
-                auto descriptor = getDescriptor!(ParameterTypeTuple!overload)(member,true);
+                auto descriptor = getDescriptor!(ParameterTypeTuple!overload)(member, true);
                 auto virtualIndex = __traits(getVirtualIndex, overload);                        
                 // setup the setter   
                 Delegate dg;
