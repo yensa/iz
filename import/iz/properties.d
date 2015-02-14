@@ -296,10 +296,12 @@ version(unittest)
 	}
 }
 
-/// annotation for a detectable property setter.
+/// designed to annotate a detectable property setter.
 struct Set{}
-/// annotate for a a detectable property getter. 
+/// designed to annotate a detectable property getter. 
 struct Get{}
+/// designed to annotate a detectable "direct" field.
+struct DirectField{}
 
 /**
  * When mixed in an agregate this generates a property. 
