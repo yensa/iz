@@ -1393,14 +1393,11 @@ version(unittest)
         assert(b.someChars == "azertyuiop");          
         //----
             
-        // decomposed de/serialization phases with event ---+
-        
-        string currObj = "Root";
-        
+        // decomposed de/serialization phases with event ---+       
+        string currObj = "Root";  
         void wantDescr(const(izSerNodeInfo*) nodeInfo, out void * matchingDescriptor, out bool stop)
         {
             if (isSerObjectType(nodeInfo.type)) currObj = nodeInfo.name.idup;
-            alias TypeDoesntMatterHere = uint;
             
             //TODO-cfeature: a izSerializable method to get the fully qualified (parent)name of a node.
             
