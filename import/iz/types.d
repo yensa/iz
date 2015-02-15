@@ -22,18 +22,18 @@ alias izConstantSizeTypes = TypeTuple!(
 static bool isConstantSize(T)()
 {
 	return (
-	    staticIndexOf!(T,izConstantSizeTypes) != -1) || 
-		(is(T==struct) & (__traits(isPOD, T))
+        staticIndexOf!(T,izConstantSizeTypes) != -1) || 
+        (is(T==struct) & (__traits(isPOD, T))
     );
 }
 
 unittest
 {
-	class Foo{}
+    class Foo{}
     struct Bar{byte a,b,c,d,e,f;}
-	alias myInt = int;
-	assert(isConstantSize!myInt);
-	assert(!isConstantSize!Foo);
+    alias myInt = int;
+    assert(isConstantSize!myInt);
+    assert(!isConstantSize!Foo);
     assert(isConstantSize!Bar);
 }
 
@@ -97,7 +97,7 @@ static void destruct(T)(ref T instance)
 if (is(T == class) || (isPointer!T && is(PointerTarget!T == struct)))
 {
     if (!instance) return;
-	destroy(instance);
+    destroy(instance);
     instance = null;
 }   
 
@@ -133,11 +133,11 @@ unittest
     assert(!b);
     assert(!c);
 
-	Object foo = construct!Object;
+    Object foo = construct!Object;
     Object bar = new Object;
     assert( GC.addrOf(cast(void*)foo) == null );
     assert( GC.addrOf(cast(void*)bar) != null );
-	foo.destruct;
+    foo.destruct;
     bar.destruct;
     
     struct Foo{size_t a,b,c;}
