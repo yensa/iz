@@ -470,7 +470,7 @@ mixin template izPropertiesAnalyzer(){
 }
 
 version(unittest){
-class Foo{
+    class Foo{
 
         mixin izPropertiesAnalyzer;
         this(A...)(A a){

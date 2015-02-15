@@ -63,11 +63,11 @@ unittest
 CT construct(CT, A...)(A a) 
 if (is(CT == class))
 {
-	import std.conv : emplace;
+    import std.conv : emplace;
     auto size = __traits(classInstanceSize, CT);
-	auto memory = malloc(size)[0 .. size];
-	if(!memory) throw new Exception("Out of memory");
-	return emplace!(CT, A)(memory, a);
+    auto memory = malloc(size)[0 .. size];
+    if(!memory) throw new Exception("Out of memory");
+    return emplace!(CT, A)(memory, a);
 }
 
 /**  
@@ -79,11 +79,11 @@ if (is(CT == class))
 ST * construct(ST, A...)(A a)
 if(is(ST==struct))
 {
-	import std.conv : emplace;
+    import std.conv : emplace;
     auto size = ST.sizeof;
-	auto memory = malloc(size)[0 .. size];
-	if(!memory) throw new Exception("Out of memory");
-	return emplace!(ST, A)(memory, a);
+    auto memory = malloc(size)[0 .. size];
+    if(!memory) throw new Exception("Out of memory");
+    return emplace!(ST, A)(memory, a);
 }
        
 /** 
