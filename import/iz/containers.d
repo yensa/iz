@@ -1,7 +1,7 @@
 module iz.containers;
 
 import core.exception, std.exception;
-import std.stdio, std.c.stdlib: malloc, free, realloc;
+import std.stdio;
 import core.stdc.string: memcpy, memmove;
 import std.string: format, strip;
 import std.traits, std.conv: to;
@@ -30,16 +30,16 @@ public struct izArray(T)
 		size_t fBlockCount;
 		bool initDone;
 
-		final void initLazy()
+		@safe @nogc final void initLazy()
 		{
-			if(initDone) return;
+			if (initDone)
+                return;
 			fGranularity = 4096;
-			fElems = malloc(fGranularity);
-			if (!fElems) throw new OutOfMemoryError();
+			fElems = getMem(fGranularity);
 			initDone = true;
 		}
 
-		void setLength(size_t aLength)
+		@nogc void setLength(size_t aLength)
 		{
 			debug { assert (fGranularity != 0); }
 
@@ -47,31 +47,31 @@ public struct izArray(T)
 			if (fBlockCount != newBlockCount)
 			{
 				fBlockCount = newBlockCount;
-				fElems = cast(T*) realloc(cast(izPtr) fElems, fGranularity * fBlockCount);
-				if (!fElems) throw new OutOfMemoryError();
+				fElems = cast(T*) reallocMem(cast(izPtr) fElems, fGranularity * fBlockCount);
 			}
 			fLength = aLength;
 		}
 	}
 	protected
 	{
-		void grow()
+		@nogc void grow()
 		{
             initLazy;
 			setLength(fLength + 1);
 		}
-		void shrink()
+		@nogc void shrink()
 		{
 			setLength(fLength - 1);
 		}
-		final T* rwPtr(size_t index)
+		@nogc final T* rwPtr(size_t index)
 		{
 			return cast(T*) (fElems + index * T.sizeof);
 		}
 	}
 	public
 	{
-		this(A...)(A someElement) if (someElement.length < ptrdiff_t.max-1)
+        
+		@nogc this(A...)(A someElement) if (someElement.length < ptrdiff_t.max-1)
 		{
 			initLazy;
 			static if (someElement.length == 0) return;
@@ -83,7 +83,7 @@ public struct izArray(T)
 				*rwPtr(++i) = elem;
 			}
 		}
-		this(T[] someElements)
+		@nogc this(T[] someElements)
 		{
 
 			if (someElements.length == 0) return;
@@ -142,12 +142,12 @@ public struct izArray(T)
 		~this()
 		{
 			if (fElems)
-				std.c.stdlib.free(fElems);
+				freeMem(fElems);
 		}
 		/**
 		 * Indicates the memory allocation block-size.
 		 */
-		@property uint granurality()
+		@property @nogc uint granurality()
 		{
 			return fGranularity;
 		}
@@ -155,7 +155,7 @@ public struct izArray(T)
 		 * Sets the memory allocation block-size.
 		 * aValue should be set to 16 or 4096 (the default).
 		 */
-		@property void granularity(uint aValue)
+		@property @nogc void granularity(uint aValue)
 		{
 			if (fGranularity == aValue) return;
 			if (aValue < T.sizeof)
@@ -176,19 +176,19 @@ public struct izArray(T)
 		/**
 		 * Indicates how many block the array is made of.
 		 */
-		@property size_t blockCount()
+		@property @nogc size_t blockCount()
 		{
 			return fBlockCount;
 		}
 		/**
 		 * Element count.
 		 */
-		@property size_t length()
+		@property @nogc size_t length()
 		{
 			return fLength;
 		}
 		/// ditto
-		@property void length(size_t aLength)
+		@property @nogc void length(size_t aLength)
 		{
 			if (aLength == fLength) return;
 			initLazy;
@@ -198,7 +198,7 @@ public struct izArray(T)
 		 * Pointer to the first element.
 		 * As it's always assigned It cannot be used to determine if the array is empty.
 		 */
-		@property izPtr ptr()
+		@property @nogc izPtr ptr()
 		{
 			return fElems;
 		}
@@ -218,17 +218,17 @@ public struct izArray(T)
 		/**
 		 *	Returns a mutable copy of the array.
 		 */
-		@property izArray!T dup()
+		@property @nogc izArray!T dup()
 		{
 			izArray!T result;
 			result.length = fLength;
-			memmove(result.fElems, fElems, fLength * T.sizeof);
+			moveMem(result.fElems, fElems, fLength * T.sizeof);
 			return result;
 		}
 		/**
 		 * Class operators
 		 */
-		bool opEquals(AT)(auto ref AT anArray) if ( (is(AT == izArray!T)) | (is(AT == T[])) )
+		@nogc bool opEquals(AT)(auto ref AT anArray) if ( (is(AT == izArray!T)) | (is(AT == T[])) )
 		{
 			if (fLength != anArray.length) return false;
 			if (fLength == 0 && anArray.length == 0) return true;
@@ -240,12 +240,12 @@ public struct izArray(T)
 			return true;
 		}
 		/// ditto
-		T opIndex(size_t i)
+		@nogc T opIndex(size_t i)
 		{
 			return *rwPtr(i);
 		}
 		/// ditto
-		void opIndexAssign(T anItem, size_t i)
+		@nogc void opIndexAssign(T anItem, size_t i)
 		{
 			*rwPtr(i) = anItem;
 		}
@@ -272,12 +272,12 @@ public struct izArray(T)
 			return result;
 		}
 		/// ditto
-		size_t opDollar()
+		@nogc size_t opDollar()
 		{
 			return fLength;
 		}
 		/// ditto
-		void opAssign(T[] someElements)
+		@nogc void opAssign(T[] someElements)
 		{
 			initLazy;
 			setLength(someElements.length);
@@ -287,24 +287,24 @@ public struct izArray(T)
 			}
 		}
 		/// ditto
-		izArray!T opSlice()
+		@nogc izArray!T opSlice()
 		{
 			izArray!T result;
 			result.length = length;
-			memmove( result.ptr, fElems , T.sizeof * fLength);
+			moveMem( result.ptr, fElems , T.sizeof * fLength);
 			return result;
 		}
 		/// ditto
-		izArray!T opSlice(size_t aFrom, size_t aTo)
+		@nogc izArray!T opSlice(size_t aFrom, size_t aTo)
 		{
 			izArray!T result;
 			size_t resLen = 1 + (aTo-aFrom);
 			result.length = resLen;
-			memmove( result.ptr, fElems + aFrom * T.sizeof, T.sizeof * resLen);
+			moveMem( result.ptr, fElems + aFrom * T.sizeof, T.sizeof * resLen);
 			return result;
 		}
 		/// ditto
-		T opSliceAssign(T aValue)
+		@nogc T opSliceAssign(T aValue)
 		{
 			for (auto i = 0; i<fLength; i++)
 			{
@@ -313,7 +313,7 @@ public struct izArray(T)
 			return aValue;
 		}
 		/// ditto
-		T opSliceAssign(T aValue, size_t aFrom, size_t aTo)
+		@nogc T opSliceAssign(T aValue, size_t aFrom, size_t aTo)
 		{
 			for (auto i = aFrom; i<aTo+1; i++)
 			{
@@ -821,7 +821,7 @@ private template dlistPayload(T)
 
 	void* newPld(void* aPrevious, void* aNext, T aData)
 	{
-		auto result = std.c.stdlib.malloc( 2 * size_t.sizeof + T.sizeof);
+		auto result = getMem( 2 * size_t.sizeof + T.sizeof);
 
         if (result)
         {
@@ -833,7 +833,7 @@ private template dlistPayload(T)
 	}
 	void freePld(void* aPayload)
 	{
-		std.c.stdlib.free(aPayload);
+		freeMem(aPayload);
 	}
 
 	void setPrev(void* aPayload, void* aPrevious)
@@ -898,7 +898,7 @@ public class izDynamicList(T): izList!T
 			return current;
 		}
 
-        @trusted
+        @trusted 
 		void* getPayloadFromDt(T anItem)
 		{
 			auto current = fFirst;

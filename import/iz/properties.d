@@ -530,8 +530,9 @@ version(unittest){
 
 unittest
 {
-    auto foo = new Foo;
+    auto foo = construct!Foo;
     foo.use;
+    foo.destruct;
 }
 
 
@@ -564,7 +565,7 @@ public class izPropertyBinder(T)
 			for(auto i = 0; i < fToFree.count; i++)
 			{
 				auto descr = fToFree[i];
-				if (descr) free(descr);
+				if (descr) freeMem(descr);
 			}
 			fItems.destruct;
 			fToFree.destruct;

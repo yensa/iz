@@ -54,19 +54,66 @@ unittest
     assert(b == typeof(b).init);
 }
 
+/**
+ * Like malloc() but for @safe context.
+ */
+@trusted @nogc izPtr getMem(size_t size) nothrow
+{
+    auto result = malloc(size);
+    assert(result, "Out of memory");
+    return result;
+}
+
+/**
+ * Like realloc() but for @safe context.
+ */
+@trusted @nogc izPtr reallocMem(ref izPtr src, size_t newSize) nothrow
+{
+    auto result = realloc(src, newSize);
+    assert(result, "Out of memory");
+    return result;
+}
+
+/**
+ * Like memmove() but for @safe context.
+ */
+@trusted @nogc void moveMem(ref izPtr dst, ref izPtr src, size_t count) nothrow
+{
+    import std.c.string : memmove;
+    memmove(dst, src, count);
+}
+
+/**
+ * Like memmove() but for @safe context.
+ */
+@trusted @nogc void moveMem(izPtr dst, izPtr src, size_t count) nothrow
+{
+    import std.c.string : memmove;
+    memmove(dst, src, count);
+}
+
+/**
+ * Like free() but for @safe context.
+ */
+@trusted @nogc void freeMem(izPtr src) nothrow
+{
+    free(src);
+    src = null;
+}
+
+
 /**  
  * The static function construct returns a new, GC-free, class instance.
  * Params:
  * CT = a class type.
  * a = variadic parameters passed to the constructor.
  */
-CT construct(CT, A...)(A a) 
+@trusted CT construct(CT, A...)(A a) 
 if (is(CT == class))
 {
     import std.conv : emplace;
     auto size = __traits(classInstanceSize, CT);
-    auto memory = malloc(size)[0 .. size];
-    if(!memory) throw new Exception("Out of memory");
+    auto memory = getMem(size)[0 .. size];
     return emplace!(CT, A)(memory, a);
 }
 
@@ -76,13 +123,12 @@ if (is(CT == class))
  * ST = a struct type.
  * a = variadic parameters passed to the constructor.
  */
-ST * construct(ST, A...)(A a)
+@trusted ST * construct(ST, A...)(A a)
 if(is(ST==struct))
 {
     import std.conv : emplace;
     auto size = ST.sizeof;
-    auto memory = malloc(size)[0 .. size];
-    if(!memory) throw new Exception("Out of memory");
+    auto memory = getMem(size)[0 .. size];
     return emplace!(ST, A)(memory, a);
 }
        

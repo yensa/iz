@@ -1,8 +1,7 @@
 module iz.streams;
 
 import core.exception;
-import std.stdio, std.string, std.c.stdlib: malloc, free, realloc;
-import core.stdc.string: memcpy, memmove;
+import std.stdio, std.string;
 import std.digest.md, std.conv;
 import iz.types;
 
@@ -239,11 +238,11 @@ public interface izStream
 
             size_t read;
             size_t buff_sz = 4096;
-            auto buff = malloc(buff_sz);
+            auto buff = getMem(buff_sz);
             scope(exit)
             {
                 rhs.position = stored;
-                free(buff);
+                freeMem(buff);
             }
 
             while(true)
@@ -268,13 +267,13 @@ public void copyStream(izStream aSource, izStream aTarget)
 {
 	auto oldpos = aSource.position; 
 	auto buffsz = 4096;
-	auto buff = malloc(buffsz);
+	auto buff = getMem(buffsz);
 	if (!buff) throw new OutOfMemoryError();
 	
 	scope(exit)
 	{
 		aSource.position = oldpos;
-		free(buff);
+		freeMem(buff);
 	}
 	
 	aSource.position = 0;
@@ -623,7 +622,7 @@ public class izMemoryStream: izStream, izStreamPersist, izFilePersist8
             import core.memory : GC;
             if (!ptr) return;
             if (GC.addrOf(ptr)) return;
-            free(ptr);
+            freeMem(ptr);
         }
 	}
 	public
@@ -631,7 +630,7 @@ public class izMemoryStream: izStream, izStreamPersist, izFilePersist8
         mixin(genReadWriteVar);
 		this()
 		{
-			fMemory = malloc(16);
+			fMemory = getMem(16);
 			if (!fMemory) throw new OutOfMemoryError();
 		}
 		
@@ -645,7 +644,7 @@ public class izMemoryStream: izStream, izStreamPersist, izFilePersist8
 		size_t read(izPtr aBuffer, size_t aCount)
 		{
 			if (aCount + fPosition > fSize) aCount = fSize - fPosition;
-			memmove(aBuffer, fMemory + fPosition, aCount);
+			moveMem(aBuffer, fMemory + fPosition, aCount);
 			fPosition += aCount;
 			return aCount;
 		}
@@ -653,7 +652,7 @@ public class izMemoryStream: izStream, izStreamPersist, izFilePersist8
 		size_t readVariable(T)(T* aValue) if (isConstantSize!T)
 		{
 			if (fPosition + T.sizeof > fSize) return 0;
-			memmove(aValue, fMemory + fPosition, T.sizeof);
+			moveMem(aValue, fMemory + fPosition, T.sizeof);
 			fPosition += T.sizeof;
 			return T.sizeof;
 		}
@@ -663,7 +662,7 @@ public class izMemoryStream: izStream, izStreamPersist, izFilePersist8
 		size_t write(izPtr aBuffer, size_t aCount)
 		{
 			if (fPosition + aCount > fSize) size(fPosition + aCount);
-			memmove(fMemory + fPosition, aBuffer, aCount);
+			moveMem(fMemory + fPosition, aBuffer, aCount);
 			fPosition += aCount;
 			return aCount;
 		}
@@ -671,7 +670,7 @@ public class izMemoryStream: izStream, izStreamPersist, izFilePersist8
 		size_t writeVariable(T)(T* aValue) if (isConstantSize!T)
 		{
 			if (fPosition + T.sizeof > fSize) size(fPosition + T.sizeof);
-			memmove(fMemory + fPosition, aValue, T.sizeof);
+			moveMem(fMemory + fPosition, aValue, T.sizeof);
 			fPosition += T.sizeof;
 			return T.sizeof;
 		}
@@ -715,7 +714,7 @@ public class izMemoryStream: izStream, izStreamPersist, izFilePersist8
 				clear;
 				return;
 			}
-			fMemory = realloc(fMemory, aValue);
+			fMemory = reallocMem(fMemory, aValue);
 			if (!fMemory) throw new OutOfMemoryError();
 			else fSize = aValue;			
 		}
@@ -751,7 +750,7 @@ public class izMemoryStream: izStream, izStreamPersist, izFilePersist8
 
 		void clear()
 		{
-			fMemory = std.c.stdlib.realloc(fMemory, 16);
+			fMemory = reallocMem(fMemory, 16);
 			if (!fMemory) throw new OutOfMemoryError();
 			fSize = 0;
 			fPosition = 0;
@@ -815,10 +814,10 @@ public class izMemoryStream: izStream, izStreamPersist, izFilePersist8
 				size_t pos;
 				for (auto i = 0; i < blocks; i++)
 				{
-					memmove(target.fMemory + pos, fMemory + pos, buffsz);
+					moveMem(target.fMemory + pos, fMemory + pos, buffsz);
 					pos += buffsz;
 				}
-				if (tail) memmove(target.fMemory + pos, fMemory + pos, tail);	
+				if (tail) moveMem(target.fMemory + pos, fMemory + pos, tail);	
 			}
 			else
 			{
@@ -929,7 +928,7 @@ public class izMemoryStream: izStream, izStreamPersist, izFilePersist8
 unittest
 {
     // izMemoryStream.setMemory
-    izPtr mem = malloc(4096);
+    izPtr mem = getMem(4096);
     auto str = construct!izMemoryStream;
     scope(exit) destruct(str);
     //
