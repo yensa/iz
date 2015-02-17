@@ -165,6 +165,7 @@ version(unittest)
     unittest
     {    
         auto col = construct!(SerializableList!itmtest);
+        scope(exit) col.destruct;
     
         itmtest itm = col.addItem();
         itm.setProps(0u,1u,2u);
