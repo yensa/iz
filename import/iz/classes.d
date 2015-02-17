@@ -13,7 +13,7 @@ import iz.types, iz.containers, iz.streams, iz.properties, iz.serializer;
  * The serialization is only possible in sequential mode (objectToStream/streamToObject) 
  * because internally the items are described using a single property descriptor.
  */
-class SerializableList(ItemClass): izSerializable 
+class izSerializableList(ItemClass): izSerializable 
 if(isImplicitlyConvertible!(ItemClass, izSerializable))
 {
     private
@@ -49,7 +49,7 @@ if(isImplicitlyConvertible!(ItemClass, izSerializable))
             {
                 assert(0, "SerializableList cant be restored in random mode");
             }
-            // ina first time, always re/stores the count.
+            // in a first time, always re/stores the count.
             aSerializer.addProperty(&fCntDescr);
             // items
             for(auto i= 0; i < fItems.count; i++)
@@ -111,7 +111,7 @@ if(isImplicitlyConvertible!(ItemClass, izSerializable))
         }      
         
         /**
-         * Provides an access to the inernal container.
+         * Provides an access to the internal container.
          * The access is mostly granted to reorganize or read the items.
          */
         izDynamicList!ItemClass items(){return fItems;}
@@ -164,34 +164,34 @@ version(unittest)
     }
     unittest
     {    
-        auto col = construct!(SerializableList!itmtest);
-    
+        auto col = construct!(izSerializableList!itmtest);
+        auto str = construct!izMemoryStream;
+        auto ser = construct!izSerializer;
+        scope(exit) destruct(col, ser, str);
+
         itmtest itm = col.addItem();
         itm.setProps(0u,1u,2u);
         itm = col.addItem;
         itm.setProps(3u,4u,5u);
         itm = col.addItem;
         itm.setProps(6u,7u,8u);
-    
-        auto str = construct!izMemoryStream;
-        auto ser = construct!izSerializer;
-        scope(exit) destruct(col, ser, str);
-        
+
         ser.objectToStream(col, str, izSerFormat.iztxt);
         str.position = 0;
-        
         col.clear;
         assert(col.items.count == 0);
+
         ser.streamToObject(str, col, izSerFormat.iztxt);
-        
         assert(col.items.count == 3);
         assert(col.items[1].field3 == 5u);
         assert(col.items[2].field3 == 8u);
-        
+
         auto todelete = col.items[0];
         col.deleteItem(todelete);
         assert(col.items.count == 2);
         col.deleteItem(1);
-        assert(col.items.count == 1);    
+        assert(col.items.count == 1);  
+        
+        std.stdio.writeln("izSerializableList passed the tests");
     }
 }
