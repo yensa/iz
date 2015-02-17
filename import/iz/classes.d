@@ -24,7 +24,7 @@ if(isImplicitlyConvertible!(ItemClass, izSerializable))
 
         final uint getCount()
         {
-            return fItems.count;
+            return cast(uint) fItems.count;
         }
         final void setCount(uint aValue)
         {
