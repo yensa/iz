@@ -77,6 +77,7 @@ object _1: TCEProject
     'import\iz\referencable.d'
     'import\iz\observer.d'
     'import\iz\serializer.d'
+    'import\iz\classes.d'
   )
   ConfigurationIndex = 2
 end
