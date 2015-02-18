@@ -406,6 +406,7 @@ mixin template izPropertiesAnalyzer(){
     private void analyzeFields()
     {
         import std.algorithm : canFind;
+        import std.traits: isCallable;
         foreach(member; __traits(allMembers, typeof(this)))
         static if (canFind("_fF", member[0]) && (!isCallable!(__traits(getMember, typeof(this), member))))
         {
