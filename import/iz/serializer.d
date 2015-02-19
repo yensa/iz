@@ -342,7 +342,7 @@ void setNodeInfo(T)(izSerNodeInfo * nodeInfo, izPropDescriptor!T * descriptor)
         nodeInfo.isArray = false;
         nodeInfo.value.length = type2size[nodeInfo.type];
         nodeInfo.descriptor = cast(izPtr) descriptor;
-        nodeInfo.name = descriptor.name;
+        nodeInfo.name = descriptor.name.dup;
         * cast(T*) nodeInfo.value.ptr = descriptor.getter()();
         //
         return;
@@ -356,7 +356,7 @@ void setNodeInfo(T)(izSerNodeInfo * nodeInfo, izPropDescriptor!T * descriptor)
         nodeInfo.type = text2type[getElemStringOf!T];
         nodeInfo.isArray = true;
         nodeInfo.descriptor = cast(izPtr) descriptor;
-        nodeInfo.name = descriptor.name;
+        nodeInfo.name = descriptor.name.dup;
         nodeInfo.value.length = value.length * type2size[nodeInfo.type];
         memmove(nodeInfo.value.ptr, cast(void*) value.ptr, nodeInfo.value.length);
         //
@@ -377,7 +377,7 @@ void setNodeInfo(T)(izSerNodeInfo * nodeInfo, izPropDescriptor!T * descriptor)
         nodeInfo.type = text2type[typeof(ser).stringof];
         nodeInfo.isArray = false;
         nodeInfo.descriptor = cast(izPtr) descriptor;
-        nodeInfo.name = descriptor.name;
+        nodeInfo.name = descriptor.name.dup;
         nodeInfo.value.length = value.length;
         memmove(nodeInfo.value.ptr, cast(void*) value.ptr, nodeInfo.value.length);      
         //
