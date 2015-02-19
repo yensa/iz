@@ -289,8 +289,8 @@ public void copyStream(izStream aSource, izStream aTarget)
 
 unittest
 {
-    ubyte _a[] = [0x11,0x22,0x33,0x44];
-    ubyte _b[] = [0x55,0x66,0x77,0x88];
+    ubyte[] _a = [0x11,0x22,0x33,0x44];
+    ubyte[] _b = [0x55,0x66,0x77,0x88];
     auto a = construct!izMemoryStream;
     auto b = construct!izMemoryStream;
     a.write(_a.ptr, 4);
@@ -679,7 +679,7 @@ public class izMemoryStream: izStream, izStreamPersist, izFilePersist8
 
 		ulong seek(ulong anOffset, izSeekMode aMode)
 		{
-			with(izSeekMode) final switch(aMode) 
+		    with(izSeekMode) final switch(aMode) 
 			{
 				case beg:
 					fPosition = cast(typeof(fPosition)) anOffset;

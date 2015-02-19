@@ -120,7 +120,7 @@ public struct izBitSet(S,E) if (setConstrain!(E,S))
          * initializes the set with someMembers.
          * someMembers: an array of E members.
          */
-        nothrow @safe this(E someMembers[])
+        nothrow @safe this(E[] someMembers)
         {
             fSet = 0;
             foreach(member; someMembers)
@@ -715,9 +715,9 @@ version(unittest)
         assert(arr1[1] == 25);
         assert(arr1[2] == 36);
 
-        int Ct1(int p[2]){return p[0] + p[1];}
-        int Ct2(int p[2]){return p[0] * p[1];}
-        int Ct3(int p[2]){return p[0] - p[1];}
+        int Ct1(int[2] p){return p[0] + p[1];}
+        int Ct2(int[2] p){return p[0] * p[1];}
+        int Ct3(int[2] p){return p[0] - p[1];}
         auto CCaller = izEnumProcs!(A, typeof(&Ct1))(&Ct1,&Ct2,&Ct3);
         assert(bs.all);
         auto arr2 = CCaller(bs,[cast(int[2])[2,2],cast(int[2])[3,3],cast(int[2])[9,8]]);
