@@ -451,14 +451,6 @@ public enum izContainerChangeKind {add, change, remove};
  */
 public interface izList(T)
 {
-	alias izListNotification = void delegate(Object aList, izContainerChangeKind aChangeKind);
-
-	/**
-	 * hasChanged() notify the implementer about the modification of the list.
-	 * It's designed to be overridden to ease the internal communication.
-	 */
-	void hasChanged(izContainerChangeKind aChangeKind, T* involvedItem);
-
 	/**
 	 * Operators
 	 */
@@ -569,15 +561,6 @@ public interface izList(T)
 	 * The value returned is always greater than 0.
 	 */
 	@property size_t count();
-
-	/**
-	 * the onChange event can be assigned to inform the outside-world
-	 * about the modifications. Inside a descendant, rather override
-	 * hasChanged() which is designed for this purpose.
-	 */
-	@property void onChange(izListNotification aNotification);
-	/// ditto
-	@property izListNotification onChange();
 }
 
 /**
@@ -593,7 +576,6 @@ public class izStaticList(T): izList!T
 	private
 	{
 		izArray!T fItems;
-		izListNotification fOnChange;
 	}
 	protected
 	{
@@ -613,11 +595,6 @@ public class izStaticList(T): izList!T
 			fItems.length = 0;
 		}
 
-		void hasChanged(izContainerChangeKind aChangeKind, T* involvedItem)
-		{
-			if (fOnChange) fOnChange(this, aChangeKind);
-		}
-
 		T opIndex(ptrdiff_t i)
 		{
 			return fItems[i];
@@ -626,7 +603,6 @@ public class izStaticList(T): izList!T
 		void opIndexAssign(T anItem, size_t i)
 		{
 			fItems[i] = anItem;
-            hasChanged(izContainerChangeKind.add, &anItem);
 		}
 
 		int opApply(int delegate(T) dg)
@@ -683,7 +659,6 @@ public class izStaticList(T): izList!T
 		{
 			fItems.grow;
 			fItems[$-1] = anItem;
-            hasChanged(izContainerChangeKind.add, &anItem);
 			return fItems.length - 1;
 		}
 
@@ -697,7 +672,6 @@ public class izStaticList(T): izList!T
 			scope(failure) throw listException;
 			memmove(fItems.ptr + T.sizeof, fItems.ptr, (fItems.length - 1) * T.sizeof);
 			fItems[0] = anItem;
-            hasChanged(izContainerChangeKind.add, &anItem);
             return 0;
 		}
 
@@ -717,7 +691,6 @@ public class izStaticList(T): izList!T
 							fItems.ptr + T.sizeof * aPosition,
 							(fItems.length - 1 - aPosition) * T.sizeof);
 				fItems[aPosition] = anItem;
-                hasChanged(izContainerChangeKind.add, &anItem);
                 return aPosition;
 			}
 		}
@@ -733,7 +706,6 @@ public class izStaticList(T): izList!T
 			{
 				fItems[i1] = fItems[i2];
 				fItems[i2] = anItem1;
-                hasChanged(izContainerChangeKind.change, null);
 			}
 		}
 
@@ -745,7 +717,6 @@ public class izStaticList(T): izList!T
 			auto old = fItems[index1];
 			fItems[index1] = fItems[index2];
 			fItems[index2] = old;
-            hasChanged(izContainerChangeKind.change, null);
 		}
 
 		bool remove(T anItem)
@@ -753,10 +724,7 @@ public class izStaticList(T): izList!T
 			auto i = find(anItem);
 			auto result = (i != -1);
 			if (result)
-            {
                 extract(i);
-                hasChanged(izContainerChangeKind.remove, &anItem);
-            }
 			return result;
 		}
 
@@ -780,14 +748,12 @@ public class izStaticList(T): izList!T
 				memmove(fromPtr, fromPtr + T.sizeof, (fItems.length - anIndex) * T.sizeof);
 				fItems.shrink;
 			}
-            hasChanged(izContainerChangeKind.remove, &result);
-            return result; // ! result is undefined.
+            return result;
 		}
 
         void clear()
         {
             fItems.setLength(0);
-            hasChanged(izContainerChangeKind.change, null);
         }
 
 		@property size_t count()
@@ -795,15 +761,6 @@ public class izStaticList(T): izList!T
 			return fItems.opDollar();
 		}
 
-		@property void onChange(izListNotification aNotification)
-		{
-			fOnChange = aNotification;
-		}
-
-		@property izListNotification onChange()
-		{
-			return fOnChange;
-		}
 	}
 
 }
@@ -882,7 +839,6 @@ public class izDynamicList(T): izList!T
 		size_t fCount;
 		void* fLast;
 		void* fFirst;
-		izListNotification fOnChange;
 		alias payload = dlistPayload!T;
 	}
 	protected
@@ -925,11 +881,6 @@ public class izDynamicList(T): izList!T
 		{
 			clear;
 		}
-
-        void hasChanged(izContainerChangeKind aChangeKind, T* involvedItem)
-        {
-			if (fOnChange) fOnChange(this, aChangeKind);
-        }
 
         @safe @nogc nothrow
         T opIndex(ptrdiff_t i)
@@ -1013,9 +964,6 @@ public class izDynamicList(T): izList!T
                 auto _pld = payload.newPld(fLast, null, anItem);
                 payload.setNext(fLast, _pld);
 				fLast = _pld;
-
-				hasChanged(izContainerChangeKind.add, &anItem);
-
 				return fCount++;
             }
         }
@@ -1027,9 +975,6 @@ public class izDynamicList(T): izList!T
 			if (fFirst) payload.setPrev(fFirst, _pld);
 			else fLast = _pld;
 			fFirst = _pld;
-
-			hasChanged(izContainerChangeKind.add, &anItem);
-
 			return fCount++;
 		}
 
@@ -1053,9 +998,6 @@ public class izDynamicList(T): izList!T
 				payload.setPrev(old, _pld);
 				payload.setNext(prev, _pld);
 				fCount++;
-
-				hasChanged(izContainerChangeKind.add, &anItem);
-
 				return aPosition;
 			}
 		}
@@ -1073,8 +1015,6 @@ public class izDynamicList(T): izList!T
 
 			payload.setData(_pld1, _data2);
 			payload.setData(_pld2, _data1);
-
-			hasChanged(izContainerChangeKind.change, null);
 		}
 
         @trusted
@@ -1090,8 +1030,6 @@ public class izDynamicList(T): izList!T
 
 			payload.setData(_pld1, _data2);
 			payload.setData(_pld2, _data1);
-
-			hasChanged(izContainerChangeKind.change, null);
 		}
 
         @trusted
@@ -1119,9 +1057,6 @@ public class izDynamicList(T): izList!T
 			}
 			payload.freePld(_pld);
 			fCount--;
-
-			hasChanged(izContainerChangeKind.remove, &anItem);
-
 			return true;
 		}
 
@@ -1154,9 +1089,7 @@ public class izDynamicList(T): izList!T
 			payload.freePld(_pld);
 			fCount--;
 
-			hasChanged(izContainerChangeKind.remove, &result);
-
-			return result;	 // ! result is undefined
+			return result;
 		}
 
         @trusted
@@ -1178,16 +1111,6 @@ public class izDynamicList(T): izList!T
 		{
 			return fCount;
 		}
-
-		@trusted @property void onChange(izListNotification aNotification)
-		{
-			fOnChange = aNotification;
-		}
-
-		@trusted @property izListNotification onChange()
-		{
-			return fOnChange;
-		}
 	}
 }
 
@@ -1200,21 +1123,13 @@ version(unittest)
 	{
 		unittest
 		{
-			bool changeMonitor;
-
 			// struct as ptr
 			alias sList = izStaticList!(s*);
 
-			void listChangedProc(Object aList, izContainerChangeKind aChangeKind)
-			{
-				changeMonitor = true;
-			}
-
-			s someS[200];
+			s[200] someS;
 			sList SList = construct!sList;
 			scope(exit) SList.destruct;
-			SList.onChange = &listChangedProc;
-			changeMonitor = false;
+
 			for (auto i = 0; i < someS.length; i++)
 			{
 				someS[i].a = i;
@@ -1223,7 +1138,6 @@ version(unittest)
 				assert( SList.count == i + 1);
 				assert( SList.find( &someS[i] ) == i);
 			}
-			assert(changeMonitor);
 			SList.swapIndexes(0,1);
 			assert( SList.find(&someS[0]) == 1 );
 			assert( SList.find(&someS[1]) == 0 );
@@ -1255,11 +1169,9 @@ version(unittest)
 			// class as ref
 			alias cList = izStaticList!c;
 
-			c someC[200];
+			c[200] someC;
 			cList CList = construct!cList;
 			scope(exit) CList.destruct;
-			CList.onChange = &listChangedProc;
-			changeMonitor = false;
 			for (auto i = 0; i < someC.length; i++)
 			{
 				someC[i] = new c;
@@ -1269,7 +1181,6 @@ version(unittest)
 				assert( CList.count == i + 1);
 				assert( CList.find( someC[i] ) == i);
 			}
-			assert(changeMonitor);
 			CList.swapIndexes(0,1);
 			assert( CList.find(someC[0]) == 1 );
 			assert( CList.find(someC[1]) == 0 );
@@ -1297,39 +1208,30 @@ version(unittest)
 			{
 				CList.add( someC[i] );
 			}
-			/*
+			
 			// cleanup of internally allocated items.
-			CList.clear;
-			CList.addNewItem!c;
-			CList.addNewItem!c;
+			c itm;
+            CList.clear;
+			CList.addNewItem;
+			CList.addNewItem;
 			while (CList.count > 0)
 			{
-				c* cpt;
-				// extract return value is not yet defined.
-				cpt = CList.extract(0);
-				//delete *cpt;
-			}*/
+				itm  = CList.extract(0);
+				itm.destruct;
+			}
+            assert(CList.count == 0);
 
 			writeln("izStaticList(T) passed the tests");
 		}
 
 		unittest
 		{
-			bool changeMonitor;
-
 			// struct as ptr
 			alias sList = izDynamicList!(s*);
 
-			void listChangedProc(Object aList, izContainerChangeKind aChangeKind)
-			{
-				changeMonitor = true;
-			}
-
-			s someS[200];
+			s[200] someS;
 			sList SList = construct!sList;
 			scope(exit) SList.destruct;
-			SList.onChange = &listChangedProc;
-			changeMonitor = false;
 			for (auto i = 0; i < someS.length; i++)
 			{
 				someS[i].a = i;
@@ -1338,7 +1240,6 @@ version(unittest)
 				assert( SList.count == i + 1);
 				assert( SList.find( &someS[i] ) == i);
 			}
-			assert(changeMonitor);
 			SList.swapIndexes(0,1);
 			assert( SList.find(&someS[0]) == 1 );
 			assert( SList.find(&someS[1]) == 0 );
@@ -1370,11 +1271,9 @@ version(unittest)
 			// class as ref
 			alias cList = izStaticList!c;
 
-			c someC[200];
+			c[200] someC;
 			cList CList = construct!cList;
 			scope(exit) CList.destruct;
-			CList.onChange = &listChangedProc;
-			changeMonitor = false;
 			for (auto i = 0; i < someC.length; i++)
 			{
 				someC[i] = new c;
@@ -1384,7 +1283,6 @@ version(unittest)
 				assert( CList.count == i + 1);
 				assert( CList.find( someC[i] ) == i);
 			}
-			assert(changeMonitor);
 			CList.swapIndexes(0,1);
 			assert( CList.find(someC[0]) == 1 );
 			assert( CList.find(someC[1]) == 0 );
@@ -1412,18 +1310,18 @@ version(unittest)
 			{
 				CList.add( someC[i] );
 			}
-			/*
+			
 			// cleanup of internally allocated items.
-			CList.clear;
-			CList.addNewItem!c;
-			CList.addNewItem!c;
+			c itm;
+            CList.clear;
+			CList.addNewItem;
+			CList.addNewItem;
 			while (CList.count > 0)
 			{
-				c* cpt;
-				// extract return value is not yet defined.
-				cpt = CList.extract(0);
-				//delete *cpt;
-			}*/
+				itm  = CList.extract(0);
+				itm.destruct;
+			}
+            assert(CList.count == 0);
 
 			writeln("izDynamicList(T) passed the tests");
 		}
@@ -2184,7 +2082,7 @@ private class foo: izTreeItem
 	unittest
 	{
 
-		foo Foos[20];
+		foo[20] Foos;
 		foo Driver;
 
 		Foos[0] = new foo;
@@ -2267,8 +2165,8 @@ private class foo: izTreeItem
 
 		//
 
-		foo Items1[20];
-		foo Items2[20][4];
+		foo[20] Items1;
+		foo[4][20] Items2;
 
 		assert( Items1[12] is null);
 		assert( Items2[12][0] is null);
