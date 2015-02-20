@@ -7,6 +7,13 @@ import std.string: format, strip;
 import std.traits, std.conv: to;
 import iz.types, iz.streams;
 
+
+version(X86_64) 
+{
+    version(linux) version = Nux64;
+    version(Windows) version = Win64;
+}
+
 /**
  * Parameterized, GC-free array.
  *
@@ -446,20 +453,22 @@ private class izArrayTester
 public enum izContainerChangeKind {add, change, remove};
 
 /**
- * TODO:
- * - opApply ref or not according to T (to store structs w/o using a ptr).
+ * Iz list interface.
+ * It uses the Pascal semantic (add(), remove(), etc)
+ * but are usable as range by std.algorithm using opSlice.
  */
 public interface izList(T)
 {
-	/**
-	 * Operators
-	 */
+    /// support for the array syntax
 	T opIndex(ptrdiff_t i);
-	/// ditto
+	
+    /// support for the array syntax
 	void opIndexAssign(T anItem, size_t i);
-	/// ditto
+	
+    /// support for the foreach operator
 	int opApply(int delegate(T) dg);
-	/// ditto
+    
+	/// support for the foreach_reverse operator
 	int opApplyReverse(int delegate(T) dg);
 
 	/**
@@ -565,11 +574,7 @@ public interface izList(T)
 
 /**
  * An izList implementation, fast to be iterated, slow to be reorganized.
- * Encapsulates an izArray!T and interfaces it with izList methods.
- *
- * TODO:
- * - removeFirst/removeLast.
- * - extract return value.
+ * Encapsulates an izArray!T and interfaces it as an izList.
  */
 public class izStaticList(T): izList!T
 {
@@ -805,32 +810,82 @@ private template dlistPayload(T)
 
 	void setData(void* aPayload, T aData)
 	{
-		*cast(T*) (aPayload + dataOffs) = aData;
+        *cast(T*) (aPayload + dataOffs) = aData;
 	}
 
 	void* getPrev(void* aPayload)
 	{
-		return *cast(void**) (aPayload + prevOffs);
+		version(X86) asm @nogc nothrow
+		{
+			naked;
+			mov     EAX, [EAX + prevOffs];
+			ret;
+		}
+		else version(Win64) asm @nogc nothrow
+		{
+			naked;
+			mov     RAX, [RCX + prevOffs];
+			ret;
+		}
+		else version(Nux64) asm @nogc nothrow
+		{
+			naked;
+			mov     RAX, [RDI + prevOffs];
+			ret;
+		}
+		else return *cast(void**) (aPayload + prevOffs);
 	}
 
 	void* getNext(void* aPayload)
 	{
-		return *cast(void**) (aPayload + nextOffs);
+		version(X86) asm @nogc nothrow
+		{
+			naked;
+			mov     EAX, [EAX + nextOffs];
+			ret;
+		}
+		else version(Win64) asm @nogc nothrow
+		{
+			naked;
+			mov     RAX, [RCX + nextOffs];
+			ret;
+		}
+		else version(Nux64) asm @nogc nothrow
+		{
+			naked;
+			mov     RAX, [RDI + nextOffs];
+			ret;
+		}
+		else return *cast(void**) (aPayload + nextOffs);
 	}
 
 	T getData(void* aPayload)
 	{
-		return *cast(T*) (aPayload + dataOffs);
+		version(X86) asm @nogc nothrow
+		{
+			naked;
+			mov     EAX, [EAX + dataOffs];
+			ret;
+		}
+		else version(Win64) asm @nogc nothrow
+		{
+			naked;
+			mov     RAX, [RCX + dataOffs];
+			ret;
+		}
+		else version(linux64) asm @nogc nothrow
+		{
+			naked;
+			mov     RAX, [RDI + dataOffs];
+			ret;
+		}
+		else return *cast(T*) (aPayload + dataOffs);
 	}
 }
 
 /**
  * An izList implementation, slow to be iterated, fast to be reorganized.
- * This is a standard linked list, with GC-free heap allocations.
- *
- * TODO:
- * - extract return value.
- * - removeFirst/removeLast.
+ * This is a standard double linked list, with GC-free heap allocations.
  */
 public class izDynamicList(T): izList!T
 {
@@ -843,8 +898,7 @@ public class izDynamicList(T): izList!T
 	}
 	protected
 	{
-        @safe @nogc nothrow
-		void* getPayloadFromIx(size_t anIndex)
+		void* getPayloadFromIx(size_t anIndex) @safe @nogc nothrow
 		{
 			auto current = fFirst;
 			for (size_t i = 0; i < anIndex; i++)
@@ -854,8 +908,7 @@ public class izDynamicList(T): izList!T
 			return current;
 		}
 
-        @trusted 
-		void* getPayloadFromDt(T anItem)
+		void* getPayloadFromDt(T anItem) @trusted 
 		{
 			auto current = fFirst;
 			while(current)
@@ -882,22 +935,19 @@ public class izDynamicList(T): izList!T
 			clear;
 		}
 
-        @safe @nogc nothrow
-        T opIndex(ptrdiff_t i)
+        T opIndex(ptrdiff_t i) @safe @nogc nothrow
         {
             auto _pld = getPayloadFromIx(i);
             return payload.getData(_pld);
         }
 
-        @safe @nogc nothrow
-        void opIndexAssign(T anItem, size_t i)
+        void opIndexAssign(T anItem, size_t i) @safe @nogc nothrow
         {
             auto _pld = getPayloadFromIx(i);
             payload.setData(_pld, anItem);
         }
 
-        @trusted
-        int opApply(int delegate(T) dg)
+        int opApply(int delegate(T) dg) @trusted
         {
 			int result = 0;
 			auto current = fFirst;
@@ -909,9 +959,8 @@ public class izDynamicList(T): izList!T
 			}
 			return result;
         }
-
-        @trusted
-        int opApplyReverse(int delegate(T) dg)
+    
+        int opApplyReverse(int delegate(T) dg) @trusted
         {
 			int result = 0;
 			auto current = fLast;
@@ -922,22 +971,43 @@ public class izDynamicList(T): izList!T
 				current = payload.getPrev(current);
 			}
 			return result;
+        }  
+        
+        T[] opSlice() @trusted
+        {
+            T[] result;
+            foreach(t; this)
+                result ~= t;
+            return result;
+        }
+               
+        T[] opSlice(size_t lo, size_t hi) @trusted
+        {
+            T[] result;
+            result.length = hi - lo;
+            for(auto i = lo; i < hi; i++)
+                result ~= opIndex(i);
+            return result;
+        }
+        
+        void opSliceAssign(T[] elems) @trusted @nogc
+        {
+            clear;
+            foreach(elem; elems)
+                add(elem);
         }
 
-        @safe @nogc nothrow
-        T last()
+        T last() @safe @nogc nothrow
         {
             return payload.getData(fLast);
         }
 
-        @safe @nogc nothrow
-        T first()
+        T first() @safe @nogc nothrow
         {
             return payload.getData(fFirst);
         }
-
-        @trusted
-        ptrdiff_t find(T anItem)
+ 
+        ptrdiff_t find(T anItem) @trusted
         {
             void* current = fFirst;
             ptrdiff_t result = -1;
@@ -951,8 +1021,8 @@ public class izDynamicList(T): izList!T
             return -1;
         }
 
-        @trusted
-        ptrdiff_t add(T anItem)
+        
+        ptrdiff_t add(T anItem) @trusted @nogc
         {
             if (fFirst == null)
             {
@@ -968,8 +1038,8 @@ public class izDynamicList(T): izList!T
             }
         }
 
-        @trusted
-		ptrdiff_t insert(T anItem)
+        
+		ptrdiff_t insert(T anItem) @trusted @nogc
 		{
 			auto _pld = payload.newPld(null, fFirst, anItem);
 			if (fFirst) payload.setPrev(fFirst, _pld);
@@ -978,8 +1048,7 @@ public class izDynamicList(T): izList!T
 			return fCount++;
 		}
 
-        @trusted
-		ptrdiff_t insert(size_t aPosition, T anItem)
+        ptrdiff_t insert(size_t aPosition, T anItem) @trusted @nogc 
 		{
 			if (fFirst == null)
             {
@@ -1002,8 +1071,7 @@ public class izDynamicList(T): izList!T
 			}
 		}
 
-        @trusted
-		void swapItems(T anItem1, T anItem2)
+        void swapItems(T anItem1, T anItem2) @trusted 
 		{
 			auto _pld1 = getPayloadFromDt(anItem1);
 			if (_pld1 == null) return;
@@ -1017,8 +1085,7 @@ public class izDynamicList(T): izList!T
 			payload.setData(_pld2, _data1);
 		}
 
-        @trusted
-		void swapIndexes(size_t index1, size_t index2)
+        void swapIndexes(size_t index1, size_t index2) @trusted 
 		{
 			auto _pld1 = getPayloadFromIx(index1);
 			if (_pld1 == null) return;
@@ -1032,8 +1099,7 @@ public class izDynamicList(T): izList!T
 			payload.setData(_pld2, _data1);
 		}
 
-        @trusted
-		bool remove(T anItem)
+        bool remove(T anItem) @trusted 
 		{
 			auto _pld = getPayloadFromDt(anItem);
 			if (!_pld) return false;
@@ -1060,8 +1126,7 @@ public class izDynamicList(T): izList!T
 			return true;
 		}
 
-        @trusted
-		T extract(size_t anIndex)
+        T extract(size_t anIndex) @trusted 
 		{
 			T result;
 			auto _pld = getPayloadFromIx(anIndex);
@@ -1092,8 +1157,7 @@ public class izDynamicList(T): izList!T
 			return result;
 		}
 
-        @trusted
-		void clear()
+        void clear() @trusted @nogc 
 		{
 			auto current = fFirst;
 			while(current)
@@ -1107,10 +1171,12 @@ public class izDynamicList(T): izList!T
 			fLast = null;
 		}
 
-		@trusted @property size_t count()
+		size_t count() @trusted @property 
 		{
 			return fCount;
 		}
+        
+        alias length = count;
 	}
 }
 
