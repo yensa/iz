@@ -1,7 +1,6 @@
 module iz.types;
 
-import core.exception, core.memory: GC;
-import std.stdio, std.c.stdlib;
+import std.c.stdlib;
 import std.traits, std.typetuple;
     
 /// iz pointer.
@@ -39,7 +38,7 @@ unittest
 
 
 /// void version of the init type property.
-void reset(T)(ref T t)
+@trusted void reset(T)(ref T t)
 {
     t = T.init;
 }
@@ -76,31 +75,46 @@ unittest
 
 /**
  * Like memmove() but for @safe context.
+ * dst and src can overlap.
+ * Params:
+ * dst = the data source.
+ * src = the data destination.
+ * count = the count of byte to meove from src to dst. 
  */
 @trusted @nogc void moveMem(ref izPtr dst, ref izPtr src, size_t count) nothrow
 {
     import std.c.string : memmove;
-    memmove(dst, src, count);
+    dst = memmove(dst, src, count);
 }
 
 /**
  * Like memmove() but for @safe context.
+ * dst and src can overlap.
+ * Params:
+ * dst = the data source.
+ * src = the data destination.
+ * count = the count of byte to meove from src to dst.
+ * Returns:
+ * the pointer to the destination, (same as dst). 
  */
-@trusted @nogc void moveMem(izPtr dst, izPtr src, size_t count) nothrow
+@trusted @nogc void * moveMem(izPtr dst, izPtr src, size_t count) nothrow
 {
     import std.c.string : memmove;
-    memmove(dst, src, count);
+    return memmove(dst, src, count);
 }
 
 /**
+ * Frees a manually allocated pointer to a basic type. 
  * Like free() but for @safe context.
+ * Params:
+ * src = the pointer to free.
  */
-@trusted @nogc void freeMem(izPtr src) nothrow
+@trusted @nogc void freeMem(T)(ref T* src) nothrow
+if (isPointer!(T*) && isBasicType!T)
 {
-    free(src);
+    if (src) free(cast(void*)src);
     src = null;
 }
-
 
 /**  
  * The static function construct returns a new, GC-free, class instance.
@@ -147,6 +161,25 @@ if (is(T == class) || (isPointer!T && is(PointerTarget!T == struct)))
     instance = null;
 }   
 
+/**
+ * Returns a pointer to a new, GC-free, basic variable.
+ * Any variable allocated using this function must be manually freed with freeMem.
+ * Params:
+ * T = the type of the pointer to return.
+ * preFill = optional boolean indicating if the result has to be initialized.
+ */
+@trusted @nogc static T * newPtr(T, bool preFill = false)() if (isBasicType!T)
+{
+    static if(!preFill)
+        return cast(T*) getMem(T.sizeof);
+    else
+    {
+        auto result = cast(T*) getMem(T.sizeof);
+        *result = T.init;
+        return result; 
+    }
+}
+
 /** 
  * Frees and invalidates a list of classes instances or struct pointers. 
  * *destruct()* is called for each item.
@@ -161,6 +194,8 @@ static void destruct(Objs...)(ref Objs objs)
 
 unittest
 {
+    import std.stdio, core.memory: GC;
+
     auto a = construct!Object;
     a.destruct;
     assert(!a);
@@ -201,4 +236,45 @@ unittest
     assert(!foos);
 
 	writeln("construct/destruct passed the tests");
+}
+
+unittest
+{
+    import core.memory: GC;
+    import std.stdio, std.math;
+    
+    auto f = newPtr!(float,true);
+    assert(isNaN(*f));
+    auto ui = newPtr!int;
+    auto i = newPtr!uint;
+    auto l = new ulong;
+    
+    assert(ui);
+    assert(i);
+    assert(f);
+    
+    assert(GC.addrOf(f) == null);
+    assert(GC.addrOf(i) == null);
+    assert(GC.addrOf(ui) == null);
+    assert(GC.addrOf(l) != null);
+    
+    *i = 8u;
+    assert(*i == 8u);
+    
+    freeMem(ui);
+    freeMem(i);
+    freeMem(f);
+    
+    assert(ui == null);
+    assert(i == null);
+    assert(f == null);
+    
+    auto ptr = getMem(16);
+    assert(ptr);
+    assert(GC.addrOf(ptr) == null);
+    ptr.freeMem;
+    assert(!ptr);
+    
+    
+    writeln("newPtr passed the tests");  
 }
