@@ -566,7 +566,7 @@ public class izPropertyBinder(T)
 			for(auto i = 0; i < fToFree.count; i++)
 			{
 				auto descr = fToFree[i];
-				if (descr) freeMem(descr);
+				if (descr) destruct(descr);
 			}
 			fItems.destruct;
 			fToFree.destruct;
