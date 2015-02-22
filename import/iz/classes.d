@@ -63,6 +63,7 @@ if(isImplicitlyConvertible!(ItemClass, izSerializable))
 
     public
     {
+        /// constructs a new instance
         this()
         {
             fItems = construct!(izDynamicList!ItemClass);
@@ -133,7 +134,7 @@ if(isImplicitlyConvertible!(ItemClass, izSerializable))
 
 version(unittest)
 {
-    class itmtest: izSerializable
+    private class ItmTest: izSerializable
     {
         private
         {
@@ -164,12 +165,12 @@ version(unittest)
     }
     unittest
     {    
-        auto col = construct!(izSerializableList!itmtest);
+        auto col = construct!(izSerializableList!ItmTest);
         auto str = construct!izMemoryStream;
         auto ser = construct!izSerializer;
         scope(exit) destruct(col, ser, str);
 
-        itmtest itm = col.addItem();
+        ItmTest itm = col.addItem();
         itm.setProps(0u,1u,2u);
         itm = col.addItem;
         itm.setProps(3u,4u,5u);
