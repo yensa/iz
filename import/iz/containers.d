@@ -9,10 +9,7 @@ import iz.types, iz.streams;
 
 
 version(X86_64) 
-{
     version(linux) version = Nux64;
-    version(Windows) version = Win64;
-}
 
 /**
  * Parameterized, GC-free array.
