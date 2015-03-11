@@ -49,7 +49,7 @@ object _1: TCEProject
       postBuildProcess.options = []
       postBuildProcess.showWindow = swoNone
       runOptions.options = [poUsePipes, poStderrToOutPut]
-      runOptions.showWindow = swoNone
+      runOptions.showWindow = swoHIDE
     end  
     item
       name = 'test64'
