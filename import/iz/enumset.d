@@ -1,38 +1,38 @@
-module iz.bitsets;
+module iz.enumset;
 
+import core.exception;
 import std.stdio;
 import std.traits;
 import std.conv;
 
-// TODO: apply latest changes from enumset (formely "bitSet")
-
-import iz.types;
-
-/// container for a izBitSet based on an enum which has up to 8 members.
-alias set8 = ubyte;
-/// container for a izBitSet based on an enum which has up to 16 members.
-alias set16 = ushort;
-/// container for a izBitSet based on an enum which has up to 32 members.
-alias set32 = uint;
-/// container for a izBitSet based on an enum which has up to 64 members.
-alias set64 = ulong;
+/// container for a izEnumSet based on an enum which has up to 8 members.
+alias Set8 = ubyte;
+/// container for a izEnumSet based on an enum which has up to 16 members.
+alias Set16 = ushort;
+/// container for a izEnumSet based on an enum which has up to 32 members.
+alias Set32 = uint;
+/// container for a izEnumSet based on an enum which has up to 64 members.
+alias Set64 = ulong;
 
 /**
- * Returns true if S is suitable for being used as a izBitSet container.
+ * Returns true if the parameter is suitable for being used as a izEnumSet container.
+ * Params:
+ * S = a izEnumSet container type.
  */
 private static bool isSetSuitable(S)()
 {
-    if (isSigned!S) return false;
-    else if (is(S==set8)) return true;
-    else if (is(S==set16)) return true;
-    else if (is(S==set32)) return true;
-    else if (is(S==set64)) return true;
+    static if (isSigned!S) return false;
+    else static if (is(S==Set8)) return true;
+    else static if (is(S==Set16)) return true;
+    else static if (is(S==Set32)) return true;
+    else static if (is(S==Set64)) return true;
     else return false;
 }
 
 /**
- * returns E member count.
- * E: an enum
+ * Returns the member count of an enum.
+ * Params:
+ * E = an enum.
  */
 private ulong enumMemberCount(E)() if (is(E==enum))
 {
@@ -41,11 +41,70 @@ private ulong enumMemberCount(E)() if (is(E==enum))
     return result;
 }
 
+/**
+ * Provides the information about the rank of the members of an enum.
+ * The properties are all static and can be retrieved from a template alias.
+ * Params:
+ * E = an enum.
+ */
+public struct izEnumRankInfo(E) if (is(E==enum))
+{
+    private:
+
+        static immutable size_t[E] fRankLUT;
+        static immutable E[size_t] fMembLUT;
+        static immutable size_t fCount;
+
+    public:
+
+        nothrow @safe static this()
+        {
+            foreach(member; EnumMembers!E)
+            {
+                fRankLUT[member] = fCount;
+                fMembLUT[fCount] = member;
+                fCount++;
+            }
+        }
+
+        /// returns the rank of the last member.
+        nothrow @safe @nogc static @property size_t max()
+        {
+            return fCount-1;
+        }
+
+        /// returns the member count.
+        nothrow @safe @nogc static @property size_t count()
+        {
+            return fCount;
+        }
+
+        /// always returns 0.
+        nothrow @safe @nogc static @property size_t min()
+        {
+            return 0;
+        }
+
+        /// returns the rank of aMember.
+        nothrow @safe static size_t opIndex(E aMember)
+        {
+            return fRankLUT[aMember];
+        }
+
+        /// returns the member at aRank.
+        nothrow @safe static E opIndex(size_t aRank)
+        {
+            return fMembLUT[aRank];
+        }
+}
 
 /**
- * Returns true if S has enough room for being used as a izBitSet for enum E.
+ * Indicates if the members of an enum fit in a container.
+ * Params:
+ * E = an enumeration.
+ * S = a container, either a Set8, Set16, Set32 or Set64.
  */
-private static bool enumFitsInSet(E,S)() if (isSetSuitable!S && is(E==enum))
+private static bool enumFitsInSet(E, S)() if (is(E==enum) && isSetSuitable!S)
 {
     S top = S.max;
     ulong max;
@@ -57,45 +116,57 @@ private static bool enumFitsInSet(E,S)() if (isSetSuitable!S && is(E==enum))
 }
 
 // setConstrain may include more test in the future.
-private alias setConstrain = enumFitsInSet ;
+private alias setConstraint = enumFitsInSet ;
 
 /**
- * The parameterized struct izBitSet allows to manipulate set of bits
- * based on the members of an enum.</br>
- * It allows two syntaxes kind:
- * <li> symbolic, C-ish, using the operators and the array noation (+/-/==/!=/[])</li>
- * <li> natural, Pascal-ish, using the primitive functions (include(), exclude(), isIncluded() for 'in')</li>
- * Parameters:
- * S: a set8, set16, set32 or set64. It must be wide enough to contain all the E members.
- * E: an enum.
+ * An izEnumSet allows to create a bit field using the members of an enum. 
+ * It's designed in a very similar way to the 'Set Of' types from the Pascal languages.
+ *
+ * It's optimized for function calls since actually the size of an izEnumSet is 
+ * equal to the size of its container (so from 1 to 8 bytes). Since manipulating
+ * an enum set is mostly all about making bitwise operations an izEnumSet is completly
+ * safe.
+ *
+ * It blends two syntaxes kind:
+ * * symbolic, C-ish, using the operators and the array noation (+/-/==/!=/[])
+ * * natural, Pascal-ish, using the primitive functions (include(), exclude()) and the 'in' operator.
+ *
+ * Params:
+ * S = a Set8, Set16, Set32 or Set64. It must be wide enough to contain all the enum members.
+ * E = an enum.
+ *
+ * Example:
+ * ---
+ * enum TreeOption {smallIcons, autoExpand, singleClickExpand, useKayboard, autoRefresh} 
+ * alias TreeOptions = izEnumSet!(TreeOption, Set8);
+ * auto treeOptions = TreeOptions(autoExpand, singleClickExpand);
+ * assert(TreeOption.autoExpand in treeOptions); 
+ * ---
  */
-public struct izBitSet(S,E) if (setConstrain!(E,S))
+public struct izEnumSet(E, S) if (setConstraint!(E, S))
 {
     private:
 
         S fSet;
         static S fMax;
-        static immutable S[E] fRankLUT;
+        static immutable izEnumRankInfo!E fRankInfs;
         static immutable S _1 = cast(S) 1;
 
     public:
 
         alias setType = S;
 
-// constructors ----------------------------------------------------------------
+// constructors ---------------------------------------------------------------+
 
         /// static constructor.
-        nothrow @safe static this()
+        nothrow @safe @nogc static this()
         {
             foreach(i, member; EnumMembers!E)
-            {
                 fMax +=  _1 << i;
-                fRankLUT[member] = i;
-            }
         }
 
         /// initializes the set with aSet.
-        nothrow @safe this(S aSet)
+        nothrow @safe @nogc this(S aSet)
         {
             fSet = aSet;
         }
@@ -132,12 +203,12 @@ public struct izBitSet(S,E) if (setConstrain!(E,S))
          * aSetString: a string representing one or several E members.
          * cf with fromString() for more detailed informations.
          */
-        this(string aSetString)
+        @safe this(string aSetString)
         {
             fromString(aSetString);
         }
-
-// string representation -------------------------------------------------------
+// -----------------------------------------------------------------------------
+// string representation ------------------------------------------------------+
 
         /**
          * returns the string representation of the set as a binary litteral.
@@ -145,7 +216,7 @@ public struct izBitSet(S,E) if (setConstrain!(E,S))
          */
         nothrow @safe string asBitString()
         {
-            char[bool] bitsCh = [false:'0', true:'1'];
+            static char[2] bitsCh = ['0', '1'];
             string result = "";
             foreach_reverse(member; EnumMembers!E)
                 result ~= bitsCh[isIncluded(member)];
@@ -181,7 +252,7 @@ public struct izBitSet(S,E) if (setConstrain!(E,S))
          * aSetString uses the std array representation: <i>"[a, b, c]"</i>.
          * the function doesn't throw if an invalid representation is found.
          */
-        void fromString(string aSetString)
+        @trusted void fromString(string aSetString)
         {
             if (aSetString.length < 2) return;
 
@@ -202,7 +273,7 @@ public struct izBitSet(S,E) if (setConstrain!(E,S))
                     scope(failure){break;}
                     auto member = to!E(identifier);
                     include(member);
-                    identifier.reset;
+                    identifier = identifier.init;
                 }
 
                 if (reader == representation.ptr + representation.length)
@@ -211,17 +282,16 @@ public struct izBitSet(S,E) if (setConstrain!(E,S))
                 ++reader;
             }
         }
-
-// operators -------------------------------------------------------------------
+// -----------------------------------------------------------------------------
+// operators ------------------------------------------------------------------+
 
         /**
          * support for the assignment operator.
-         * rhs: a setXX, an array of E members or a izBitSet of same type.
+         * rhs: a setXX, an array of E members or a izEnumSet of same type.
          */
-        nothrow @safe opAssign(S rhs)
+        nothrow @safe @nogc void opAssign(S rhs)
         {
-            (rhs <= fMax) ? (fSet = rhs) : (fSet = fMax);
-            return this;
+            fSet = (rhs <= fMax) ? rhs : fMax;
         }
 
         /// ditto
@@ -232,25 +302,25 @@ public struct izBitSet(S,E) if (setConstrain!(E,S))
         }
 
         /// ditto
-        nothrow @safe void opAssign(typeof(this) rhs)
+        nothrow @safe @nogc void opAssign(typeof(this) rhs)
         {
             fSet = rhs.fSet;
         }
 
         /// support for the array syntax.
-        bool opIndex(S index)
+        nothrow @safe @nogc bool opIndex(S index)
         {
             return (fSet == (fSet | _1 << index));
         }
 
         /// ditto
-        bool opIndex(E member)
+        nothrow @safe bool opIndex(E member)
         {
             return isIncluded(member);
         }
 
         /// support for "+" and "-" operators.
-        nothrow @safe typeof(this) opBinary(string op)(E rhs)
+        nothrow @safe izEnumSet!(E, S) opBinary(string op)(E rhs)
         {
             static if (op == "+")
             {
@@ -266,7 +336,7 @@ public struct izBitSet(S,E) if (setConstrain!(E,S))
         }
 
         /// ditto
-        nothrow @safe typeof(this) opBinary(string op)(E[] rhs)
+        nothrow @safe izEnumSet!(E, S) opBinary(string op)(E[] rhs)
         {
             static if (op == "+")
             {
@@ -282,7 +352,7 @@ public struct izBitSet(S,E) if (setConstrain!(E,S))
         }
 
         /// ditto
-        nothrow @safe typeof(this) opBinary(string op)(typeof(this) rhs)
+        nothrow @safe @nogc typeof(this) opBinary(string op)(typeof(this) rhs)
         {
             static if (op == "+")
             {
@@ -314,7 +384,7 @@ public struct izBitSet(S,E) if (setConstrain!(E,S))
         }
 
         /// ditto
-        nothrow @safe void opOpAssign(string op)(typeof(this) rhs)
+        nothrow @safe @nogc void opOpAssign(string op)(typeof(this) rhs)
         {
             static if (op == "+") fSet |= rhs.fSet;
             else static if (op == "-") fSet ^= rhs.fSet;
@@ -322,31 +392,37 @@ public struct izBitSet(S,E) if (setConstrain!(E,S))
         }
 
         /// support for comparison "=" and "!=" operators.
-        nothrow @safe bool opEquals(S rhs)
+        nothrow @safe bool opEquals(T)(T rhs)
         {
-            return (fSet == rhs);
+            static if (is(T == S))
+                return (fSet == rhs);
+            else static if (isIntegral!T && T.max >= S.max)
+                return (fSet == rhs);
+            else static if (is(T == typeof(this)))
+                return (fSet == rhs.fSet);
+            else static if (is(T == E[])){
+                auto rhsset = typeof(this)(rhs);
+                return (rhsset.fSet == fSet);
+            }
+            else
+                static assert(0, "opEquals not implemented when rhs is " ~ T.stringof);
         }
 
-        /// ditto
-        nothrow @safe bool opEquals(typeof(this) rhs)
-        {
-            return (fSet == rhs.fSet);
-        }
-
-        /// ditto
-        nothrow @safe  bool opEquals(E[] rhs)
-        {
-            auto rhsset = typeof(this)(rhs);
-            return (rhsset.fSet == fSet);
-        }
 
         /// support for the in operator.
-        bool opIn_r(E rhs)
+        nothrow @safe bool opIn_r(T)(T rhs)
         {
-            return isIncluded(rhs);
+            static if (is(T == E))
+                return isIncluded(rhs);
+            else static if (is(T == typeof(this)))
+                return (fSet & rhs.fSet) >= rhs.fSet;
+            else static if (is(T == S))
+                return (fSet & rhs) >= rhs;
+            else
+                static assert(0, "opIn not implemented when rhs is " ~ T.stringof);
         }
-
-// Pascal-ish primitives -------------------------------------------------------
+// -----------------------------------------------------------------------------
+// Pascal-ish primitives ------------------------------------------------------+
 
         /**
          * includes someMembers in the set.
@@ -356,16 +432,16 @@ public struct izBitSet(S,E) if (setConstrain!(E,S))
         nothrow @safe void include(E...)(E someMembers)
         {
             static if (someMembers.length == 1)
-                fSet += _1 << fRankLUT[someMembers];
+                fSet += _1 << fRankInfs[someMembers];
             else foreach(member; someMembers)
-                fSet += _1 << fRankLUT[member];
+                fSet += _1 << fRankInfs[member];
         }
 
         /// ditto
         nothrow @safe void include(E[] someMembers)
         {
             foreach(member; someMembers)
-                fSet += _1 << fRankLUT[member];
+                fSet += _1 << fRankInfs[member];
         }
 
         /**
@@ -376,16 +452,16 @@ public struct izBitSet(S,E) if (setConstrain!(E,S))
         nothrow @safe void exclude(E...)(E someMembers)
         {
             static if (someMembers.length == 1)
-                fSet ^= _1 << fRankLUT[someMembers];
+                fSet ^= _1 << fRankInfs[someMembers];
             else foreach(member; someMembers)
-                fSet ^= _1 << fRankLUT[member];
+                fSet ^= _1 << fRankInfs[member];
         }
 
         /// ditto
         nothrow @safe void exclude(E[] someMembers)
         {
             foreach(member; someMembers)
-                fSet ^= _1 << fRankLUT[member];
+                fSet ^= _1 << fRankInfs[member];
         }
 
         /**
@@ -394,46 +470,49 @@ public struct izBitSet(S,E) if (setConstrain!(E,S))
          */
         nothrow @safe bool isIncluded(E aMember)
         {
-            return (fSet == (fSet | _1 << fRankLUT[aMember]));
+            return (fSet == (fSet | _1 << fRankInfs[aMember]));
         }
-
-// misc helpers ----------------------------------------------------------------
-
+//------------------------------------------------------------------------------
+// misc helpers ---------------------------------------------------------------+
+      
         /// returns true if the set is empty.
-        nothrow @safe bool none()
+        nothrow @safe @nogc bool none()
         {
             return fSet == 0;
         }
 
         /// returns true if at least one member is included.
-        nothrow @safe bool any()
+        nothrow @safe @nogc bool any()
         {
             return fSet != 0;
         }
 
         /// returns true if all the members are included.
-        nothrow @safe bool all()
+        nothrow @safe @nogc bool all()
         {
             return fSet == fMax;
         }
 
         /// returns the maximal value the set can have.
-        nothrow @safe static const(S) max()
+        nothrow @safe @nogc static const(S) max()
         {
             return fMax;
         }
 
         /// returns a lookup table which can be used to retrieve the rank of a member.
-        nothrow @safe static ref const(S[E]) rankLookup()
+        nothrow @safe @nogc static ref const(izEnumRankInfo!E) rankInfo()
         {
-            return fRankLUT;
+            return fRankInfs;
         }
 
         /// returns the enum count
-        nothrow @safe static const(S) memberCount()
+        nothrow @safe @nogc static const(S) memberCount()
         {
-            return cast(S) enumMemberCount!E;
+            return cast(S) rankInfo.count;
         }
+       
+//------------------------------------------------------------------------------
+
 }
 
 
@@ -445,39 +524,28 @@ private static bool isCallableFromEnum(T, E)()
 
 /**
  * CallTable based on an enum. It can be compared to an associative array of type E[T].
- * Additionally a bitset can be used to fire a burst of call.
+ * Additionally an izEnumSet can be used to fire a burst of call.
  * E: an enum.
  * T: a callable type.
  */
 public struct izEnumProcs(E,T) if (isCallableFromEnum!(T,E))
 {
-    private
-    {
-        static immutable uint[E] fRankLUT;
-        static immutable uint _1 = 1U;
+    private:
+        static izEnumRankInfo!E fRankInfs;
         alias retT = ReturnType!T;
-        T[] procs;
+        T[] fProcs;
 
         void initLength()
         {
-            procs.length = fRankLUT.length;
+            fProcs.length = fRankInfs.count;
         }
-    }
-    public
-    {
+    
+    public:
 
-// constructors ----------------------------------------------------------------
-
-        /// static constructor
-        nothrow @safe static this()
-        {
-            static assert( enumMemberCount!E < uint.max );
-            foreach(i, member; EnumMembers!E)
-                fRankLUT[member] = i;
-        }
+// constructors ---------------------------------------------------------------+
 
         /**
-         * constructs an enumCallee with a set of T.
+         * constructs an izEnumProcs with a set of T.
          * a: a list of T.
          */
         nothrow this(A...)(A a)
@@ -486,34 +554,47 @@ public struct izEnumProcs(E,T) if (isCallableFromEnum!(T,E))
             initLength;
             foreach(i, item; a)
             {
-                procs[i] = a[i];
+                fProcs[i] = a[i];
             }
         }
 
         /**
-         * constructs an enumCallee with an array of T.
+         * constructs an izEnumProcs with an array of T.
          * someItems: an array of T.
          */
         nothrow this(T[] someItems)
         {
-            assert(someItems.length == enumMemberCount!E);
+            assert(someItems.length == fRankInfs.count);
             initLength;
             foreach(i, item; someItems)
             {
-                procs[i] = someItems[i];
+                fProcs[i] = someItems[i];
             }
         }
+//------------------------------------------------------------------------------
+// operators ------------------------------------------------------------------+
 
-// call ------------------------------------------------------------------------
+        /**
+         * opIndex allow a more explicit call syntax than opCall.
+         * myStuffs[E.member](params).
+         */
+        nothrow const(T) opIndex(E aMember)
+        {
+            return fProcs[fRankInfs[aMember]];
+        }
+
+//------------------------------------------------------------------------------
+// call -----------------------------------------------------------------------+
 
         /**
          * calls the function matching to selector rank.
          * selector: an E member.
          * prms: arguments for calling the function.
+         * return: a value of type ReturnType!T.
          */
         retT opCall(CallParams...)(E selector, CallParams prms)
         {
-            return procs[fRankLUT[selector]](prms);
+            return fProcs[fRankInfs[selector]](prms);
         }
 
         /**
@@ -523,10 +604,10 @@ public struct izEnumProcs(E,T) if (isCallableFromEnum!(T,E))
          * return: an array representing the result of each selector, by rank.
          */
         retT[] opCall(BS,CallParams...)(BS selectors, CallParams prms)
-        if  (   (is(BS == izBitSet!(set8,E)))
-            ||  (is(BS == izBitSet!(set16,E)))
-            ||  (is(BS == izBitSet!(set32,E)))
-            ||  (is(BS == izBitSet!(set64,E)))
+        if  (   (is(BS == izEnumSet!(E, Set8)))
+            ||  (is(BS == izEnumSet!(E, Set16)))
+            ||  (is(BS == izEnumSet!(E, Set32)))
+            ||  (is(BS == izEnumSet!(E, Set64)))
             )
         {
             retT[] result;
@@ -537,7 +618,7 @@ public struct izEnumProcs(E,T) if (isCallableFromEnum!(T,E))
                 for(selectors.setType i = 0; i < selectors.memberCount; i++)
                 {
                     if (selectors[i])
-                        result[i] = procs[i](prms);
+                        result[i] = fProcs[i](prms);
                 }
                 return result;
             }
@@ -546,12 +627,104 @@ public struct izEnumProcs(E,T) if (isCallableFromEnum!(T,E))
                 for(selectors.setType i = 0; i < selectors.memberCount; i++)
                 {
                     if (selectors[i])
-                        result[i] = procs[i](prms[0][i]);
+                        result[i] = fProcs[i](prms[0][i]); // Hard to believe it works ! A unittest HAS to show it can fail.
                 }
                 return result;
             }
         }
-    }
+//------------------------------------------------------------------------------
+// misc. ----------------------------------------------------------------------+
+
+        /// returns the array of callable for additional containers operations.
+        ref T[] procs()
+        {
+            return fProcs;
+        }
+//------------------------------------------------------------------------------
+
+}
+
+/**
+ * Encapsulates an array of T and uses the rank of the enum members
+ * E to perform the actions usually done with integer indexes.
+ */
+public struct izEnumIndexedArray(E,T) if (is(E==enum))
+{
+    private:
+
+        T[] fArray;
+        izEnumRankInfo!E fRankInfs;
+
+    public:
+
+        nothrow @safe size_t opDollar()
+        {
+            return length;
+        }
+
+        nothrow @safe @property size_t length()
+        {
+            return fArray.length;
+        }
+
+        /**
+         * sets the array length using a standard integer value.
+         * aValue is checked according to E highest rank.
+         */
+        @safe @property length(size_t aValue)
+        {
+            version(D_NoBoundsChecks)
+                fArray.length = aValue;
+            else
+                if (aValue > fRankInfs.count)
+                    throw new Exception("izEnumIndexedArray upper bound error");
+                else
+                    fArray.length = aValue;
+        }
+
+        /**
+         * sets the array length according to the value following
+         * aMember rank.
+         */
+        nothrow @safe @property length(E aMember)
+        {
+            fArray.length = fRankInfs[aMember] + 1;
+        }
+
+        /**
+         * returns the value of the slot indexed by the rank of aMember.
+         */
+        nothrow @safe T opIndex(E aMember)
+        {
+            return fArray[fRankInfs[aMember]];
+        }
+
+        /**
+         * sets the slot indexed by the rank of aMember to aValue.
+         */
+        nothrow @safe void opIndexAssign(T aValue,E aMember)
+        {
+            fArray[fRankInfs[aMember]] = aValue;
+        }
+
+        /**
+         * returns a slice of T using the rank of
+         * loMember and hiMember to define the range.
+         */
+        nothrow @safe T[] opSlice(E loMember, E hiMember)
+        in
+        {
+            assert(fRankInfs[loMember] <= fRankInfs[hiMember]);
+        }
+        body
+        {
+            return fArray[fRankInfs[loMember]..fRankInfs[hiMember]];
+        }
+
+        nothrow @safe @property ref const(T[]) array()
+        {
+            return fArray;
+        }
 }
 
 version(unittest)
@@ -562,6 +735,7 @@ version(unittest)
     enum a16    {a0,a1,a2,a3,a4,a5,a6,a7,a8,a9,a10,a11,a12,a13,a14,a15}
     enum a17    {a0,a1,a2,a3,a4,a5,a6,a7,a8,a9,a10,a11,a12,a13,a14,a15,a16}
 
+    /// Constraints
     static unittest
     {
         static assert( isSetSuitable!ubyte );
@@ -573,16 +747,16 @@ version(unittest)
 
     static unittest
     {
-        static assert( enumFitsInSet!(a8,set8));
-        static assert( !enumFitsInSet!(a9,set8));
-        static assert( enumFitsInSet!(a16,set16));
-        static assert( !enumFitsInSet!(a17,set16));
+        static assert( enumFitsInSet!(a8, Set8));
+        static assert( !enumFitsInSet!(a9, Set8));
+        static assert( enumFitsInSet!(a16, Set16));
+        static assert( !enumFitsInSet!(a17, Set16));
     }
 
-    /// operator operations
+    /// izEnumSet
     unittest
     {
-        alias bs8 = izBitSet!(set8,a8);
+        alias bs8 = izEnumSet!(a8, Set8);
         bs8 set = bs8(a8.a0,a8.a1,a8.a2,a8.a3,a8.a4,a8.a5,a8.a6,a8.a7);
         assert(set == 0b1111_1111);
         assert(set.all);
@@ -616,13 +790,13 @@ version(unittest)
         assert(set == 0b0000_1111);
         set -= [a8.a0,a8.a1];
         assert(set == 0b0000_1100);
-        version(coeditmessages)
-            writeln("izBitSet passed the tests(operators)");
+
+        writeln("izEnumSet passed the tests(operators)");
     }
 
     unittest
     {
-        izBitSet!(set32,a17) set;
+        izEnumSet!(a17, Set32) set;
         set.include(a17.a8,a17.a9);
         assert(!set.isIncluded(a17.a7));
         assert(set.isIncluded(a17.a8));
@@ -632,13 +806,22 @@ version(unittest)
         assert(a17.a8 in set);
         assert(a17.a9 in set);
         assert(!(a17.a10 in set));
-        version(coeditmessages)
-            writeln("izBitSet passed the tests(isIncluded)");
+        set = 0;
+        set += [a17.a5, a17.a6, a17.a7];
+        izEnumSet!(a17, Set32) set2;
+        set2 += [a17.a5,a17.a6];
+        assert(set2 in set);
+        set -= [a17.a5];
+        assert(!(set2 in set));
+        set2 -= [a17.a5];
+        assert(set2 in set);
+
+        writeln("izEnumSet passed the tests(inclusion)");
     }
 
     unittest
     {
-        auto bs = izBitSet!(set32,a17)(a17.a0,a17.a1,a17.a16);
+        auto bs = izEnumSet!(a17, Set32)(a17.a0, a17.a1, a17.a16);
         assert(bs[0]);
         assert(bs[1]);
         assert(bs[16]);
@@ -647,18 +830,18 @@ version(unittest)
         assert(bs[a17.a16]);
         assert(!bs[8]);
         assert(!bs[a17.a8]);
-        version(coeditmessages)
-            writeln("izBitSet passed the tests(array operators)");
+
+        writeln("izEnumSet passed the tests(array operators)");
     }
 
     unittest
     {
-        auto set = izBitSet!(set8,a8)(a8.a3, a8.a5);
+        auto set = izEnumSet!(a8, Set8)(a8.a3, a8.a5);
         assert(set == 0b0010_1000);
         auto rep = set.toString;
         set = 0;
         assert(set == 0);
-        set = izBitSet!(set8,a8)(rep);
+        set = izEnumSet!(a8, Set8)(rep);
         assert(set == 0b0010_1000);
         // test asBitString
         auto brep = set.asBitString;
@@ -668,22 +851,33 @@ version(unittest)
         assert( brep == "0b11110000", brep );
 
         //set = 0;
-        //set = to!set8(brep);
+        //set = to!Set8(brep);
         //assert(set == 0b1111_0000);
-        version(coeditmessages)
-            writeln("izBitSet passes the tests(toString)");
+
+        writeln("izEnumSet passes the tests(toString)");
     }
 
     unittest
     {
-        auto set = izBitSet!(set32,a17)(a17.a0);
-        assert( set.rankLookup[a17.a16] == 16);
-        assert( set.rankLookup[a17.a15] == 15);
-        version(coeditmessages)
-            writeln("izBitSet passed the tests(misc.)");
+        auto set = izEnumSet!(a17, Set32)(a17.a0);
+        assert( set.rankInfo[a17.a16] == 16);
+        assert( set.rankInfo[a17.a15] == 15);
+
+        writeln("izEnumSet passed the tests(misc.)");
     }
 
-    /// callprocs
+    unittest
+    {
+        enum E {e1, e2}
+        alias ESet = izEnumSet!(E, Set8);
+        ESet eSet1 = ESet(E.e1);
+        ESet eSet2 = ESet(E.e1, E.e2);
+        assert(eSet1 != eSet2);
+        eSet2 -= E.e2;
+        assert(eSet1 == eSet2);
+    }
+
+    /// izEnumProcs
     unittest
     {
         enum A {t1=8,t2,t3}
@@ -697,11 +891,17 @@ version(unittest)
         int Bt2(int p){return 20 + p;}
         int Bt3(int p){return 30 + p;}
         auto BCaller = izEnumProcs!(A, typeof(&Bt1))(&Bt1,&Bt2,&Bt3);
+        assert( BCaller.procs[0]== &Bt1);
+        assert( BCaller.procs[1]== &Bt2);
+        assert( BCaller.procs[2]== &Bt3);
         assert( BCaller(A.t1, 1) == 11);
         assert( BCaller(A.t2, 2) == 22);
         assert( BCaller(A.t3, 3) == 33);
+        assert( BCaller[A.t1](2) == 12);
+        assert( BCaller[A.t2](3) == 23);
+        assert( BCaller[A.t3](4) == 34);
 
-        auto bs = izBitSet!(set8,A)();
+        auto bs = izEnumSet!(A, Set8)();
         bs.include(A.t1,A.t3);
 
         auto arr0 = BCaller(bs,8);
@@ -735,7 +935,48 @@ version(unittest)
         assert(arr3[1] == 8);
         assert(arr3[2] == 9);
 
-        version(coeditmessages)
-            writeln("izEnumProcs passed the tests");
+
+        writeln("izEnumProcs passed the tests");
+    }
+
+    /// izEnumRankInfo
+    unittest
+    {
+        enum E
+        {
+            e1 = 0.15468,
+            e2 = 1256UL,
+            e3 = 'A'
+        }
+
+        alias infs = izEnumRankInfo!E;
+        assert(infs.min == 0);
+        assert(infs.max == 2);
+        assert(infs.count == 3);
+        assert(infs[2] == 'A');
+        assert(infs[E.e3] == 2);
+
+        writeln("izEnumRankInfo passed the tests");
+    }
+
+    /// izEnumIndexedArray
+    unittest
+    {
+        enum E {e0 = 1.8,e1,e2,e3 = 888.459,e4,e5,e6,e7}
+        alias E_Fp_Indexed = izEnumIndexedArray!(E,float);
+        E_Fp_Indexed arr;
+        arr.length = izEnumRankInfo!E.count;
+
+        foreach(i,memb; EnumMembers!E)
+            arr[memb] = 1.0 + 0.1 * i;
+
+        assert(arr[E.e1] == 1.1f);
+        assert(arr[E.e0] == 1.0f);
+
+        auto slice = arr[E.e2..E.e4];
+        assert(slice == [1.2f,1.3f]);
+
+
+        writeln("izEnumIndexedArray passed the tests");
     }
 }

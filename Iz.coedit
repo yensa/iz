@@ -70,7 +70,6 @@ object _1: TCEProject
     end>
   Sources.Strings = (
     'import\iz\types.d'
-    'import\iz\bitsets.d'
     'import\iz\streams.d'
     'import\iz\containers.d'
     'import\iz\properties.d'
@@ -78,6 +77,7 @@ object _1: TCEProject
     'import\iz\observer.d'
     'import\iz\serializer.d'
     'import\iz\classes.d'
+    'import\iz\enumset.d'
   )
   ConfigurationIndex = 2
 end

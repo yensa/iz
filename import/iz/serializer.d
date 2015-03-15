@@ -34,7 +34,7 @@ public interface izSerializable
 
 /**
  * Makes a reference serializable.
- * The reference must be stored in the referenceMan.
+ * The reference must be stored in the izReferenceMan.
  * A "referenced variable" is typically something that is assigned
  * at the run-time, such as the source of a delegate, a pointer to an Object, etc.
  */
@@ -51,22 +51,22 @@ public class izSerializableReference: izSerializable
         this() {analyzeVirtualSetGet;}
 
         /**
-         * Sets the internal fields according to aReferenced.
+         * Sets the internal fields according to a referenced.
          * Usually called before the serialization.
          */
         void storeReference(RT)(RT* aReferenced)
         {
             _tp = (typeString!RT).dup;
-            _id = referenceMan.referenceID!RT(aReferenced);
+            _id = izReferenceMan.referenceID!RT(aReferenced);
         }
 
         /**
-         * Sets aReferenced according to the internal fields.
+         * Returns the reference according to the internal fields.
          * Usually called after the deserialization.
          */
         RT* restoreReference(RT)()
         {
-            return referenceMan.reference!RT(_id);
+            return izReferenceMan.reference!RT(_id);
         }
 
         mixin(genPropFromField!(char[], "type", "_tp"));
@@ -1379,10 +1379,10 @@ version(unittest)
         auto usrr = construct!ReferencedUser;
         scope(exit) destruct(ref1, ref2, usrr);
         
-        assert( referenceMan.storeReference!Referenced1(&ref1, 0x11223344));
-        assert( referenceMan.storeReference!Referenced1(&ref2, 0x55667788));
-        assert( referenceMan.referenceID!Referenced1(&ref1) == 0x11223344);
-        assert( referenceMan.referenceID!Referenced1(&ref2) == 0x55667788);
+        assert( izReferenceMan.storeReference!Referenced1(&ref1, 0x11223344));
+        assert( izReferenceMan.storeReference!Referenced1(&ref2, 0x55667788));
+        assert( izReferenceMan.referenceID!Referenced1(&ref1) == 0x11223344);
+        assert( izReferenceMan.referenceID!Referenced1(&ref2) == 0x55667788);
         
         str.clear;
         usrr.fRef = &ref1;
@@ -1479,9 +1479,9 @@ version(unittest)
         // ----
         
         // assignable to/from simple type struct ---+
-        import iz.bitsets;
+        import iz.enumset;
         enum A {a0,a1,a2}
-        alias SetofA = izBitSet!(set8,A);
+        alias SetofA = izEnumSet!(A,Set8);
         class Bar: izSerializable
         {    
             private: 

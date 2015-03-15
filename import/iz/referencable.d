@@ -24,7 +24,7 @@ interface izReferenced
 {
     /// the ID, as set when added as reference.
     ulong refID();
-    /// the type, as registered in the referenceMan ( typeString!typeof(this) )
+    /// the type, as registered in the izReferenceMan ( typeString!typeof(this) )
     string refType();
 }
 
@@ -46,7 +46,7 @@ private alias refStore = itemsById[string];
  * associated to a class instance, rather than storing all its properties, as
  * the instance settings may be saved elsewhere.
  */
-static class referenceMan
+static class izReferenceMan
 {
     private
     {
@@ -55,7 +55,7 @@ static class referenceMan
     public
     {
 
-// Helpers ---------------------------------------------------------------------
+// Helpers --------------------------------------------------------------------+
 
         /**
          * Indicates if a type is referenced.
@@ -89,8 +89,8 @@ static class referenceMan
         {
             fStore = fStore.init;
         }
-
-// Add stuff -------------------------------------------------------------------
+// -----------------------------------------------------------------------------
+// Add stuff ------------------------------------------------------------------+
 
         /** 
          * References a type. This is a convenience function since
@@ -140,7 +140,7 @@ static class referenceMan
                     return i-1;
             }
 
-            assert(0, "referenceMan is full for this type");
+            assert(0, "izReferenceMan is full for this type");
         }
 
         /**
@@ -163,8 +163,8 @@ static class referenceMan
             fStore[typeString!RT][anID] = aReference;
             return true;
         }
-
-// Remove stuff ----------------------------------------------------------------
+// -----------------------------------------------------------------------------
+// Remove stuff ---------------------------------------------------------------+
 
         /**
          * Tries to remove a reference identified by its ID.
@@ -189,7 +189,8 @@ static class referenceMan
                 fStore[typeString!RT][id] = null;
         }
 
-// Query stuff -----------------------------------------------------------------
+// -----------------------------------------------------------------------------
+// Query stuff ----------------------------------------------------------------+
 
         /**
          * Indicates if a variable is referenced.
@@ -225,6 +226,8 @@ static class referenceMan
             if (!isTypeStored!RT) return null;
             return cast(RT*) fStore[typeString!RT].get(anID, null);
         }
+// -----------------------------------------------------------------------------        
+        
     }
 }
 
@@ -235,65 +238,65 @@ unittest
     alias delegate2 = short delegate(uint param);
     class Foo{int aMember;}
 
-    assert( !referenceMan.isTypeStored!delegate1 );
-    assert( !referenceMan.isTypeStored!delegate2 );
-    assert( !referenceMan.isTypeStored!Foo );
+    assert( !izReferenceMan.isTypeStored!delegate1 );
+    assert( !izReferenceMan.isTypeStored!delegate2 );
+    assert( !izReferenceMan.isTypeStored!Foo );
 
-    referenceMan.storeType!delegate1;
-    referenceMan.storeType!delegate2;
-    referenceMan.storeType!Foo;
+    izReferenceMan.storeType!delegate1;
+    izReferenceMan.storeType!delegate2;
+    izReferenceMan.storeType!Foo;
 
-    assert( referenceMan.isTypeStored!delegate1 );
-    assert( referenceMan.isTypeStored!delegate2 );
-    assert( referenceMan.isTypeStored!Foo );
+    assert( izReferenceMan.isTypeStored!delegate1 );
+    assert( izReferenceMan.isTypeStored!delegate2 );
+    assert( izReferenceMan.isTypeStored!Foo );
 
     auto f1 = construct!Foo;
     auto f2 = construct!Foo;
     auto f3 = construct!Foo;
     scope(exit) destruct(f1,f2,f3);
 
-    assert( !referenceMan.isReferenced(&f1) );
-    assert( !referenceMan.isReferenced(&f2) );
-    assert( !referenceMan.isReferenced(&f3) );
+    assert( !izReferenceMan.isReferenced(&f1) );
+    assert( !izReferenceMan.isReferenced(&f2) );
+    assert( !izReferenceMan.isReferenced(&f3) );
 
-    assert( referenceMan.referenceID(&f1) == 0);
-    assert( referenceMan.referenceID(&f2) == 0);
-    assert( referenceMan.referenceID(&f3) == 0);
+    assert( izReferenceMan.referenceID(&f1) == 0);
+    assert( izReferenceMan.referenceID(&f2) == 0);
+    assert( izReferenceMan.referenceID(&f3) == 0);
 
-    referenceMan.storeReference( &f1, 10UL );
-    referenceMan.storeReference( &f2, 15UL );
-    referenceMan.storeReference( &f3, 20UL );
+    izReferenceMan.storeReference( &f1, 10UL );
+    izReferenceMan.storeReference( &f2, 15UL );
+    izReferenceMan.storeReference( &f3, 20UL );
 
-    assert( referenceMan.reference!Foo(10UL) == &f1);
-    assert( referenceMan.reference!Foo(15UL) == &f2);
-    assert( referenceMan.reference!Foo(20UL) == &f3);
+    assert( izReferenceMan.reference!Foo(10UL) == &f1);
+    assert( izReferenceMan.reference!Foo(15UL) == &f2);
+    assert( izReferenceMan.reference!Foo(20UL) == &f3);
 
-    assert( referenceMan.referenceID(&f1) == 10UL);
-    assert( referenceMan.referenceID(&f2) == 15UL);
-    assert( referenceMan.referenceID(&f3) == 20UL);
+    assert( izReferenceMan.referenceID(&f1) == 10UL);
+    assert( izReferenceMan.referenceID(&f2) == 15UL);
+    assert( izReferenceMan.referenceID(&f3) == 20UL);
 
-    assert( referenceMan.isReferenced(&f1) );
-    assert( referenceMan.isReferenced(&f2) );
-    assert( referenceMan.isReferenced(&f3) );
+    assert( izReferenceMan.isReferenced(&f1) );
+    assert( izReferenceMan.isReferenced(&f2) );
+    assert( izReferenceMan.isReferenced(&f3) );
 
-    referenceMan.removeReference(&f1);
-    referenceMan.removeReference(&f2);
-    referenceMan.removeReference!Foo(20UL);
+    izReferenceMan.removeReference(&f1);
+    izReferenceMan.removeReference(&f2);
+    izReferenceMan.removeReference!Foo(20UL);
 
-    assert( !referenceMan.isReferenced(&f1) );
-    assert( !referenceMan.isReferenced(&f2) );
-    assert( !referenceMan.isReferenced(&f3) );
+    assert( !izReferenceMan.isReferenced(&f1) );
+    assert( !izReferenceMan.isReferenced(&f2) );
+    assert( !izReferenceMan.isReferenced(&f3) );
 
-    referenceMan.removeReference!Foo(10UL);
-    referenceMan.removeReference(&f2);
-    referenceMan.removeReference!Foo(20UL);
+    izReferenceMan.removeReference!Foo(10UL);
+    izReferenceMan.removeReference(&f2);
+    izReferenceMan.removeReference!Foo(20UL);
     
-    referenceMan.reset;
-    assert( !referenceMan.isTypeStored!Foo );
+    izReferenceMan.reset;
+    assert( !izReferenceMan.isTypeStored!Foo );
     
-    referenceMan.storeReference( &f1, 10UL );
-    assert( referenceMan.isTypeStored!Foo );
+    izReferenceMan.storeReference( &f1, 10UL );
+    assert( izReferenceMan.isTypeStored!Foo );
     
 
-    writeln("referenceMan passed the tests");
+    writeln("izReferenceMan passed the tests");
 }
