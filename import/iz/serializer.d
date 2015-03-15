@@ -91,8 +91,10 @@ enum izSerType
     _izSerializable = 0x30, _Object
 } 
 
+private struct InvalidSerType{}
+
 private alias izSerTypeTuple = TypeTuple!(
-    uint, 
+    InvalidSerType, 
     byte, ubyte, short, ushort, int, uint, long, ulong,
     float, double,
     char, wchar, dchar,
@@ -133,6 +135,21 @@ private static bool isSerSimpleType(T)()
     else return true;
 }
 
+private static bool isSerImplicitType(T)()
+{
+    static if (isArray!T) return false;
+    else static if (isSerObjectType!T) return false; 
+    else static if (!is(T==struct)) return false; 
+    else
+    { 
+        foreach(TT; izSerTypeTuple)
+            static if (isAssignable!(T,TT))
+                return true;
+        return false;
+    }   
+    assert(0, T.stringof ~ " is not tested by " ~ __FUNCTION__);
+}
+
 private bool isSerArrayType(T)()
 {
     static if (!isArray!T) return false;
@@ -144,18 +161,26 @@ private bool isSerArrayType(T)()
 
 public bool isSerializable(T)()
 {
-    return (isSerSimpleType!T || isSerArrayType!T || isSerObjectType!T);
+    static if (isSerSimpleType!T) return true;
+    else static if (isSerImplicitType!T) return true;   
+    else static if (isSerArrayType!T) return true;   
+    else static if (isSerObjectType!T) return true;
+    else return false;
 }
 
 unittest
 {
     struct S{}
+    struct V{uint _value; alias _value this;}
+    struct VS{V _value; alias _value this;}
     static assert( isSerializable!ubyte );
     static assert( isSerializable!double );
     static assert( isSerializable!(ushort[]) );
     static assert( isSerializable!Object );
     static assert( !(isSerializable!(Object[])) );
     static assert( !(isSerializable!S) );
+    static assert( (isSerializable!V) );
+    static assert( (isSerializable!VS) );
 }
 
 private static string getElemStringOf(T)() if (isArray!T)
@@ -335,10 +360,20 @@ void setNodeInfo(T)(izSerNodeInfo * nodeInfo, izPropDescriptor!T * descriptor)
     
     // TODO: nodeInfo.value, try to use an union instead of an array 
     
-    // simple, fixed-length, types
-    static if (isSerSimpleType!T)
+    // simple, fixed-length (or convertible to), types
+    static if (isSerSimpleType!T || isSerImplicitType!T)
     {
-        nodeInfo.type = text2type[T.stringof];
+        static if (isSerImplicitType!T)
+        {
+            foreach(TT;izSerTypeTuple)
+                static if (isAssignable!(T,TT))
+                {
+                    nodeInfo.type = text2type[TT.stringof];
+                    break;
+                }          
+        }
+        else nodeInfo.type = text2type[T.stringof];
+        //
         nodeInfo.isArray = false;
         nodeInfo.value.length = type2size[nodeInfo.type];
         nodeInfo.descriptor = cast(izPtr) descriptor;
@@ -1155,14 +1190,19 @@ version(unittest)
             setNodeInfo!T(&inf, &descr);
             //
             asText = to!string(value).dup;
-            assert(value2text(&inf) == asText);
+            assert(value2text(&inf) == asText, T.stringof);
             static if (!isArray!T) 
                 assert( * cast(T*)(text2value(asText, &inf)).ptr == value, T.stringof);
             static if (isArray!T) 
                 assert( cast(ubyte[])text2value(asText, &inf) == cast(ubyte[])value, T.stringof);
         }
+        
+        struct ImpConv{uint _field; alias _field this;}
+        auto ic = ImpConv(8);
+        
         testType('c');
         testType("azertyuiop".dup);
+        testType!uint(ic); 
         testType(cast(byte)8);      testType(cast(byte[])[8,8]);
         testType(cast(ubyte)8);     testType(cast(ubyte[])[8,8]);
         testType(cast(short)8);     testType(cast(short[])[8,8]); 
@@ -1393,13 +1433,13 @@ version(unittest)
         assert(b.someChars == "azertyuiop");          
         //----
             
-        // decomposed de/serialization phases with event ---+       
+        // decomposed de/serialization phases with event ---+
         string currObj = "Root";  
         void wantDescr(const(izSerNodeInfo*) nodeInfo, out void * matchingDescriptor, out bool stop)
         {
             if (isSerObjectType(nodeInfo.type)) currObj = nodeInfo.name.idup;
             
-            //TODO-cfeature: a izSerializable method to get the fully qualified (parent)name of a node.
+            //TODO -cfeature: a izSerializable method to get the fully qualified (parent)name of a node.
             
             if (currObj == "Root")
                 matchingDescriptor = a.getUntypedDescriptor(nodeInfo.name.idup);
@@ -1436,7 +1476,41 @@ version(unittest)
         assert(a._aB2.aFloat ==  0.123456f);
         assert(a._aB2.someChars == "azertyuiop");
         ser.onWantDescriptor = null;
-        //----
+        // ----
+        
+        // assignable to/from simple type struct ---+
+        import iz.bitsets;
+        enum A {a0,a1,a2}
+        alias SetofA = izBitSet!(set8,A);
+        class Bar: izSerializable
+        {    
+            private: 
+                SetofA set;
+                izPropDescriptor!SetofA setDescr;
+            public:
+                this()
+                {
+                    setDescr.define(&set,"set");
+                    with(A) set = SetofA(a1,a2);
+                }
+                void declareProperties(izSerializer aSerializer)
+                {
+                    aSerializer.addProperty(&setDescr);
+                }  
+        }
+        
+        str.clear;
+        auto bar = construct!Bar;
+        scope(exit) bar.destruct;
+        
+        static assert(isSerImplicitType!SetofA);
+        
+        ser.objectToStream(bar, str, izSerFormat.iztxt);
+        bar.set = [];
+        str.position = 0;
+        ser.streamToObject(str, bar, izSerFormat.iztxt);
+        assert( bar.set == SetofA(A.a1,A.a2), to!string(bar.set));
+        // ----
     
         writeln("izSerializer passed the ", to!string(format), " format test");
     }
