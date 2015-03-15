@@ -5,6 +5,8 @@ import iz.types, iz.properties, iz.containers, iz.streams, iz.referencable;
 
 // Serializable types ---------------------------------------------------------+
 
+//TODO-cfeature: izSerializableReference can be replaced with a struct serialized as string. 
+
 /**
  * Allows an implementer to be serialized by an izSerializer.
  */
@@ -12,7 +14,7 @@ public interface izSerializable
 {
     /**
      * Indicates the type of the implementer. This information may be used
-     * during the deserialization process for type-safety or to create an
+     * during the deserialization phase for type-safety or to create an
      * new class instance.
      */
     final string className()
@@ -24,9 +26,9 @@ public interface izSerializable
     }
     /**
      * Called by an izSerializer during the de/serialization phase.
-     * In this method, the implementer declares its properties to the serializer.
+     * In the implementation, the izSerializable declares its properties to the serializer.
      * Params:
-     * aSerializer = the serializer. The implementer calls aSerializer.addProperty
+     * aSerializer = the serializer. The implementer calls aSerializer.addProperty()
      * to declare arbitrarily some izPropDescriptors (run-time decision).
      */
 	void declareProperties(izSerializer aSerializer);
@@ -82,7 +84,7 @@ public class izSerializableReference: izSerializable
 /**
  * Enumerates the types automatically handled by an izSerializer.
  */
-enum izSerType
+public enum izSerType
 {
     _invalid = 0,
     _byte = 0x01, _ubyte, _short, _ushort, _int, _uint, _long, _ulong,
@@ -135,11 +137,9 @@ private static bool isSerSimpleType(T)()
     else return true;
 }
 
-private static bool isSerImplicitType(T)()
+private static bool isSerStructType(T)()
 {
-    static if (isArray!T) return false;
-    else static if (isSerObjectType!T) return false; 
-    else static if (!is(T==struct)) return false; 
+    static if (!is(T==struct)) return false; 
     else
     { 
         foreach(TT; izSerTypeTuple)
@@ -154,16 +154,29 @@ private bool isSerArrayType(T)()
 {
     static if (!isArray!T) return false;
     else static if (is(T : izSerializable)) return false;
-    else static if (isSerObjectType!(typeof(T.init[0]))) return false;
+    else static if (isSerObjectType!(typeof(T.init[0]))) return false;    
     else static if (staticIndexOf!(typeof(T.init[0]), izSerTypeTuple) == -1) return false;
     else return true;
+}
+
+private bool isSerArrayStructType(T)()
+{
+    static if (!is(T==struct)) return false;
+    else
+    { 
+        foreach(TT; izSerTypeTuple)
+            static if (isAssignable!(T,TT[]))
+                return true;
+        return false;
+    } 
 }
 
 public bool isSerializable(T)()
 {
     static if (isSerSimpleType!T) return true;
-    else static if (isSerImplicitType!T) return true;   
-    else static if (isSerArrayType!T) return true;   
+    else static if (isSerStructType!T) return true;   
+    else static if (isSerArrayType!T) return true; 
+    else static if (isSerArrayStructType!T) return true;  
     else static if (isSerObjectType!T) return true;
     else return false;
 }
@@ -361,9 +374,9 @@ void setNodeInfo(T)(izSerNodeInfo * nodeInfo, izPropDescriptor!T * descriptor)
     // TODO: nodeInfo.value, try to use an union instead of an array 
     
     // simple, fixed-length (or convertible to), types
-    static if (isSerSimpleType!T || isSerImplicitType!T)
+    static if (isSerSimpleType!T || isSerStructType!T)
     {
-        static if (isSerImplicitType!T)
+        static if (isSerStructType!T)
         {
             foreach(TT;izSerTypeTuple)
                 static if (isAssignable!(T,TT))
@@ -384,16 +397,31 @@ void setNodeInfo(T)(izSerNodeInfo * nodeInfo, izPropDescriptor!T * descriptor)
     }
     
     // arrays types
-    else static if (isSerArrayType!T)
+    else static if (isSerArrayType!T || isSerArrayStructType!T)
     {
-        T value = descriptor.getter()();
+        static if (isSerArrayStructType!T)
+        {
+            foreach(TT;izSerTypeTuple)
+                static if (isAssignable!(T,TT[]))
+                {
+                    nodeInfo.type = text2type[TT.stringof];
+                    TT[] value = to!(TT[])(descriptor.getter()());
+                    nodeInfo.value.length = value.length * type2size[nodeInfo.type];
+                    memmove(nodeInfo.value.ptr, cast(void*) value.ptr, nodeInfo.value.length);
+                    break;
+                }          
+        }
+        else
+        { 
+            nodeInfo.type = text2type[getElemStringOf!T];
+            T value = descriptor.getter()();
+            nodeInfo.value.length = value.length * type2size[nodeInfo.type];
+            memmove(nodeInfo.value.ptr, cast(void*) value.ptr, nodeInfo.value.length);
+        }
         //
-        nodeInfo.type = text2type[getElemStringOf!T];
         nodeInfo.isArray = true;
         nodeInfo.descriptor = cast(izPtr) descriptor;
         nodeInfo.name = descriptor.name.dup;
-        nodeInfo.value.length = value.length * type2size[nodeInfo.type];
-        memmove(nodeInfo.value.ptr, cast(void*) value.ptr, nodeInfo.value.length);
         //
         return;
     }
@@ -712,7 +740,7 @@ private izSerReader readFormat(izSerFormat format)
 
 /**
  * Native iz Serializer.
- * An izSerializer is specialized to store and restore from any classes heriting
+ * An izSerializer is specialized to store and restore from any class heriting
  * from the interface izSerializable. An izSerializable arbitrarily exposes some
  * properties to serialize using the izPropDescriptor format.
  *
@@ -782,9 +810,9 @@ public class izSerializer
         /** 
          * Builds the IST from an izSerializable.
          * The process starts by a call to .declareProperties() in the root then
-         * the process is leaded by the the subsequent declarations.
+         * the process is lead by the the subsequent declarations.
          * Params:
-         * root = the izSerializable from where the declarations starts.
+         * root = the izSerializable from where the declarations start.
          */
         void objectToIst(izSerializable root)
         {
@@ -806,8 +834,8 @@ public class izSerializer
         /** 
          * Builds the IST from an izSerializable and stores sequentially in a stream.
          * The process starts by a call to .declaraPropties() in the root then
-         * the process is leaded by the the subsequent declarations.
-         * The data are written straight after a descriptor declaration.
+         * the process is lead by the the subsequent declarations.
+         * The data are written right after a descriptor declaration.
          * Params:
          * root = the izSerializable from where the declarations starts.
          * outputStream = the stream where te data are written.
@@ -838,8 +866,8 @@ public class izSerializer
         
         /** 
          * Saves the IST to a stream. 
-         * Data are grabbed in bulk hence the descriptor linked to each
-         * tree node cannot share a common descriptor.
+         * The data are grabbed in bulk therefore the descriptor linked to each
+         * tree node cannot be re-used.
          * Params:
          * outputStream = the stream where te data are written.
          * format = the format of the serialized data.
@@ -1074,9 +1102,19 @@ public class izSerializer
          * Designed to be called by an izSerializable when it needs to declare 
          * a property in its declarePropeties() method.
          *
-         * This can also be called in an exotic serialization scheme.
+         * Allowed properties:
+         * - all the basic types: int, uint, char, ...
+         * - all the basic types as array: int[], uin[], char[], ...
+         * - the structs assignable from/to a basic type (if they include a public alias this but not only)
+         * - the structs assignable from/to an array of basic type (this(char[]), opAssign(char[]), toString())
+         * - the izSerializable (used to build the structure).
+         * - any class, if it implements izSerializable. It's safer to pass some izPropDescriptor!izSerializable but izPropDescriptor!Object is easyer.
+         *
+         * Some aliases exist for each basic type (addintProperty(), addcharProperty(), ...).
+         * the structs are represented as the type they convert to and are not used to build the IST.
          */
         void addProperty(T)(izPropDescriptor!T * aDescriptor)
+        if (isSerializable!T)
         {    
             if (!aDescriptor) return;
             if (!aDescriptor.name.length) return;
@@ -1150,7 +1188,7 @@ public class izSerializer
 private static string genAllAdders()
 {
     string result;
-    foreach(t; izSerTypeTuple) if (!(is(t  == struct)))
+    foreach(t; izSerTypeTuple) if (!(is(t == struct)))
         result ~= "alias add" ~ t.stringof ~ "Property =" ~ "addProperty!" ~ t.stringof ~";"; 
     return result;
 }
@@ -1478,24 +1516,47 @@ version(unittest)
         ser.onWantDescriptor = null;
         // ----
         
-        // assignable to/from simple type struct ---+
+        // struct serialized as basicType or basicType[] ---+
+        
+        /*
+         to be serializable as an array, a struct must
+         - implement a copy constructor with T[] as param.
+         - implement opAssign with T[] as param.
+         - must be convertible by std.conv.to() to a T[].
+        */
+        struct SerStruct
+        {
+            private char[] _field;
+            public this()(char[] param){_field = param;}
+            public void opAssign(char[] param){_field = param;}
+            public string toString(){return _field.idup;}
+        }
+        
         import iz.enumset;
         enum A {a0,a1,a2}
         alias SetofA = izEnumSet!(A,Set8);
+        
+        static assert(isSerArrayStructType!SerStruct);
+        
         class Bar: izSerializable
         {    
             private: 
                 SetofA set;
+                SerStruct str;
                 izPropDescriptor!SetofA setDescr;
+                izPropDescriptor!SerStruct strDescr;
             public:
                 this()
                 {
                     setDescr.define(&set,"set");
                     with(A) set = SetofA(a1,a2);
+                    strDescr.define(&str,"aStruct");
+                    str = "azertyuiop".dup;
                 }
                 void declareProperties(izSerializer aSerializer)
                 {
                     aSerializer.addProperty(&setDescr);
+                    aSerializer.addProperty(&strDescr);
                 }  
         }
         
@@ -1503,13 +1564,15 @@ version(unittest)
         auto bar = construct!Bar;
         scope(exit) bar.destruct;
         
-        static assert(isSerImplicitType!SetofA);
+        static assert(isSerStructType!SetofA);
         
         ser.objectToStream(bar, str, format);
         bar.set = [];
+        bar.str = "".dup;
         str.position = 0;
         ser.streamToObject(str, bar, format);
         assert( bar.set == SetofA(A.a1,A.a2), to!string(bar.set));
+        assert( bar.str._field == "azertyuiop", bar.str._field );
         // ----
     
         writeln("izSerializer passed the ", to!string(format), " format test");
