@@ -1505,10 +1505,10 @@ version(unittest)
         
         static assert(isSerImplicitType!SetofA);
         
-        ser.objectToStream(bar, str, izSerFormat.iztxt);
+        ser.objectToStream(bar, str, format);
         bar.set = [];
         str.position = 0;
-        ser.streamToObject(str, bar, izSerFormat.iztxt);
+        ser.streamToObject(str, bar, format);
         assert( bar.set == SetofA(A.a1,A.a2), to!string(bar.set));
         // ----
     
