@@ -173,7 +173,7 @@ public struct izPropDescriptor(T)
 		void define(T* aData, in char[] aName = "", Object aDeclarator = null)
 		{
 			setDirectSource(aData);
-			setPropTarget(aData);
+			setDirectTarget(aData);
 			if (aName != "") {name(aName);}
 			fDeclarator = aDeclarator;
 		}
@@ -194,12 +194,16 @@ public struct izPropDescriptor(T)
 		/**
 		 * Sets the property setter using a pointer to a direct data
 		 */
-		void setPropTarget(T* aLoc)
+		void setDirectTarget(T* aLoc)
 		{
 			fSetPtr = aLoc;
 			fSetter = &internalSetter;
 			updateAccess;
 		}
+        /**
+         * Sets the property value
+         */
+        void set(T aValue) {fSetter(aValue);}
 	
 // getter ---------------
 	
@@ -223,6 +227,10 @@ public struct izPropDescriptor(T)
 			fGetter = &internalGetter;
 			updateAccess;
 		}
+        /**
+         * Gets the property value
+         */
+        T get(){return fGetter();}
 		
 // misc ---------------		
 		
@@ -557,7 +565,7 @@ unittest
     
     auto baz = construct!Baz;
     auto fset = baz.getDescriptor!size_t("field");
-    fset.setter()(0);
+    fset.set(0);
     assert(baz.info == "BarBaz");
     assert(baz.descriptorCount == 1);
     baz.destruct;
