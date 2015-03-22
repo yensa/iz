@@ -52,6 +52,17 @@ public struct izPropDescriptor(T)
 		izPropAccess fAccess;
 
 		char[] fName;
+        
+        void cleanup()
+        {
+            fSetPtr = null;
+            fGetPtr = null, 
+            fSetter = null;
+            fGetter = null;
+            fDeclarator = null;
+            fAccess = izPropAccess.none;
+            fName.length = 0;
+        }
 
 		void updateAccess()
 		{
@@ -83,11 +94,6 @@ public struct izPropDescriptor(T)
 	public
 	{
 		static immutable ubyte DescriptorFormat = 0;
-		
-		this(in char[] aName = "")
-		{
-			if (aName != "") {name(aName);}
-		}
 		
 		/**
 		 * Constructs a property descriptor from an izPropSetter and an izPropGetter method.
@@ -151,6 +157,7 @@ public struct izPropDescriptor(T)
 		 */
 		void define(izPropSetter aSetter, izPropGetter aGetter, in char[] aName = "")
 		{
+            cleanup;
 			setter(aSetter);
 			getter(aGetter);
 			if (aName != "") {name(aName);}
@@ -162,16 +169,18 @@ public struct izPropDescriptor(T)
 		 */
 		void define(izPropSetter aSetter, T* aSourceData, in char[] aName = "")
 		{
+            cleanup;
 			setter(aSetter);
 			setDirectSource(aSourceData);
 			if (aName != "") {name(aName);}
 			fDeclarator = cast(Object) aSetter.ptr;
 		}		
 		/**
-		 * Defines a property descriptor from a single data used as source/target
+		 * Defines a property descriptor from a single variable used as source/target
 		 */
 		void define(T* aData, in char[] aName = "", Object aDeclarator = null)
 		{
+            cleanup;
 			setDirectSource(aData);
 			setDirectTarget(aData);
 			if (aName != "") {name(aName);}
@@ -192,7 +201,7 @@ public struct izPropDescriptor(T)
 		/// ditto
 		@property izPropSetter setter(){return fSetter;}	
 		/**
-		 * Sets the property setter using a pointer to a direct data
+		 * Sets the property setter using a pointer to a variable
 		 */
 		void setDirectTarget(T* aLoc)
 		{
@@ -219,7 +228,7 @@ public struct izPropDescriptor(T)
 		/// ditto
 		@property izPropGetter getter(){return fGetter;}	
 		/** 
-		 * Sets the property getter using a pointer to a direct data
+		 * Sets the property getter using a pointer to a variable
 		 */
 		void setDirectSource(T* aLoc)
 		{
@@ -235,7 +244,7 @@ public struct izPropDescriptor(T)
 // misc ---------------		
 		
 		/** 
-		 * Informs about the prop accessibility
+		 * Information about the prop accessibility
 		 */
 		@property const(izPropAccess) access()
 		{
@@ -309,7 +318,9 @@ struct Set{}
 /// designed to annotate a detectable property getter. 
 struct Get{}
 /// designed to annotate a detectable "direct" field.
-struct DirectField{}
+struct SetGet{}
+/// ditto
+alias GetSet = SetGet;
 
 /**
  * When mixed in an agregate this generates a property. 
@@ -407,7 +418,7 @@ mixin template izPropertiesAnalyzer(){
     }
     
     /**
-     * Creates the properties descriptors for each field marked with @DirectField
+     * Creates the properties descriptors for each field marked with @SetGet
      * and whose identifier starts with one of the following prefix: underscore, f, F.
      * The resulting property descriptors names don't include the prefix.
      */
@@ -420,7 +431,7 @@ mixin template izPropertiesAnalyzer(){
         {
             static if (is(typeof(__traits(getMember, this, member))))
             foreach(attribute; __traits(getAttributes, __traits(getMember, this, member)))
-            static if (is(attribute == DirectField)) 
+            static if (is(attribute == SetGet)) 
             {
                 alias propType = typeof(__traits(getMember, this, member));
                 auto propPtr = &__traits(getMember, this, member);
@@ -487,8 +498,8 @@ version(unittest){
             analyzeFields;
         }
         
-        @DirectField private uint _anUint;
-        @DirectField private static char[] _manyChars;
+        @SetGet private uint _anUint;
+        @SetGet private static char[] _manyChars;
         private uint _a, _b;
         private char[] _c;
         
