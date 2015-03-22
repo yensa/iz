@@ -474,6 +474,92 @@ alias izSerWriter = void function(izIstNode istNode, izStream stream);
 /// Propotype of a function which reads the representation of an izIstNode from an izStream.
 alias izSerReader = void function(izStream stream, izIstNode istNode);
 
+// JSON format ----------------------------------------------------------------+
+void writeJSON(izIstNode istNode, izStream stream)
+{
+    import std.json;
+    //    
+    auto level  = JSONValue(istNode.level);
+    auto type   = JSONValue(istNode.nodeInfo.type);
+    auto name   = JSONValue(istNode.nodeInfo.name.idup);
+    auto isarray= JSONValue(cast(ubyte)istNode.nodeInfo.isArray);
+    auto value  = JSONValue(value2text(istNode.nodeInfo).idup);
+    auto prop   = JSONValue(["level":level,"type":type,"name":name,"isarray":isarray,"value":value]);
+    auto txt    = toJSON(&prop, false).dup;
+    auto len    = txt.length;
+    //
+    stream.write(txt.ptr, txt.length);   
+}
+
+void readJSON(izStream stream, izIstNode istNode)
+{
+    import std.json;
+    //
+    // cache property
+    size_t cnt, len;
+    char c;
+    bool skip;
+    auto stored = stream.position;
+    while (true)
+    {
+        if (stream.position == stream.size)
+            break;
+        ++len;
+        stream.read(&c, 1);
+        if (c == '\\')
+            continue;
+        if (c == '"') 
+            skip = !skip;
+        if (!skip)
+        {
+            cnt += (c == '{');
+            cnt -= (c == '}');
+        }
+        if (cnt == 0)
+            break;   
+    }
+    stream.position = stored;
+    char[] cache;
+    cache.length = len;
+    stream.read(cache.ptr, cache.length);
+    //writeln("cache:");
+    //writeln(cache);
+    //
+    auto prop = parseJSON(cache);
+    
+    JSONValue level = prop["level"];
+    if (level.type == JSON_TYPE.INTEGER) 
+        istNode.nodeInfo.level = cast(uint) level.integer;
+    else 
+        istNode.nodeInfo.isDamaged = true;
+        
+    JSONValue type = prop["type"];
+    if (type.type == JSON_TYPE.INTEGER) 
+        istNode.nodeInfo.type = cast(izSerType) type.integer;
+    else 
+        istNode.nodeInfo.isDamaged = true;       
+        
+    JSONValue name = prop["name"];
+    if (name.type == JSON_TYPE.STRING) 
+        istNode.nodeInfo.name = name.str.dup;
+    else 
+        istNode.nodeInfo.isDamaged = true;   
+        
+    JSONValue isarray = prop["isarray"];
+    if (isarray.type == JSON_TYPE.INTEGER) 
+        istNode.nodeInfo.isArray = cast(bool) isarray.integer;
+    else 
+        istNode.nodeInfo.isDamaged = true;                    
+        
+    JSONValue value = prop["value"];
+    if (value.type == JSON_TYPE.STRING) 
+        istNode.nodeInfo.value = text2value(value.str.dup, istNode.nodeInfo);
+    else 
+        istNode.nodeInfo.isDamaged = true;                   
+    
+}
+// ----
+
 // Text format ----------------------------------------------------------------+
 void writeText(izIstNode istNode, izStream stream)
 {
@@ -497,8 +583,8 @@ void writeText(izIstNode istNode, izStream stream)
     char[] name_value = " = \"".dup;
     stream.write(name_value.ptr, name_value.length);
     // value
-    char[] classname = value2text(istNode.nodeInfo); // add_dqe
-    stream.write(classname.ptr, classname.length);
+    char[] value = value2text(istNode.nodeInfo); // add_dqe
+    stream.write(value.ptr, value.length);
     char[] eol = "\"\n".dup;
     stream.write(eol.ptr, eol.length);
 }  
@@ -565,6 +651,7 @@ void readText(izStream stream, izIstNode istNode)
     istNode.nodeInfo.value = text2value(identifier, istNode.nodeInfo);
 }  
 //----
+
 // Binary format --------------------------------------------------------------+
 version(BigEndian) private ubyte[] swapBE(const ref ubyte[] input, size_t div)
 {
@@ -679,6 +766,7 @@ void readBin(izStream stream, izIstNode istNode)
     } 
 }  
 //----
+
 // High end serializer --------------------------------------------------------+
 
 /// Enumerates the possible state of an izSerializer.
@@ -716,7 +804,9 @@ public enum izSerFormat : ubyte
     /// native binary format
     izbin,
     /// native readable text format 
-    iztxt
+    iztxt,
+    /// JSON chunks
+    json
 }
 
 private izSerWriter writeFormat(izSerFormat format)
@@ -724,6 +814,7 @@ private izSerWriter writeFormat(izSerFormat format)
     with(izSerFormat) final switch(format) {
         case izbin: return &writeBin;
         case iztxt: return &writeText;   
+        case json:  return &writeJSON;
     }
 }
 
@@ -731,7 +822,8 @@ private izSerReader readFormat(izSerFormat format)
 {
     with(izSerFormat) final switch(format) {
         case izbin: return &readBin;
-        case iztxt: return &readText;   
+        case iztxt: return &readText;
+        case json:  return &readJSON;   
     }
 }
 
@@ -1259,6 +1351,7 @@ version(unittest)
     {
         testByFormat!(izSerFormat.iztxt)();
         testByFormat!(izSerFormat.izbin)();
+        testByFormat!(izSerFormat.json)();
     }
     
     class Referenced1 {}
@@ -1468,7 +1561,7 @@ version(unittest)
         else assert(0);                  
         assert(b.anIntArray == [0, 1, 2, 3]);
         assert(b.aFloat == 0.123456f);
-        assert(b.someChars == "azertyuiop");          
+        assert(b.someChars == "azertyuiop");      
         //----
             
         // decomposed de/serialization phases with event ---+
