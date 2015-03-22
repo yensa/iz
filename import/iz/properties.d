@@ -314,7 +314,7 @@ struct DirectField{}
 public string genPropFromField(T, string propName, string propField)()
 {
     return
-	"@Set @property void "~ propName ~ "(" ~ T.stringof ~ " aValue)" ~
+	"@Set @property void " ~ propName ~ "(" ~ T.stringof ~ " aValue)" ~
 	"{ " ~ propField ~ " = aValue;} " ~
 	"@Get @property " ~ T.stringof ~ " " ~ propName ~
 	"(){ return " ~ propField ~ ";}" ;
@@ -349,7 +349,7 @@ mixin template izPropertiesAnalyzer(){
     /**
      * Returns the count of descriptor the analyzers have created.
      */
-    public size_t descriptorCount(){return descriptors.length;}
+    public final size_t descriptorCount(){return descriptors.length;}
     
     /** 
      * Returns a pointer to a descriptor according to its name.
@@ -359,7 +359,7 @@ mixin template izPropertiesAnalyzer(){
      * Returns:
      * null if the operation fails otherwise a pointer to an izPropDescriptor!T.
      */
-    protected izPropDescriptor!T * getDescriptor(T)(string name, bool createIfMissing = false)
+    protected final izPropDescriptor!T * getDescriptor(T)(string name, bool createIfMissing = false)
     {
         izPropDescriptor!T * descr;
         
@@ -384,7 +384,7 @@ mixin template izPropertiesAnalyzer(){
      * Identical to the *getDescriptor()* except that the result
      * type has not to be specified.
      */    
-    protected void * getUntypedDescriptor(string name)
+    protected final void * getUntypedDescriptor(string name)
     {
         return getDescriptor!size_t(name);
     }
@@ -392,7 +392,7 @@ mixin template izPropertiesAnalyzer(){
     /**
      * Performs all the possible analysis.
      */
-    private void analyzeAll()
+    protected final void analyzeAll()
     {
         analyzeFields;
         analyzeVirtualSetGet;
@@ -403,7 +403,7 @@ mixin template izPropertiesAnalyzer(){
      * and whose identifier starts with one of the following prefix: underscore, f, F.
      * The resulting property descriptors names don't include the prefix.
      */
-    private void analyzeFields()
+    protected void analyzeFields()
     {
         import std.algorithm : canFind;
         import std.traits: isCallable;
@@ -426,10 +426,10 @@ mixin template izPropertiesAnalyzer(){
     }
     
     /**
-     * Creates the property descriptors for the setter/getter pairs maked with @Set/@Get.
-     * The methods must be virtual and non final.
+     * Creates the property descriptors for the setter/getter pairs annotated with 
+     * @Set/@Get.To be detected the methods must be virtual and non final.
      */
-    private void analyzeVirtualSetGet()
+    protected void analyzeVirtualSetGet()
     {
         struct Delegate {void* ptr, funcptr;}
         auto virtualTable = typeid(this).vtbl;
@@ -523,10 +523,30 @@ version(unittest){
             assert(_manyChars == "BimBamBom");
             _manyChars = "BomBamBim".dup;  
             assert(manyCharsDescriptor.getter()() == "BomBamBim");          
-            
-            writeln("izPropertiesAnalyzer passed the analyzeVirtualSetGet() test");
         }
     }
+    
+    class Bar
+    {
+        size_t _field;
+        string info;
+        mixin izPropertiesAnalyzer;
+        this()
+        {
+            analyzeVirtualSetGet;
+        }
+        @Set void field(size_t aValue){
+            info ~= "Bar";
+        }
+        @Get size_t field(){return _field;}
+    }
+    class Baz : Bar
+    {
+        @Set override void field(size_t aValue){
+            super.field(aValue);
+            info ~= "Baz";
+        }
+    }  
 }
 
 unittest
@@ -534,13 +554,22 @@ unittest
     auto foo = construct!Foo;
     foo.use;
     foo.destruct;
+    
+    auto baz = construct!Baz;
+    auto fset = baz.getDescriptor!size_t("field");
+    fset.setter()(0);
+    assert(baz.info == "BarBaz");
+    assert(baz.descriptorCount == 1);
+    baz.destruct;
+    
+    writeln("izPropertiesAnalyzer passed the tests");
 }
 
 
 /**
  * This container maintains a list of property synchronized between themselves.
  *
- * The regerence to the properties are stored using the izPropDescriptor format. 
+ * The reference to the properties are stored using the izPropDescriptor format. 
  * The izPropDescriptor *name* field can be omitted.
  *
  * Params:
@@ -666,6 +695,7 @@ public class izPropertyBinder(T)
 	}
 }	
 
+version(unittest)
 private class izPropertyBinderTester
 {
 	unittest
