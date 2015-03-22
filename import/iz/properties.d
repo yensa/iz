@@ -1,9 +1,7 @@
 module iz.properties;
 
-import 
-	core.exception,
-	std.stdio, std.traits,
-	iz.types, iz.containers;
+import std.stdio, std.traits;
+import iz.types, iz.containers;
 		
 /**
  * Describes the accessibility of a property.
@@ -354,8 +352,9 @@ mixin(genStandardPropDescriptors);
 
 /**
  * When mixed in a class, several analyzers can be used to automatically create
- * some izPropertyDescriptors.
- * These methods can be called in every non-static methods, usually *this()*.
+ * some izPropertyDescriptors for the properties or field anotated with
+ * @SetGet, @Set and @Get.
+ * These analyzers can be called in every non-static methods, usually *this()*.
  */
 mixin template izPropertiesAnalyzer(){
 
@@ -447,6 +446,7 @@ mixin template izPropertiesAnalyzer(){
     /**
      * Creates the property descriptors for the setter/getter pairs annotated with 
      * @Set/@Get.To be detected the methods must be virtual and non final.
+     * In a class hierarchy, an overriden accessor replaces the ancestor's one. 
      */
     protected void analyzeVirtualSetGet()
     {
