@@ -206,7 +206,7 @@ public interface izStream
 	/// ditto
 	ulong seek(uint anOffset, izSeekMode aMode);
 	/**
-	 * Stream size.
+	 * Sets or gets the stream size.
 	 */
 	@property ulong size();
 	/// ditto
@@ -226,11 +226,11 @@ public interface izStream
 	 */
 	void clear();
     /// support for the concatenation operator.
-    void opOpAssign(string op)(izStream rhs)
+    final void opOpAssign(string op)(izStream rhs)
     {
         static if(op == "~")
         {
-            alias lhs = this;
+            izStream lhs = this;
             auto stored = rhs.position;
 
             lhs.seek(0, izSeekMode.end);
@@ -639,7 +639,7 @@ public class izMemoryStream: izStream, izStreamPersist, izFilePersist8
 			freeNonGc(fMemory);
 		}
 		
-// read -------------------------------
+// read -----------------------------------------------------------------------+
 
 		size_t read(izPtr aBuffer, size_t aCount)
 		{
@@ -656,8 +656,8 @@ public class izMemoryStream: izStream, izStreamPersist, izFilePersist8
 			fPosition += T.sizeof;
 			return T.sizeof;
 		}
-		
-// write -------------------------------
+// ----		
+// write ----------------------------------------------------------------------+
 
 		size_t write(izPtr aBuffer, size_t aCount)
 		{
@@ -674,8 +674,9 @@ public class izMemoryStream: izStream, izStreamPersist, izFilePersist8
 			fPosition += T.sizeof;
 			return T.sizeof;
 		}
-		
-// seek -------------------------------
+
+// ----		
+// seek -----------------------------------------------------------------------+
 
 		ulong seek(ulong anOffset, izSeekMode aMode)
 		{
@@ -698,8 +699,8 @@ public class izMemoryStream: izStream, izStreamPersist, izFilePersist8
             ulong longOffs = anOffset;
             return seek(longOffs, aMode);
 		}
-		
-// size -------------------------------	
+// ----			
+// size -----------------------------------------------------------------------+
 
 		@property ulong size()
 		{
@@ -728,8 +729,8 @@ public class izMemoryStream: izStream, izStreamPersist, izFilePersist8
 			}
 			size(cast(uint) aValue);		
 		}
-		
-// position -------------------------------			
+// ----		
+// position -------------------------------------------------------------------+
 		
 		@property ulong position()
 		{
@@ -745,8 +746,8 @@ public class izMemoryStream: izStream, izStreamPersist, izFilePersist8
 		{
 			seek(aValue, izSeekMode.beg);
 		}
-		
-// misc -------------------------------	
+// ----		
+// misc -----------------------------------------------------------------------+
 
 		void clear()
 		{
@@ -782,16 +783,17 @@ public class izMemoryStream: izStream, izStreamPersist, izFilePersist8
 			return fMemory;
 		}
 
-// operators -------------------------------
-
+        /**
+         * Returns the stream content as a read-only ubyte array.
+         */
         const(ubyte[]) ubytes()
         {
             fBytes.length = fSize;
             fBytes.ptr = fMemory;
             return * cast(ubyte[] *) &fBytes;
         }
-	
-// izStreamPersist -------------------------------
+// ----		
+// izStreamPersist ------------------------------------------------------------+
 	
 		/// Refer to izStreamPersist.
 		void saveToStream(izStream aStream)
@@ -838,8 +840,8 @@ public class izMemoryStream: izStream, izStreamPersist, izFilePersist8
 				copyStream(aStream, this);
 			}
 		}
-
-// izFilePersist8 -------------------------------
+// ----	
+// izFilePersist8 -------------------------------------------------------------+
 		
         /// Refers to izFilePersist8.
 		void saveToFile(in char[] aFilename)
@@ -921,7 +923,7 @@ public class izMemoryStream: izStream, izStreamPersist, izFilePersist8
         {
             return fFilename;
         }
-
+// ----	
 	}
 }
 
@@ -948,6 +950,27 @@ unittest
     typeof(arr[0]) value;
     str.read(&value, value.sizeof);
     assert(value == arr[3]);    
+}
+
+unittest
+{
+    // izStream.opOpAssign!("~")
+    auto str1 = construct!izMemoryStream;
+    auto str2 = construct!izMemoryStream;
+    scope(exit) destruct(str1, str2);
+    //
+    auto dat1 = "1234";
+    auto dat2 = "5678";
+    str1.write(cast(void*) dat1.ptr, dat1.length);
+    str2.write(cast(void*) dat2.ptr, dat2.length);
+    str2.position = 0;
+    str1 ~= str2;
+    assert(str2.position == 0);
+    assert(str1.size == dat1.length + dat2.length); 
+    auto dat3 = new char[](8);
+    str1.position = 0;
+    str1.read(cast(void*) dat3.ptr, dat3.length);
+    assert(dat3 == "12345678");     
 }
 
 version(unittest)
