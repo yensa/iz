@@ -447,7 +447,7 @@ private class izArrayTester
  * izContainerChangeKind represents the message kinds a container
  * can emit (either by assignable event or by over-ridable method).
  */
-public enum izContainerChangeKind {add, change, remove};
+public enum izContainerChangeKind {add, change, remove}
 
 /**
  * Iz list interface.
@@ -882,7 +882,10 @@ private template dlistPayload(T)
 
 /**
  * An izList implementation, slow to be iterated, fast to be reorganized.
- * This is a standard double linked list, with GC-free heap allocations.
+ * This is a standard doubly linked list, with GC-free heap allocations.
+ * 
+ * While using the array syntax for looping should be avoided, foreach() 
+ * processes with some acceptable performances.
  */
 public class izDynamicList(T): izList!T
 {
@@ -1392,7 +1395,7 @@ version(unittest)
 }
 
 /**
- * izTreeItem interface allows to turn its implementer into a tree item.
+ * izTreeItem interface turn its implementer into a tree item.
  * Most of the methods are pre-implemented so that an interfacer just needs
  * to override the payload accessors.
  */
@@ -1400,7 +1403,7 @@ public interface izTreeItem
 {
 	/**
 	 * The following methods must be implemented in an izTreeItem interfacer.
-	 * They provide the access to the links between the list items.
+	 * They provide the links between the tree items.
 	 *
 	 * Note that the mixin template izTreeItemAccessors provides a standard
 	 * way to achieve the task.
@@ -1425,18 +1428,21 @@ public interface izTreeItem
 	/// ditto
 	@safe @property izTreeItemSiblings children();
 	/**
-	 * hasChanged() notify the implementers about the modification of the list.
-	 * It's also injected by izTreeItemAccessors.
+	 * hasChanged() notifies the implementer about the modification of the list.
+	 * It's also injected by izTreeItemAccessors. This method is necessary because
+     * most of the methods of the interface can't be overriden, for example to
+     * call a particular updater when a node is added or removed.
 	 */
 	@safe void hasChanged(izContainerChangeKind aChangeKind, izTreeItem involvedItem);
 
 	/// Encapsulates the operators for accessing to the siblings/children.
-	struct izTreeItemSiblings
+	private struct izTreeItemSiblings
 	{
 		public:
 			izTreeItem item;
 
 		public:
+            /// Operators
 			@safe final izTreeItem opIndex(ptrdiff_t i)
 			{
 				auto old = item.firstSibling;
@@ -1500,7 +1506,7 @@ public interface izTreeItem
 
 	}
 
-// siblings --------------------------
+// siblings -------------------------------------------------------------------+
 	/**
 	 * Allocates, adds to the back, and returns a new sibling of type IT.
 	 * This method should be preferred over addSibling/insertSibling if deleteChildren() is used.
@@ -1595,7 +1601,7 @@ public interface izTreeItem
 
 	/**
 	 * Inserts an item at the beginning of the list.
-	 * Returns 0 when the operation is successful otherwise -1.
+	 * Returns 0 if the operation is successful otherwise -1.
 	 */
 	@safe final ptrdiff_t insertSibling(izTreeItem aSibling)
 	{
@@ -1797,7 +1803,8 @@ public interface izTreeItem
 		}
 	}
 
-// children --------------------------
+// -----------------------------------------------------------------------------    
+// children -------------------------------------------------------------------+
 
 	/**
 	 * Allocates, adds to the back and returns a new children of type IT.
@@ -1981,8 +1988,8 @@ public interface izTreeItem
 		}
 		firstChild = null;
 	}
-
-// other --------------------------
+// -----------------------------------------------------------------------------
+// other ----------------------------------------------------------------------+
 
     final char[] nodeToTextNative()
     {
@@ -2001,6 +2008,7 @@ public interface izTreeItem
         for (auto i = 0; i < childrenCount; i++)
             children[i].saveToStream(aStream);
     }
+// -----------------------------------------------------------------------------    
 
 }
 
@@ -2011,10 +2019,8 @@ mixin template izTreeItemAccessors()
 {
 	private:
 		izTreeItem fPrevSibling, fNextSibling, fFirstChild, fParent;
+        izTreeItemSiblings fSiblings, fChild;
 	
-	public:
-		izTreeItemSiblings fSiblings,fChild;
-
 	public:
 		/**
 		 * Called by an izTreeItem to set the link to the previous izTreeItem.
@@ -2100,7 +2106,7 @@ mixin template izTreeItemAccessors()
 }
 
 /**
- * Helper template designed to make a sub class C inherit from izTreeItem.
+ * Helper template designed to make a C sub class of C heriting of izTreeItem.
  * The class C must have a default ctor and only this default ctor is generated.
  */
 public class izMakeTreeItem(C): C, izTreeItem
