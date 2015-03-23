@@ -1,0 +1,488 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8"/>
+<link rel="stylesheet" type="text/css" href="../../style.css"/>
+<script src="../../highlight.pack.js"></script>
+<title>izTreeItem</title>
+<base href="../../"/>
+<script src="search.js"></script>
+<script src="show_hide.js"></script>
+</head>
+<body>
+<div class="main">
+<div class="breadcrumbs">
+<table id="results"></table>
+<a href="index.html" class="home">⌂</a><input type="search" id="search" placeholder="Search" onkeyup="searchSubmit(this.value, event)"/>
+<small>iz.<a href=iz\containers.html>containers</a>.</small><span class="highlight">izTreeItem</span>
+</div>
+<div class="sidebar">
+<a href="iz\containers.html#hide-toc" class="hide" id="hide-toc">&#171;</a>
+<a href="iz\containers.html#show-toc" class="show" id="show-toc">&#187;</a>
+<div id="toc-id" class="toc">
+<ul><li><span class="package" onclick="show_hide('iz');">iz</span>
+<ul id="iz" style='display:block'>
+<li>iz.<a href="iz\classes.html">classes</a></li>
+<li><span class=" selected">iz.<a href="iz\containers.html">containers</a></span>
+</li>
+<li>iz.<a href="iz\enumset.html">enumset</a></li>
+<li>iz.<a href="iz\observer.html">observer</a></li>
+<li>iz.<a href="iz\properties.html">properties</a></li>
+<li>iz.<a href="iz\referencable.html">referencable</a></li>
+<li>iz.<a href="iz\serializer.html">serializer</a></li>
+<li>iz.<a href="iz\streams.html">streams</a></li>
+<li>iz.<a href="iz\types.html">types</a></li>
+</ul>
+</li>
+
+</ul>
+</div></div>
+<div class="content">
+<div class="aggregate-symbol"><div class="description"><pre><code>public @trusted @nogc nothrow interface izTreeItem
+</code></pre>
+<div class="section "><p>izTreeItem interface turn its implementer into a tree item.
+Most of the methods are pre-implemented so that an interfacer just needs
+to override the payload accessors.
+</p>
+
+
+</div>
+</div><a class="anchor" id="prevSibling"></a><div class="symbol"><div class="description"><pre><code>public @safe @property <a href="iz\containers\izTreeItem.html">izTreeItem</a> <a href="iz\containers\izTreeItem.html#prevSibling">prevSibling</a>()
+</code></pre>
+<div class="section "><p>The following methods must be implemented in an izTreeItem interfacer.
+They provide the links between the tree items.
+</p>
+
+
+</div>
+<div class="section"><p>Note that the mixin template izTreeItemAccessors provides a standard
+way to achieve the task.
+</p>
+
+
+</div>
+</div></div><a class="anchor" id="nextSibling"></a><div class="symbol"><div class="description"><pre><code>public @safe @property <a href="iz\containers\izTreeItem.html">izTreeItem</a> <a href="iz\containers\izTreeItem.html#nextSibling">nextSibling</a>()
+</code></pre>
+<div class="section "><p>The following methods must be implemented in an izTreeItem interfacer.
+They provide the links between the tree items.
+</p>
+
+
+</div>
+<div class="section"><p>Note that the mixin template izTreeItemAccessors provides a standard
+way to achieve the task.
+</p>
+
+
+</div>
+</div></div><a class="anchor" id="parent"></a><div class="symbol"><div class="description"><pre><code>public @safe @property <a href="iz\containers\izTreeItem.html">izTreeItem</a> <a href="iz\containers\izTreeItem.html#parent">parent</a>()
+</code></pre>
+<div class="section "><p>The following methods must be implemented in an izTreeItem interfacer.
+They provide the links between the tree items.
+</p>
+
+
+</div>
+<div class="section"><p>Note that the mixin template izTreeItemAccessors provides a standard
+way to achieve the task.
+</p>
+
+
+</div>
+</div></div><a class="anchor" id="firstChild"></a><div class="symbol"><div class="description"><pre><code>public @safe @property <a href="iz\containers\izTreeItem.html">izTreeItem</a> <a href="iz\containers\izTreeItem.html#firstChild">firstChild</a>()
+</code></pre>
+<div class="section "><p>The following methods must be implemented in an izTreeItem interfacer.
+They provide the links between the tree items.
+</p>
+
+
+</div>
+<div class="section"><p>Note that the mixin template izTreeItemAccessors provides a standard
+way to achieve the task.
+</p>
+
+
+</div>
+</div></div><a class="anchor" id="prevSibling"></a><div class="symbol"><div class="description"><pre><code>public @safe @property <a href="http://dlang.org/type.html#basic-data-types">void</a> <a href="iz\containers\izTreeItem.html#prevSibling">prevSibling</a>(<a href="iz\containers\izTreeItem.html">izTreeItem</a> anItem)
+</code></pre>
+<div class="section "><p>The following methods must be implemented in an izTreeItem interfacer.
+They provide the links between the tree items.
+</p>
+
+
+</div>
+<div class="section"><p>Note that the mixin template izTreeItemAccessors provides a standard
+way to achieve the task.
+</p>
+
+
+</div>
+</div></div><a class="anchor" id="nextSibling"></a><div class="symbol"><div class="description"><pre><code>public @safe @property <a href="http://dlang.org/type.html#basic-data-types">void</a> <a href="iz\containers\izTreeItem.html#nextSibling">nextSibling</a>(<a href="iz\containers\izTreeItem.html">izTreeItem</a> anItem)
+</code></pre>
+<div class="section "><p>The following methods must be implemented in an izTreeItem interfacer.
+They provide the links between the tree items.
+</p>
+
+
+</div>
+<div class="section"><p>Note that the mixin template izTreeItemAccessors provides a standard
+way to achieve the task.
+</p>
+
+
+</div>
+</div></div><a class="anchor" id="parent"></a><div class="symbol"><div class="description"><pre><code>public @safe @property <a href="http://dlang.org/type.html#basic-data-types">void</a> <a href="iz\containers\izTreeItem.html#parent">parent</a>(<a href="iz\containers\izTreeItem.html">izTreeItem</a> anItem)
+</code></pre>
+<div class="section "><p>The following methods must be implemented in an izTreeItem interfacer.
+They provide the links between the tree items.
+</p>
+
+
+</div>
+<div class="section"><p>Note that the mixin template izTreeItemAccessors provides a standard
+way to achieve the task.
+</p>
+
+
+</div>
+</div></div><a class="anchor" id="firstChild"></a><div class="symbol"><div class="description"><pre><code>public @safe @property <a href="http://dlang.org/type.html#basic-data-types">void</a> <a href="iz\containers\izTreeItem.html#firstChild">firstChild</a>(<a href="iz\containers\izTreeItem.html">izTreeItem</a> anItem)
+</code></pre>
+<div class="section "><p>The following methods must be implemented in an izTreeItem interfacer.
+They provide the links between the tree items.
+</p>
+
+
+</div>
+<div class="section"><p>Note that the mixin template izTreeItemAccessors provides a standard
+way to achieve the task.
+</p>
+
+
+</div>
+</div></div><a class="anchor" id="siblings"></a><div class="symbol"><div class="description"><pre><code>public @safe @property <a href="iz\containers\izTreeItem.izTreeItemSiblings.html">izTreeItemSiblings</a> <a href="iz\containers\izTreeItem.html#siblings">siblings</a>()
+</code></pre>
+<div class="section "><p>The following methods must be implemented in an izTreeItem interfacer.
+They provide the links between the tree items.
+</p>
+
+
+</div>
+<div class="section"><p>Note that the mixin template izTreeItemAccessors provides a standard
+way to achieve the task.
+</p>
+
+
+</div>
+</div></div><a class="anchor" id="children"></a><div class="symbol"><div class="description"><pre><code>public @safe @property <a href="iz\containers\izTreeItem.izTreeItemSiblings.html">izTreeItemSiblings</a> <a href="iz\containers\izTreeItem.html#children">children</a>()
+</code></pre>
+<div class="section "><p>The following methods must be implemented in an izTreeItem interfacer.
+They provide the links between the tree items.
+</p>
+
+
+</div>
+<div class="section"><p>Note that the mixin template izTreeItemAccessors provides a standard
+way to achieve the task.
+</p>
+
+
+</div>
+</div></div><a class="anchor" id="hasChanged"></a><div class="symbol"><div class="description"><pre><code>public @safe <a href="http://dlang.org/type.html#basic-data-types">void</a> <a href="iz\containers\izTreeItem.html#hasChanged">hasChanged</a>(
+    <a href="iz\containers\izContainerChangeKind.html">izContainerChangeKind</a> aChangeKind, 
+    <a href="iz\containers\izTreeItem.html">izTreeItem</a> involvedItem)
+</code></pre>
+<div class="section "><p>hasChanged() notifies the implementer about the modification of the list.
+It's also injected by izTreeItemAccessors. This method is necessary because
+most of the methods of the interface can't be overriden, for example to
+call a particular updater when a node is added or removed.
+</p>
+
+
+</div>
+</div></div><a class="anchor" id="addNewSibling"></a><div class="symbol"><div class="description"><pre><code>public final IT <a href="iz\containers\izTreeItem.html#addNewSibling">addNewSibling</a>(IT, A...)(A a) 
+if(is(IT : <a href="iz\containers\izTreeItem.html">izTreeItem</a>))
+</code></pre>
+<div class="section "><p>Allocates, adds to the back, and returns a new sibling of type IT.
+This method should be preferred over addSibling/insertSibling if deleteChildren() is used.
+</p>
+
+
+</div>
+</div></div><a class="anchor" id="lastSibling"></a><div class="symbol"><div class="description"><pre><code>public @safe final <a href="iz\containers\izTreeItem.html">izTreeItem</a> <a href="iz\containers\izTreeItem.html#lastSibling">lastSibling</a>()
+</code></pre>
+<div class="section "><p>Returns the last item.
+The value returned is never null.
+</p>
+
+
+</div>
+</div></div><a class="anchor" id="firstSibling"></a><div class="symbol"><div class="description"><pre><code>public @safe final <a href="iz\containers\izTreeItem.html">izTreeItem</a> <a href="iz\containers\izTreeItem.html#firstSibling">firstSibling</a>()
+</code></pre>
+<div class="section "><p>Returns the first item.
+The value returned is never null.
+</p>
+
+
+</div>
+</div></div><a class="anchor" id="findSibling"></a><div class="symbol"><div class="description"><pre><code>public @safe final ptrdiff_t <a href="iz\containers\izTreeItem.html#findSibling">findSibling</a>(<a href="iz\containers\izTreeItem.html">izTreeItem</a> aSibling)
+</code></pre>
+<div class="section "><p>Returns the index of aSibling if it's found otherwise -1.
+</p>
+
+
+</div>
+</div></div><a class="anchor" id="addSibling"></a><div class="symbol"><div class="description"><pre><code>public @safe final ptrdiff_t <a href="iz\containers\izTreeItem.html#addSibling">addSibling</a>(<a href="iz\containers\izTreeItem.html">izTreeItem</a> aSibling)
+</code></pre>
+<div class="section "><p>Adds an item at the end of list.
+Returns 0 when the operation is successful otherwise -1.
+</p>
+
+
+</div>
+</div></div><a class="anchor" id="insertSibling"></a><div class="symbol"><div class="description"><pre><code>public @safe final ptrdiff_t <a href="iz\containers\izTreeItem.html#insertSibling">insertSibling</a>(<a href="iz\containers\izTreeItem.html">izTreeItem</a> aSibling)
+</code></pre>
+<div class="section "><p>Inserts an item at the beginning of the list.
+Returns 0 if the operation is successful otherwise -1.
+</p>
+
+
+</div>
+</div></div><a class="anchor" id="insertSibling"></a><div class="symbol"><div class="description"><pre><code>public @safe final ptrdiff_t <a href="iz\containers\izTreeItem.html#insertSibling">insertSibling</a>(
+    size_t aPosition, 
+    <a href="iz\containers\izTreeItem.html">izTreeItem</a> aSibling)
+</code></pre>
+<div class="section "><p>Inserts aSibling before the one standing at aPosition.
+If aPosition is greater than count than aSibling is added to the end of list.
+Returns the sibling position when the operation is successful otherwise -1.
+</p>
+
+
+</div>
+</div></div><a class="anchor" id="exchangeSibling"></a><div class="symbol"><div class="description"><pre><code>public @safe final <a href="http://dlang.org/type.html#basic-data-types">void</a> <a href="iz\containers\izTreeItem.html#exchangeSibling">exchangeSibling</a>(
+    <a href="iz\containers\izTreeItem.html">izTreeItem</a> aSibling1, 
+    <a href="iz\containers\izTreeItem.html">izTreeItem</a> aSibling2)
+</code></pre>
+<div class="section "><p>Permutes aSibling1 and aSibling2 positions in the list.
+</p>
+
+
+</div>
+</div></div><a class="anchor" id="removeSibling"></a><div class="symbol"><div class="description"><pre><code>public @safe final <a href="http://dlang.org/type.html#basic-data-types">bool</a> <a href="iz\containers\izTreeItem.html#removeSibling">removeSibling</a>(<a href="iz\containers\izTreeItem.html">izTreeItem</a> aSibling)
+</code></pre>
+<div class="section "><p>Tries to removes aSibling from the list.
+</p>
+
+
+</div>
+</div></div><a class="anchor" id="removeSibling"></a><div class="symbol"><div class="description"><pre><code>public @safe final <a href="iz\containers\izTreeItem.html">izTreeItem</a> <a href="iz\containers\izTreeItem.html#removeSibling">removeSibling</a>(size_t anIndex)
+</code></pre>
+<div class="section "><p>Tries to extract the anIndex-nth sibling from this branch.
+</p>
+
+
+</div>
+</div></div><a class="anchor" id="siblingCount"></a><div class="symbol"><div class="description"><pre><code>public @safe @property final size_t <a href="iz\containers\izTreeItem.html#siblingCount">siblingCount</a>()
+</code></pre>
+<div class="section "><p>Returns the count of sibling in the branch.
+The value returned is always greater than 0.
+</p>
+
+
+</div>
+</div></div><a class="anchor" id="siblingIndex"></a><div class="symbol"><div class="description"><pre><code>public @safe @property final ptrdiff_t <a href="iz\containers\izTreeItem.html#siblingIndex">siblingIndex</a>()
+</code></pre>
+<div class="section "><p>Returns the item position in the list.
+</p>
+
+
+</div>
+</div></div><a class="anchor" id="siblingIndex"></a><div class="symbol"><div class="description"><pre><code>public @safe @property final <a href="http://dlang.org/type.html#basic-data-types">void</a> <a href="iz\containers\izTreeItem.html#siblingIndex">siblingIndex</a>(size_t aPosition)
+</code></pre>
+<div class="section "><p>Sets the item position in the list.
+The new position of the previous item is undetermined.
+</p>
+
+
+</div>
+</div></div><a class="anchor" id="addNewChildren"></a><div class="symbol"><div class="description"><pre><code>public final IT <a href="iz\containers\izTreeItem.html#addNewChildren">addNewChildren</a>(IT, A...)(A a) 
+if(is(IT : <a href="iz\containers\izTreeItem.html">izTreeItem</a>))
+</code></pre>
+<div class="section "><p>Allocates, adds to the back and returns a new children of type IT.
+This method should be preferred over addChildren/insertChildren if deleteChildren() is used.
+</p>
+
+
+</div>
+</div></div><a class="anchor" id="level"></a><div class="symbol"><div class="description"><pre><code>public @safe @property final size_t <a href="iz\containers\izTreeItem.html#level">level</a>()
+</code></pre>
+<div class="section "><p>Returns the distance to the root.
+</p>
+
+
+</div>
+</div></div><a class="anchor" id="childrenCount"></a><div class="symbol"><div class="description"><pre><code>public @safe @property final size_t <a href="iz\containers\izTreeItem.html#childrenCount">childrenCount</a>()
+</code></pre>
+<div class="section "><p>Returns the children count.
+</p>
+
+
+</div>
+</div></div><a class="anchor" id="addChild"></a><div class="symbol"><div class="description"><pre><code>public @safe final ptrdiff_t <a href="iz\containers\izTreeItem.html#addChild">addChild</a>(<a href="iz\containers\izTreeItem.html">izTreeItem</a> aChild)
+</code></pre>
+<div class="section "><p>Tries to add aChild to the back and returns its position.
+</p>
+
+
+</div>
+</div></div><a class="anchor" id="insertChild"></a><div class="symbol"><div class="description"><pre><code>public @safe final ptrdiff_t <a href="iz\containers\izTreeItem.html#insertChild">insertChild</a>(<a href="iz\containers\izTreeItem.html">izTreeItem</a> aChild)
+</code></pre>
+<div class="section "><p>Tries to insert aChild to the front and returns its position.
+</p>
+
+
+</div>
+</div></div><a class="anchor" id="insertChild"></a><div class="symbol"><div class="description"><pre><code>public @safe final ptrdiff_t <a href="iz\containers\izTreeItem.html#insertChild">insertChild</a>(
+    size_t aPosition, 
+    <a href="iz\containers\izTreeItem.html">izTreeItem</a> aChild)
+</code></pre>
+<div class="section "><p>Tries to insert aChild at aPosition and returns its position.
+</p>
+
+
+</div>
+</div></div><a class="anchor" id="removeChild"></a><div class="symbol"><div class="description"><pre><code>public @safe final <a href="http://dlang.org/type.html#basic-data-types">bool</a> <a href="iz\containers\izTreeItem.html#removeChild">removeChild</a>(<a href="iz\containers\izTreeItem.html">izTreeItem</a> aChild)
+</code></pre>
+<div class="section "><p>Tries to removes aChild from the list.
+</p>
+
+
+</div>
+</div></div><a class="anchor" id="removeChild"></a><div class="symbol"><div class="description"><pre><code>public @safe final <a href="iz\containers\izTreeItem.html">izTreeItem</a> <a href="iz\containers\izTreeItem.html#removeChild">removeChild</a>(size_t anIndex)
+</code></pre>
+<div class="section "><p>Tries to extract the anIndex-nth child from this branch.
+</p>
+
+
+</div>
+</div></div><a class="anchor" id="clearChildren"></a><div class="symbol"><div class="description"><pre><code>public @safe final <a href="http://dlang.org/type.html#basic-data-types">void</a> <a href="iz\containers\izTreeItem.html#clearChildren">clearChildren</a>(<a href="http://dlang.org/type.html#basic-data-types">bool</a> unlinkSiblings = false)
+</code></pre>
+<div class="section "><p>Removes the children.
+</p>
+
+
+</div>
+</div></div><a class="anchor" id="deleteChildren"></a><div class="symbol"><div class="description"><pre><code>public @safe final <a href="http://dlang.org/type.html#basic-data-types">void</a> <a href="iz\containers\izTreeItem.html#deleteChildren">deleteChildren</a>()
+</code></pre>
+<div class="section "><p>Removes and deletes the children.
+If add/insert has been used to fill the list then initial references
+will be dangling.
+</p>
+
+
+</div>
+</div></div><div class="section members"><h2>Functions</h2><table><tr><td><span class="extrainfo"><span class="attribs"><span class="attr-safe">@safe</span>, <span class="attr-property">@property</span></span></span><a href="iz\containers\izTreeItem.html#prevSibling">prevSibling</a><span class="extrainfo"></span></td><td></td><td><p>The following methods must be implemented in an izTreeItem interfacer.
+They provide the links between the tree items.
+</p>
+</td></tr><tr><td><span class="extrainfo"><span class="attribs"><span class="attr-safe">@safe</span>, <span class="attr-property">@property</span></span></span><a href="iz\containers\izTreeItem.html#nextSibling">nextSibling</a><span class="extrainfo"></span></td><td></td><td><p>The following methods must be implemented in an izTreeItem interfacer.
+They provide the links between the tree items.
+</p>
+</td></tr><tr><td><span class="extrainfo"><span class="attribs"><span class="attr-safe">@safe</span>, <span class="attr-property">@property</span></span></span><a href="iz\containers\izTreeItem.html#parent">parent</a><span class="extrainfo"></span></td><td></td><td><p>The following methods must be implemented in an izTreeItem interfacer.
+They provide the links between the tree items.
+</p>
+</td></tr><tr><td><span class="extrainfo"><span class="attribs"><span class="attr-safe">@safe</span>, <span class="attr-property">@property</span></span></span><a href="iz\containers\izTreeItem.html#firstChild">firstChild</a><span class="extrainfo"></span></td><td></td><td><p>The following methods must be implemented in an izTreeItem interfacer.
+They provide the links between the tree items.
+</p>
+</td></tr><tr><td><span class="extrainfo"><span class="attribs"><span class="attr-safe">@safe</span>, <span class="attr-property">@property</span></span></span><a href="iz\containers\izTreeItem.html#prevSibling">prevSibling</a><span class="extrainfo"></span></td><td></td><td><p>The following methods must be implemented in an izTreeItem interfacer.
+They provide the links between the tree items.
+</p>
+</td></tr><tr><td><span class="extrainfo"><span class="attribs"><span class="attr-safe">@safe</span>, <span class="attr-property">@property</span></span></span><a href="iz\containers\izTreeItem.html#nextSibling">nextSibling</a><span class="extrainfo"></span></td><td></td><td><p>The following methods must be implemented in an izTreeItem interfacer.
+They provide the links between the tree items.
+</p>
+</td></tr><tr><td><span class="extrainfo"><span class="attribs"><span class="attr-safe">@safe</span>, <span class="attr-property">@property</span></span></span><a href="iz\containers\izTreeItem.html#parent">parent</a><span class="extrainfo"></span></td><td></td><td><p>The following methods must be implemented in an izTreeItem interfacer.
+They provide the links between the tree items.
+</p>
+</td></tr><tr><td><span class="extrainfo"><span class="attribs"><span class="attr-safe">@safe</span>, <span class="attr-property">@property</span></span></span><a href="iz\containers\izTreeItem.html#firstChild">firstChild</a><span class="extrainfo"></span></td><td></td><td><p>The following methods must be implemented in an izTreeItem interfacer.
+They provide the links between the tree items.
+</p>
+</td></tr><tr><td><span class="extrainfo"><span class="attribs"><span class="attr-safe">@safe</span>, <span class="attr-property">@property</span></span></span><a href="iz\containers\izTreeItem.html#siblings">siblings</a><span class="extrainfo"></span></td><td></td><td><p>The following methods must be implemented in an izTreeItem interfacer.
+They provide the links between the tree items.
+</p>
+</td></tr><tr><td><span class="extrainfo"><span class="attribs"><span class="attr-safe">@safe</span>, <span class="attr-property">@property</span></span></span><a href="iz\containers\izTreeItem.html#children">children</a><span class="extrainfo"></span></td><td></td><td><p>The following methods must be implemented in an izTreeItem interfacer.
+They provide the links between the tree items.
+</p>
+</td></tr><tr><td><span class="extrainfo"><span class="attribs"><span class="attr-safe">@safe</span></span></span><a href="iz\containers\izTreeItem.html#hasChanged">hasChanged</a><span class="extrainfo"></span></td><td></td><td><p>hasChanged() notifies the implementer about the modification of the list.
+It's also injected by izTreeItemAccessors. This method is necessary because
+most of the methods of the interface can't be overriden, for example to
+call a particular updater when a node is added or removed.
+</p>
+</td></tr><tr><td><span class="extrainfo"><span class="attribs"><span class="attr-final">final</span></span></span><a href="iz\containers\izTreeItem.html#addNewSibling">addNewSibling</a><span class="extrainfo"></span></td><td></td><td><p>Allocates, adds to the back, and returns a new sibling of type IT.
+This method should be preferred over addSibling/insertSibling if deleteChildren() is used.
+</p>
+</td></tr><tr><td><span class="extrainfo"><span class="attribs"><span class="attr-safe">@safe</span>, <span class="attr-final">final</span></span></span><a href="iz\containers\izTreeItem.html#lastSibling">lastSibling</a><span class="extrainfo"></span></td><td></td><td><p>Returns the last item.
+The value returned is never null.
+</p>
+</td></tr><tr><td><span class="extrainfo"><span class="attribs"><span class="attr-safe">@safe</span>, <span class="attr-final">final</span></span></span><a href="iz\containers\izTreeItem.html#firstSibling">firstSibling</a><span class="extrainfo"></span></td><td></td><td><p>Returns the first item.
+The value returned is never null.
+</p>
+</td></tr><tr><td><span class="extrainfo"><span class="attribs"><span class="attr-safe">@safe</span>, <span class="attr-final">final</span></span></span><a href="iz\containers\izTreeItem.html#findSibling">findSibling</a><span class="extrainfo"></span></td><td></td><td><p>Returns the index of aSibling if it's found otherwise -1.
+</p>
+</td></tr><tr><td><span class="extrainfo"><span class="attribs"><span class="attr-safe">@safe</span>, <span class="attr-final">final</span></span></span><a href="iz\containers\izTreeItem.html#addSibling">addSibling</a><span class="extrainfo"></span></td><td></td><td><p>Adds an item at the end of list.
+Returns 0 when the operation is successful otherwise -1.
+</p>
+</td></tr><tr><td><span class="extrainfo"><span class="attribs"><span class="attr-safe">@safe</span>, <span class="attr-final">final</span></span></span><a href="iz\containers\izTreeItem.html#insertSibling">insertSibling</a><span class="extrainfo"></span></td><td></td><td><p>Inserts an item at the beginning of the list.
+Returns 0 if the operation is successful otherwise -1.
+</p>
+</td></tr><tr><td><span class="extrainfo"><span class="attribs"><span class="attr-safe">@safe</span>, <span class="attr-final">final</span></span></span><a href="iz\containers\izTreeItem.html#insertSibling">insertSibling</a><span class="extrainfo"></span></td><td></td><td><p>Inserts aSibling before the one standing at aPosition.
+If aPosition is greater than count than aSibling is added to the end of list.
+Returns the sibling position when the operation is successful otherwise -1.
+</p>
+</td></tr><tr><td><span class="extrainfo"><span class="attribs"><span class="attr-safe">@safe</span>, <span class="attr-final">final</span></span></span><a href="iz\containers\izTreeItem.html#exchangeSibling">exchangeSibling</a><span class="extrainfo"></span></td><td></td><td><p>Permutes aSibling1 and aSibling2 positions in the list.
+</p>
+</td></tr><tr><td><span class="extrainfo"><span class="attribs"><span class="attr-safe">@safe</span>, <span class="attr-final">final</span></span></span><a href="iz\containers\izTreeItem.html#removeSibling">removeSibling</a><span class="extrainfo"></span></td><td></td><td><p>Tries to removes aSibling from the list.
+</p>
+</td></tr><tr><td><span class="extrainfo"><span class="attribs"><span class="attr-safe">@safe</span>, <span class="attr-final">final</span></span></span><a href="iz\containers\izTreeItem.html#removeSibling">removeSibling</a><span class="extrainfo"></span></td><td></td><td><p>Tries to extract the anIndex-nth sibling from this branch.
+</p>
+</td></tr><tr><td><span class="extrainfo"><span class="attribs"><span class="attr-safe">@safe</span>, <span class="attr-property">@property</span>, <span class="attr-final">final</span></span></span><a href="iz\containers\izTreeItem.html#siblingCount">siblingCount</a><span class="extrainfo"></span></td><td></td><td><p>Returns the count of sibling in the branch.
+The value returned is always greater than 0.
+</p>
+</td></tr><tr><td><span class="extrainfo"><span class="attribs"><span class="attr-safe">@safe</span>, <span class="attr-property">@property</span>, <span class="attr-final">final</span></span></span><a href="iz\containers\izTreeItem.html#siblingIndex">siblingIndex</a><span class="extrainfo"></span></td><td></td><td><p>Returns the item position in the list.
+</p>
+</td></tr><tr><td><span class="extrainfo"><span class="attribs"><span class="attr-safe">@safe</span>, <span class="attr-property">@property</span>, <span class="attr-final">final</span></span></span><a href="iz\containers\izTreeItem.html#siblingIndex">siblingIndex</a><span class="extrainfo"></span></td><td></td><td><p>Sets the item position in the list.
+The new position of the previous item is undetermined.
+</p>
+</td></tr><tr><td><span class="extrainfo"><span class="attribs"><span class="attr-final">final</span></span></span><a href="iz\containers\izTreeItem.html#addNewChildren">addNewChildren</a><span class="extrainfo"></span></td><td></td><td><p>Allocates, adds to the back and returns a new children of type IT.
+This method should be preferred over addChildren/insertChildren if deleteChildren() is used.
+</p>
+</td></tr><tr><td><span class="extrainfo"><span class="attribs"><span class="attr-safe">@safe</span>, <span class="attr-property">@property</span>, <span class="attr-final">final</span></span></span><a href="iz\containers\izTreeItem.html#level">level</a><span class="extrainfo"></span></td><td></td><td><p>Returns the distance to the root.
+</p>
+</td></tr><tr><td><span class="extrainfo"><span class="attribs"><span class="attr-safe">@safe</span>, <span class="attr-property">@property</span>, <span class="attr-final">final</span></span></span><a href="iz\containers\izTreeItem.html#childrenCount">childrenCount</a><span class="extrainfo"></span></td><td></td><td><p>Returns the children count.
+</p>
+</td></tr><tr><td><span class="extrainfo"><span class="attribs"><span class="attr-safe">@safe</span>, <span class="attr-final">final</span></span></span><a href="iz\containers\izTreeItem.html#addChild">addChild</a><span class="extrainfo"></span></td><td></td><td><p>Tries to add aChild to the back and returns its position.
+</p>
+</td></tr><tr><td><span class="extrainfo"><span class="attribs"><span class="attr-safe">@safe</span>, <span class="attr-final">final</span></span></span><a href="iz\containers\izTreeItem.html#insertChild">insertChild</a><span class="extrainfo"></span></td><td></td><td><p>Tries to insert aChild to the front and returns its position.
+</p>
+</td></tr><tr><td><span class="extrainfo"><span class="attribs"><span class="attr-safe">@safe</span>, <span class="attr-final">final</span></span></span><a href="iz\containers\izTreeItem.html#insertChild">insertChild</a><span class="extrainfo"></span></td><td></td><td><p>Tries to insert aChild at aPosition and returns its position.
+</p>
+</td></tr><tr><td><span class="extrainfo"><span class="attribs"><span class="attr-safe">@safe</span>, <span class="attr-final">final</span></span></span><a href="iz\containers\izTreeItem.html#removeChild">removeChild</a><span class="extrainfo"></span></td><td></td><td><p>Tries to removes aChild from the list.
+</p>
+</td></tr><tr><td><span class="extrainfo"><span class="attribs"><span class="attr-safe">@safe</span>, <span class="attr-final">final</span></span></span><a href="iz\containers\izTreeItem.html#removeChild">removeChild</a><span class="extrainfo"></span></td><td></td><td><p>Tries to extract the anIndex-nth child from this branch.
+</p>
+</td></tr><tr><td><span class="extrainfo"><span class="attribs"><span class="attr-safe">@safe</span>, <span class="attr-final">final</span></span></span><a href="iz\containers\izTreeItem.html#clearChildren">clearChildren</a><span class="extrainfo"></span></td><td></td><td><p>Removes the children.
+</p>
+</td></tr><tr><td><span class="extrainfo"><span class="attribs"><span class="attr-safe">@safe</span>, <span class="attr-final">final</span></span></span><a href="iz\containers\izTreeItem.html#deleteChildren">deleteChildren</a><span class="extrainfo"></span></td><td></td><td><p>Removes and deletes the children.
+If add/insert has been used to fill the list then initial references
+will be dangling.
+</p>
+</td></tr></table><h2>Structs</h2><table><tr><td><a href="iz\containers\izTreeItem.izTreeItemSiblings.html">izTreeItemSiblings</a></td><td></td><td><p>Encapsulates the operators for accessing to the siblings/children.
+</p>
+</td></tr></table>
+</div>
+</div><script>hljs.initHighlightingOnLoad();</script>
+
+</div>
+<footer>
+Generated with <a href="https://github.com/kiith-sa/harbored-mod">harbored-mod</a>
+</footer>
+</div>
+</body>
+</html>

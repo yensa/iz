@@ -1,0 +1,382 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8"/>
+<link rel="stylesheet" type="text/css" href="../../style.css"/>
+<script src="../../highlight.pack.js"></script>
+<title>izSerializer</title>
+<base href="../../"/>
+<script src="search.js"></script>
+<script src="show_hide.js"></script>
+</head>
+<body>
+<div class="main">
+<div class="breadcrumbs">
+<table id="results"></table>
+<a href="index.html" class="home">⌂</a><input type="search" id="search" placeholder="Search" onkeyup="searchSubmit(this.value, event)"/>
+<small>iz.<a href=iz\serializer.html>serializer</a>.</small><span class="highlight">izSerializer</span>
+</div>
+<div class="sidebar">
+<a href="iz\serializer.html#hide-toc" class="hide" id="hide-toc">&#171;</a>
+<a href="iz\serializer.html#show-toc" class="show" id="show-toc">&#187;</a>
+<div id="toc-id" class="toc">
+<ul><li><span class="package" onclick="show_hide('iz');">iz</span>
+<ul id="iz" style='display:block'>
+<li>iz.<a href="iz\classes.html">classes</a></li>
+<li>iz.<a href="iz\containers.html">containers</a></li>
+<li>iz.<a href="iz\enumset.html">enumset</a></li>
+<li>iz.<a href="iz\observer.html">observer</a></li>
+<li>iz.<a href="iz\properties.html">properties</a></li>
+<li>iz.<a href="iz\referencable.html">referencable</a></li>
+<li><span class=" selected">iz.<a href="iz\serializer.html">serializer</a></span>
+</li>
+<li>iz.<a href="iz\streams.html">streams</a></li>
+<li>iz.<a href="iz\types.html">types</a></li>
+</ul>
+</li>
+
+</ul>
+</div></div>
+<div class="content">
+<div class="aggregate-symbol"><div class="description"><pre><code>public class izSerializer
+</code></pre>
+<div class="section "><p>Native iz Serializer.
+An izSerializer is specialized to store and restore from any class heriting
+from the interface izSerializable. An izSerializable arbitrarily exposes some
+properties to serialize using the izPropDescriptor format.
+</p>
+
+
+</div>
+<div class="section"><p>The serializer uses an intermediate serialization tree (IST) which grants a 
+certain flexibilty. 
+As expected for a serializer, some objects trees can be stored or restored by 
+a simple and single call ( <em>objectToStream()</em> and <em>streamToObject()</em> ) but the 
+IST also allows to convert a data stream, to randomly find and restores 
+some properties and to handle compatibility errors.
+Even the IST can be build manually, without using the automatic mechanism.
+</p>
+
+
+</div>
+</div><a class="anchor" id="objectToIst"></a><div class="symbol"><div class="description"><pre><code>public <a href="http://dlang.org/type.html#basic-data-types">void</a> <a href="iz\serializer\izSerializer.html#objectToIst">objectToIst</a>(<a href="iz\serializer\izSerializable.html">izSerializable</a> root)
+</code></pre>
+<div class="section "><p>Builds the IST from an izSerializable.
+The process starts by a call to .declareProperties() in the root then
+the process is lead by the the subsequent declarations.
+</p>
+
+
+</div>
+<div class="section"><h2>Parameters</h2>
+<table class="params">
+<tr class="param"><td class="paramName">root</td><td class="paramDoc"><p>the izSerializable from where the declarations start.
+</p>
+</td></tr>
+</table>
+</div>
+</div></div><a class="anchor" id="objectToStream"></a><div class="symbol"><div class="description"><pre><code>public <a href="http://dlang.org/type.html#basic-data-types">void</a> <a href="iz\serializer\izSerializer.html#objectToStream">objectToStream</a>(
+    <a href="iz\serializer\izSerializable.html">izSerializable</a> root, 
+    <a href="iz\streams\izStream.html">izStream</a> outputStream, 
+    <a href="iz\serializer\izSerFormat.html">izSerFormat</a> format)
+</code></pre>
+<div class="section "><p>Builds the IST from an izSerializable and stores sequentially in a stream.
+The process starts by a call to .declaraPropties() in the root then
+the process is lead by the the subsequent declarations.
+The data are written right after a descriptor declaration.
+</p>
+
+
+</div>
+<div class="section"><h2>Parameters</h2>
+<table class="params">
+<tr class="param"><td class="paramName">root</td><td class="paramDoc"><p>the izSerializable from where the declarations starts.
+</p>
+</td></tr>
+<tr class="param"><td class="paramName">outputStream</td><td class="paramDoc"><p>the stream where te data are written.
+</p>
+</td></tr>
+<tr class="param"><td class="paramName">format</td><td class="paramDoc"><p>the format of the serialized data.
+</p>
+</td></tr>
+</table>
+</div>
+</div></div><a class="anchor" id="istToStream"></a><div class="symbol"><div class="description"><pre><code>public <a href="http://dlang.org/type.html#basic-data-types">void</a> <a href="iz\serializer\izSerializer.html#istToStream">istToStream</a>(
+    <a href="iz\streams\izStream.html">izStream</a> outputStream, 
+    <a href="iz\serializer\izSerFormat.html">izSerFormat</a> format)
+</code></pre>
+<div class="section "><p>Saves the IST to a stream. 
+The data are grabbed in bulk therefore the descriptor linked to each
+tree node cannot be re-used.
+</p>
+
+
+</div>
+<div class="section"><h2>Parameters</h2>
+<table class="params">
+<tr class="param"><td class="paramName">outputStream</td><td class="paramDoc"><p>the stream where te data are written.
+</p>
+</td></tr>
+<tr class="param"><td class="paramName">format</td><td class="paramDoc"><p>the format of the serialized data.
+</p>
+</td></tr>
+</table>
+</div>
+</div></div><a class="anchor" id="streamToIst"></a><div class="symbol"><div class="description"><pre><code>public <a href="http://dlang.org/type.html#basic-data-types">void</a> <a href="iz\serializer\izSerializer.html#streamToIst">streamToIst</a>(
+    <a href="iz\streams\izStream.html">izStream</a> inputStream, 
+    <a href="iz\serializer\izSerFormat.html">izSerFormat</a> format)
+</code></pre>
+<div class="section "><p>Builds the IST from a stream.
+After the call the properties can only be restored manually 
+by using findNode() and restoreProperty(). 
+This function is also usefull to convert from a format to another.
+</p>
+
+
+</div>
+<div class="section"><h2>Parameters</h2>
+<table class="params">
+<tr class="param"><td class="paramName">inputStream</td><td class="paramDoc"><p>a stream containing the serialized data.
+</p>
+</td></tr>
+<tr class="param"><td class="paramName">format</td><td class="paramDoc"><p>the format of the serialized data.
+</p>
+</td></tr>
+</table>
+</div>
+</div></div><a class="anchor" id="streamToObject"></a><div class="symbol"><div class="description"><pre><code>public <a href="http://dlang.org/type.html#basic-data-types">void</a> <a href="iz\serializer\izSerializer.html#streamToObject">streamToObject</a>(
+    <a href="iz\streams\izStream.html">izStream</a> inputStream, 
+    <a href="iz\serializer\izSerializable.html">izSerializable</a> root, 
+    <a href="iz\serializer\izSerFormat.html">izSerFormat</a> format)
+</code></pre>
+<div class="section "><p>Builds the IST from a stream and restores sequentially to a root.
+The process starts by a call to .declaraPropties() in the root.
+</p>
+
+
+</div>
+<div class="section"><h2>Parameters</h2>
+<table class="params">
+<tr class="param"><td class="paramName">inputStream</td><td class="paramDoc"><p>the stream containing the serialized data.
+</p>
+</td></tr>
+<tr class="param"><td class="paramName">root</td><td class="paramDoc"><p>the izSerializable from where the declarations and the restoration starts.
+</p>
+</td></tr>
+<tr class="param"><td class="paramName">format</td><td class="paramDoc"><p>the format of the serialized data.
+</p>
+</td></tr>
+</table>
+</div>
+</div></div><a class="anchor" id="istToObject"></a><div class="symbol"><div class="description"><pre><code>public <a href="http://dlang.org/type.html#basic-data-types">void</a> <a href="iz\serializer\izSerializer.html#istToObject">istToObject</a>()
+</code></pre>
+<div class="section "><p>Fully Restores the IST. Can be called after <em>streamToIst()</em>.
+For each ISTnode and if assigned, the onWantDesscriptor event is called.
+</p>
+
+
+</div>
+</div></div><a class="anchor" id="findNode"></a><div class="symbol"><div class="description"><pre><code>public <a href="iz\serializer\izIstNode.html">izIstNode</a> <a href="iz\serializer\izSerializer.html#findNode">findNode</a>(in <a href="http://dlang.org/type.html#basic-data-types">char</a>[] descriptorName)
+</code></pre>
+<div class="section "><p>Finds the tree node matching to a property names chain.
+</p>
+
+
+</div>
+<div class="section"><h2>Parameters</h2>
+<table class="params">
+<tr class="param"><td class="paramName">descriptorName</td><td class="paramDoc"><p>the property names chain which identifies the interesting node.
+</p>
+</td></tr>
+</table>
+</div>
+<div class="section"><h2>Returns</h2>
+<p>A reference to the node which matches to the property if the call succeeds otherwise nulll.
+</p>
+
+
+</div>
+</div></div><a class="anchor" id="istToObject"></a><div class="symbol"><div class="description"><pre><code>public <a href="http://dlang.org/type.html#basic-data-types">void</a> <a href="iz\serializer\izSerializer.html#istToObject">istToObject</a>(
+    <a href="iz\serializer\izIstNode.html">izIstNode</a> node, 
+    <a href="http://dlang.org/type.html#basic-data-types">bool</a> recursive = false)
+</code></pre>
+<div class="section "><p>Restores the IST from an arbitrary tree node. 
+The process is lead by the nodeInfo associated to the node.
+If the descriptor is not defined then wantDescriptorEvent is called.
+It means that this method can be used to deserialize to an arbitrary descriptor,
+for example after a call to streamToIst().
+</p>
+
+
+</div>
+<div class="section"><h2>Parameters</h2>
+<table class="params">
+<tr class="param"><td class="paramName">node</td><td class="paramDoc"><p>the IST node from where the restoration begins. It can be determined by a call to findNode().
+</p>
+</td></tr>
+<tr class="param"><td class="paramName">recursive</td><td class="paramDoc"><p>when set to true the restoration is recursive.
+</p>
+</td></tr>
+</table>
+</div>
+</div></div><a class="anchor" id="restoreProperty"></a><div class="symbol"><div class="description"><pre><code>public <a href="http://dlang.org/type.html#basic-data-types">void</a> <a href="iz\serializer\izSerializer.html#restoreProperty">restoreProperty</a>(T)(
+    <a href="iz\serializer\izIstNode.html">izIstNode</a> node, 
+    <a href="iz\properties\izPropDescriptor.html">izPropDescriptor</a>!T* aDescriptor = null)
+</code></pre>
+<div class="section "><p>Restores a single property from a tree node using the setter of a descriptor.
+</p>
+
+
+</div>
+<div class="section"><h2>Parameters</h2>
+<table class="params">
+<tr class="param"><td class="paramName">node</td><td class="paramDoc"><p>an izIstNode. Can be determined by a call to findNode()
+</p>
+</td></tr>
+<tr class="param"><td class="paramName">aDescriptor</td><td class="paramDoc"><p>the izPropDescriptor whose setter is used to restore the node data. If not specified then the onWantDescriptor event may be called.
+</p>
+</td></tr>
+</table>
+</div>
+</div></div><a class="anchor" id="addProperty"></a><div class="symbol"><div class="description"><pre><code>public <a href="http://dlang.org/type.html#basic-data-types">void</a> <a href="iz\serializer\izSerializer.html#addProperty">addProperty</a>(T)(<a href="iz\properties\izPropDescriptor.html">izPropDescriptor</a>!T* aDescriptor) 
+if(isSerializable!T)
+</code></pre>
+<div class="section "><p>Designed to be called by an izSerializable when it needs to declare 
+a property in its declarePropeties() method.
+</p>
+
+
+</div>
+<div class="section"><p>Allowed properties:
+</p>
+<ul>
+<li>all the basic types: int, uint, char, ...
+</li>
+<li>all the basic types as array: int[], uin[], char[], ...
+</li>
+<li>the structs assignable from/to a basic type (if they include a public alias this but not only)
+</li>
+<li>the structs assignable from/to an array of basic type (this(char[]), opAssign(char[]), toString())
+</li>
+<li>the izSerializable (used to build the structure).
+</li>
+<li>any class, if it implements izSerializable. It's safer to pass some izPropDescriptor!izSerializable but izPropDescriptor!Object is easyer.
+</li>
+</ul>
+<p>Some aliases exist for each basic type (addintProperty(), addcharProperty(), ...).
+the structs are represented as the type they convert to and are not used to build the IST.
+</p>
+
+
+</div>
+</div></div><a class="anchor" id="state"></a><div class="symbol"><div class="description"><pre><code>public @property <a href="iz\serializer\izSerState.html">izSerState</a> <a href="iz\serializer\izSerializer.html#state">state</a>()
+</code></pre>
+<div class="section "><p>state is set visible to an izSerializable to let it know how the properties will be used (store: getter, restore: setter)
+</p>
+
+
+</div>
+</div></div><a class="anchor" id="storeMode"></a><div class="symbol"><div class="description"><pre><code>public @property <a href="iz\serializer\izStoreMode.html">izStoreMode</a> <a href="iz\serializer\izSerializer.html#storeMode">storeMode</a>()
+</code></pre>
+<div class="section "><p>storeMode is set visible to an izSerializable to let it adjust the way to declare the properties. 
+</p>
+
+
+</div>
+</div></div><a class="anchor" id="restoreMode"></a><div class="symbol"><div class="description"><pre><code>public @property <a href="iz\serializer\izRestoreMode.html">izRestoreMode</a> <a href="iz\serializer\izSerializer.html#restoreMode">restoreMode</a>()
+</code></pre>
+<div class="section "><p>restoreMode is set visible to an izSerializable to let it adjust the way to declare the properties. 
+</p>
+
+
+</div>
+</div></div><a class="anchor" id="serializationFormat"></a><div class="symbol"><div class="description"><pre><code>public @property <a href="iz\serializer\izSerFormat.html">izSerFormat</a> <a href="iz\serializer\izSerializer.html#serializationFormat">serializationFormat</a>()
+</code></pre>
+<div class="section "><p>serializationFormat is set visible to an izSerializable to let it adjust the way to declare the properties. 
+</p>
+
+
+</div>
+</div></div><a class="anchor" id="serializationTree"></a><div class="symbol"><div class="description"><pre><code>public @property <a href="iz\serializer\izIstNode.html">izIstNode</a> <a href="iz\serializer\izSerializer.html#serializationTree">serializationTree</a>()
+</code></pre>
+<div class="section "><p>The IST can be modified, build, cleaned from the root node
+</p>
+
+
+</div>
+</div></div><a class="anchor" id="onWantDescriptor"></a><div class="symbol"><div class="description"><pre><code>public @property <a href="iz\serializer.html#WantDescriptorEvent">WantDescriptorEvent</a> <a href="iz\serializer\izSerializer.html#onWantDescriptor">onWantDescriptor</a>()
+</code></pre>
+<div class="section "><p>Event triggered when the serializer needs a particulat property descriptor.
+</p>
+
+
+</div>
+</div></div><a class="anchor" id="onWantDescriptor"></a><div class="symbol"><div class="description"><pre><code>public @property <a href="http://dlang.org/type.html#basic-data-types">void</a> <a href="iz\serializer\izSerializer.html#onWantDescriptor">onWantDescriptor</a>(<a href="iz\serializer.html#WantDescriptorEvent">WantDescriptorEvent</a> aValue)
+</code></pre>
+<div class="section "><p>Event triggered when the serializer needs a particulat property descriptor.
+</p>
+
+
+</div>
+</div></div><div class="section members"><h2>Functions</h2><table><tr><td><a href="iz\serializer\izSerializer.html#objectToIst">objectToIst</a><span class="extrainfo"></span></td><td></td><td><p>Builds the IST from an izSerializable.
+The process starts by a call to .declareProperties() in the root then
+the process is lead by the the subsequent declarations.
+</p>
+</td></tr><tr><td><a href="iz\serializer\izSerializer.html#objectToStream">objectToStream</a><span class="extrainfo"></span></td><td></td><td><p>Builds the IST from an izSerializable and stores sequentially in a stream.
+The process starts by a call to .declaraPropties() in the root then
+the process is lead by the the subsequent declarations.
+The data are written right after a descriptor declaration.
+</p>
+</td></tr><tr><td><a href="iz\serializer\izSerializer.html#istToStream">istToStream</a><span class="extrainfo"></span></td><td></td><td><p>Saves the IST to a stream. 
+The data are grabbed in bulk therefore the descriptor linked to each
+tree node cannot be re-used.
+</p>
+</td></tr><tr><td><a href="iz\serializer\izSerializer.html#streamToIst">streamToIst</a><span class="extrainfo"></span></td><td></td><td><p>Builds the IST from a stream.
+After the call the properties can only be restored manually 
+by using findNode() and restoreProperty(). 
+This function is also usefull to convert from a format to another.
+</p>
+</td></tr><tr><td><a href="iz\serializer\izSerializer.html#streamToObject">streamToObject</a><span class="extrainfo"></span></td><td></td><td><p>Builds the IST from a stream and restores sequentially to a root.
+The process starts by a call to .declaraPropties() in the root.
+</p>
+</td></tr><tr><td><a href="iz\serializer\izSerializer.html#istToObject">istToObject</a><span class="extrainfo"></span></td><td></td><td><p>Fully Restores the IST. Can be called after <em>streamToIst()</em>.
+For each ISTnode and if assigned, the onWantDesscriptor event is called.
+</p>
+</td></tr><tr><td><a href="iz\serializer\izSerializer.html#findNode">findNode</a><span class="extrainfo"></span></td><td></td><td><p>Finds the tree node matching to a property names chain.
+</p>
+</td></tr><tr><td><a href="iz\serializer\izSerializer.html#istToObject">istToObject</a><span class="extrainfo"></span></td><td></td><td><p>Restores the IST from an arbitrary tree node. 
+The process is lead by the nodeInfo associated to the node.
+If the descriptor is not defined then wantDescriptorEvent is called.
+It means that this method can be used to deserialize to an arbitrary descriptor,
+for example after a call to streamToIst().
+</p>
+</td></tr><tr><td><a href="iz\serializer\izSerializer.html#restoreProperty">restoreProperty</a><span class="extrainfo"></span></td><td></td><td><p>Restores a single property from a tree node using the setter of a descriptor.
+</p>
+</td></tr><tr><td><a href="iz\serializer\izSerializer.html#addProperty">addProperty</a><span class="extrainfo"></span></td><td></td><td><p>Designed to be called by an izSerializable when it needs to declare 
+a property in its declarePropeties() method.
+</p>
+</td></tr><tr><td><span class="extrainfo"><span class="attribs"><span class="attr-property">@property</span></span></span><a href="iz\serializer\izSerializer.html#state">state</a><span class="extrainfo"></span></td><td></td><td><p>state is set visible to an izSerializable to let it know how the properties will be used (store: getter, restore: setter)
+</p>
+</td></tr><tr><td><span class="extrainfo"><span class="attribs"><span class="attr-property">@property</span></span></span><a href="iz\serializer\izSerializer.html#storeMode">storeMode</a><span class="extrainfo"></span></td><td></td><td><p>storeMode is set visible to an izSerializable to let it adjust the way to declare the properties. 
+</p>
+</td></tr><tr><td><span class="extrainfo"><span class="attribs"><span class="attr-property">@property</span></span></span><a href="iz\serializer\izSerializer.html#restoreMode">restoreMode</a><span class="extrainfo"></span></td><td></td><td><p>restoreMode is set visible to an izSerializable to let it adjust the way to declare the properties. 
+</p>
+</td></tr><tr><td><span class="extrainfo"><span class="attribs"><span class="attr-property">@property</span></span></span><a href="iz\serializer\izSerializer.html#serializationFormat">serializationFormat</a><span class="extrainfo"></span></td><td></td><td><p>serializationFormat is set visible to an izSerializable to let it adjust the way to declare the properties. 
+</p>
+</td></tr><tr><td><span class="extrainfo"><span class="attribs"><span class="attr-property">@property</span></span></span><a href="iz\serializer\izSerializer.html#serializationTree">serializationTree</a><span class="extrainfo"></span></td><td></td><td><p>The IST can be modified, build, cleaned from the root node
+</p>
+</td></tr><tr><td><span class="extrainfo"><span class="attribs"><span class="attr-property">@property</span></span></span><a href="iz\serializer\izSerializer.html#onWantDescriptor">onWantDescriptor</a><span class="extrainfo"></span></td><td></td><td><p>Event triggered when the serializer needs a particulat property descriptor.
+</p>
+</td></tr><tr><td><span class="extrainfo"><span class="attribs"><span class="attr-property">@property</span></span></span><a href="iz\serializer\izSerializer.html#onWantDescriptor">onWantDescriptor</a><span class="extrainfo"></span></td><td></td><td><p>Event triggered when the serializer needs a particulat property descriptor.
+</p>
+</td></tr></table>
+</div>
+</div><script>hljs.initHighlightingOnLoad();</script>
+
+</div>
+<footer>
+Generated with <a href="https://github.com/kiith-sa/harbored-mod">harbored-mod</a>
+</footer>
+</div>
+</body>
+</html>

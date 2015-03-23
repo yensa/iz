@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8"/>
+<link rel="stylesheet" type="text/css" href="../../style.css"/>
+<script src="../../highlight.pack.js"></script>
+<title>destruct</title>
+<base href="../../"/>
+<script src="search.js"></script>
+<script src="show_hide.js"></script>
+</head>
+<body>
+<div class="main">
+<div class="breadcrumbs">
+<table id="results"></table>
+<a href="index.html" class="home">⌂</a><input type="search" id="search" placeholder="Search" onkeyup="searchSubmit(this.value, event)"/>
+<small>iz.<a href=iz\types.html>types</a>.</small><span class="highlight">destruct</span>
+</div>
+<div class="toc">
+<ul><li><span class="package" onclick="show_hide('iz');">iz</span>
+<ul id="iz" style='display:block;'>
+<li><small>iz.</small><a href="iz\bitsets.html">bitsets</a></li>
+<li><small>iz.</small><a href="iz\containers.html">containers</a></li>
+<li><small>iz.</small><a href="iz\observer.html">observer</a></li>
+<li><small>iz.</small><a href="iz\properties.html">properties</a></li>
+<li><small>iz.</small><a href="iz\referencable.html">referencable</a></li>
+<li><small>iz.</small><a href="iz\serializer.html">serializer</a></li>
+<li><small>iz.</small><a href="iz\streams.html">streams</a></li>
+<li><small>iz.</small><a href="iz\temp.html">temp</a></li>
+<li><small>iz.</small><a href="iz\traits.html">traits</a></li>
+<li><span class="selected"><small>iz.</small><a href="iz\types.html">types</a></span>
+</li>
+</ul>
+</li>
+
+</ul>
+</div>
+<div class="content">
+<pre><code>public static <a href="http://dlang.org/type.html#basic-data-types">void</a> <a href="iz\types\destruct.html">destruct</a>(CT)(ref CT instance) 
+if(is(CT == class))
+</code></pre>
+<div class="section "><p>The static function destruct frees and invalidate a class instance.
+</p>
+
+
+</div>
+<div class="section"><h2>Parameters</h2>
+<table class="params">
+<tr class="param"><td class="paramName">CT</td><td class="paramDoc"><p>a class type, likely to be infered by the <em>instance</em> parameter
+</p>
+</td></tr>
+<tr class="param"><td class="paramName">instance</td><td class="paramDoc"><p>an instance of type <em>CT</em>.
+</p>
+</td></tr>
+</table>
+</div>
+<hr/><pre><code>public static <a href="http://dlang.org/type.html#basic-data-types">void</a> <a href="iz\types\destruct.html">destruct</a>(Objs...)(ref Objs objs)
+</code></pre>
+<div class="section "><p>Frees and invalidates a list of Object. 
+<em>destruct()</em> is called for each item.
+</p>
+
+
+</div>
+<div class="section"><h2>Parameters</h2>
+<table class="params">
+<tr class="param"><td class="paramName">objs</td><td class="paramDoc"><p>variadic list of Object instances.
+</p>
+</td></tr>
+</table>
+</div>
+<hr/><pre><code>public static <a href="http://dlang.org/type.html#basic-data-types">void</a> <a href="iz\types\destruct.html">destruct</a>(ST)(ref ST* instance) 
+if(is(ST == struct))
+</code></pre>
+<div class="section "><p>The static function destruct frees the memory allocated for a struct.
+</p>
+
+
+</div>
+<div class="section"><h2>Parameters</h2>
+<table class="params">
+<tr class="param"><td class="paramName">ST</td><td class="paramDoc"><p>a struct type, likely to be infered by the <em>instance</em> parameter.
+</p>
+</td></tr>
+<tr class="param"><td class="paramName">instance</td><td class="paramDoc"><p>an instance of type <em>CT</em>.
+</p>
+</td></tr>
+</table>
+</div>
+
+<script>hljs.initHighlightingOnLoad();</script>
+</div>
+</div>
+</body>
+</html>

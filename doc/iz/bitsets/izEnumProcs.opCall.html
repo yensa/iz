@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8"/>
+<link rel="stylesheet" type="text/css" href="../../style.css"/>
+<script src="../../highlight.pack.js"></script>
+<title>opCall</title>
+<base href="../../"/>
+<script src="search.js"></script>
+<script src="show_hide.js"></script>
+</head>
+<body>
+<div class="main">
+<div class="breadcrumbs">
+<table id="results"></table>
+<a href="index.html" class="home">⌂</a><input type="search" id="search" placeholder="Search" onkeyup="searchSubmit(this.value, event)"/>
+<small>iz.<a href=iz\bitsets.html>bitsets</a>.</small><span class="highlight"><a href=iz\bitsets\izEnumProcs.html>izEnumProcs</a>.opCall</span>
+</div>
+<div class="sidebar">
+<a href="iz\bitsets.html#hide-toc" class="hide" id="hide-toc">&#171;</a>
+<a href="iz\bitsets.html#show-toc" class="show" id="show-toc">&#187;</a>
+<div id="toc-id" class="toc">
+<ul><li><span class="package" onclick="show_hide('iz');">iz</span>
+<ul id="iz" style='display:block'>
+<li><span class=" selected">iz.<a href="iz\bitsets.html">bitsets</a></span>
+</li>
+<li>iz.<a href="iz\containers.html">containers</a></li>
+<li>iz.<a href="iz\observer.html">observer</a></li>
+<li>iz.<a href="iz\properties.html">properties</a></li>
+<li>iz.<a href="iz\referencable.html">referencable</a></li>
+<li>iz.<a href="iz\serializer.html">serializer</a></li>
+<li>iz.<a href="iz\streams.html">streams</a></li>
+<li>iz.<a href="iz\temp.html">temp</a></li>
+<li>iz.<a href="iz\traits.html">traits</a></li>
+<li>iz.<a href="iz\types.html">types</a></li>
+</ul>
+</li>
+
+</ul>
+</div>
+</div>
+<div class="content">
+<pre><code>public retT <a href="iz\bitsets\izEnumProcs.opCall.html">opCall</a>(CallParams...)(
+    E selector, 
+    CallParams prms)
+</code></pre>
+<div class="section "><p>calls the function matching to selector rank.
+</p>
+
+
+</div>
+<div class="section"><h2>selector</h2>
+<p> an E member.
+</p>
+
+
+</div>
+<div class="section"><h2>prms</h2>
+<p> arguments for calling the function.
+</p>
+
+
+</div>
+<hr/><pre><code>public retT[] <a href="iz\bitsets\izEnumProcs.opCall.html">opCall</a>(BS, CallParams...)(
+    BS selectors, 
+    CallParams prms) 
+if((is(BS == <a href="iz\bitsets\izBitSet.html">izBitSet</a>!(<a href="iz\bitsets\set8.html">set8</a>, E))) || (is(BS == <a href="iz\bitsets\izBitSet.html">izBitSet</a>!(<a href="iz\bitsets\set16.html">set16</a>, E))) || (is(BS == <a href="iz\bitsets\izBitSet.html">izBitSet</a>!(<a href="iz\bitsets\set32.html">set32</a>, E))) || (is(BS == <a href="iz\bitsets\izBitSet.html">izBitSet</a>!(<a href="iz\bitsets\set64.html">set64</a>, E))))
+</code></pre>
+<div class="section "><p>calls the functions matching to a set of selectors.
+</p>
+
+
+</div>
+<div class="section"><h2>selectors</h2>
+<p> a set of E.
+</p>
+
+
+</div>
+<div class="section"><h2>prms</h2>
+<p> common or selector-sepcific arguments for calling the functions.
+</p>
+
+
+</div>
+<div class="section"><h2>return</h2>
+<p> an array representing the result of each selector, by rank.
+</p>
+
+
+</div>
+<script>hljs.initHighlightingOnLoad();</script>
+
+</div>
+<footer>
+Generated with <a href="https://github.com/kiith-sa/harbored-mod">harbored-mod</a>
+</footer>
+</div>
+</body>
+</html>

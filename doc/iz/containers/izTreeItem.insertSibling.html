@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8"/>
+<link rel="stylesheet" type="text/css" href="../../style.css"/>
+<script src="../../highlight.pack.js"></script>
+<title>insertSibling</title>
+<base href="../../"/>
+<script src="search.js"></script>
+<script src="show_hide.js"></script>
+</head>
+<body>
+<div class="main">
+<div class="breadcrumbs">
+<table id="results"></table>
+<a href="index.html" class="home">⌂</a><input type="search" id="search" placeholder="Search" onkeyup="searchSubmit(this.value, event)"/>
+<small>iz.<a href=iz\containers.html>containers</a>.</small><span class="highlight"><a href=iz\containers\izTreeItem.html>izTreeItem</a>.insertSibling</span>
+</div>
+<div class="sidebar">
+<a href="iz\containers.html#hide-toc" class="hide" id="hide-toc">&#171;</a>
+<a href="iz\containers.html#show-toc" class="show" id="show-toc">&#187;</a>
+<div id="toc-id" class="toc">
+<ul><li><span class="package" onclick="show_hide('iz');">iz</span>
+<ul id="iz" style='display:block'>
+<li>iz.<a href="iz\bitsets.html">bitsets</a></li>
+<li><span class=" selected">iz.<a href="iz\containers.html">containers</a></span>
+</li>
+<li>iz.<a href="iz\observer.html">observer</a></li>
+<li>iz.<a href="iz\properties.html">properties</a></li>
+<li>iz.<a href="iz\referencable.html">referencable</a></li>
+<li>iz.<a href="iz\serializer.html">serializer</a></li>
+<li>iz.<a href="iz\streams.html">streams</a></li>
+<li>iz.<a href="iz\temp.html">temp</a></li>
+<li>iz.<a href="iz\traits.html">traits</a></li>
+<li>iz.<a href="iz\types.html">types</a></li>
+</ul>
+</li>
+
+</ul>
+</div>
+</div>
+<div class="content">
+<pre><code>public @safe final ptrdiff_t <a href="iz\containers\izTreeItem.insertSibling.html">insertSibling</a>(<a href="iz\containers\izTreeItem.html">izTreeItem</a> aSibling)
+</code></pre>
+<div class="section "><p>Inserts an item at the beginning of the list.
+Returns 0 when the operation is successful otherwise -1.
+</p>
+
+
+</div>
+<hr/><pre><code>public @safe final ptrdiff_t <a href="iz\containers\izTreeItem.insertSibling.html">insertSibling</a>(
+    size_t aPosition, 
+    <a href="iz\containers\izTreeItem.html">izTreeItem</a> aSibling)
+</code></pre>
+<div class="section "><p>Inserts aSibling before the one standing at aPosition.
+If aPosition is greater than count than aSibling is added to the end of list.
+Returns the sibling position when the operation is successful otherwise -1.
+</p>
+
+
+</div>
+<script>hljs.initHighlightingOnLoad();</script>
+
+</div>
+<footer>
+Generated with <a href="https://github.com/kiith-sa/harbored-mod">harbored-mod</a>
+</footer>
+</div>
+</body>
+</html>

@@ -1,0 +1,260 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8"/>
+<link rel="stylesheet" type="text/css" href="../../style.css"/>
+<script src="../../highlight.pack.js"></script>
+<title>izArray</title>
+<base href="../../"/>
+<script src="search.js"></script>
+<script src="show_hide.js"></script>
+</head>
+<body>
+<div class="main">
+<div class="breadcrumbs">
+<table id="results"></table>
+<a href="index.html" class="home">⌂</a><input type="search" id="search" placeholder="Search" onkeyup="searchSubmit(this.value, event)"/>
+<small>iz.<a href=iz\containers.html>containers</a>.</small><span class="highlight">izArray</span>
+</div>
+<div class="sidebar">
+<a href="iz\containers.html#hide-toc" class="hide" id="hide-toc">&#171;</a>
+<a href="iz\containers.html#show-toc" class="show" id="show-toc">&#187;</a>
+<div id="toc-id" class="toc">
+<ul><li><span class="package" onclick="show_hide('iz');">iz</span>
+<ul id="iz" style='display:block'>
+<li>iz.<a href="iz\classes.html">classes</a></li>
+<li><span class=" selected">iz.<a href="iz\containers.html">containers</a></span>
+</li>
+<li>iz.<a href="iz\enumset.html">enumset</a></li>
+<li>iz.<a href="iz\observer.html">observer</a></li>
+<li>iz.<a href="iz\properties.html">properties</a></li>
+<li>iz.<a href="iz\referencable.html">referencable</a></li>
+<li>iz.<a href="iz\serializer.html">serializer</a></li>
+<li>iz.<a href="iz\streams.html">streams</a></li>
+<li>iz.<a href="iz\types.html">types</a></li>
+</ul>
+</li>
+
+</ul>
+</div></div>
+<div class="content">
+<div class="aggregate-symbol"><div class="description"><pre><code>public struct izArray(T)
+</code></pre>
+<div class="section "><p>Parameterized, GC-free array.
+</p>
+
+
+</div>
+<div class="section"><p>izArray(T) implements a single-dimension array of uncollected memory.
+It internally preallocates the memory to minimize the reallocation fingerprints.
+</p>
+<p>Its layout differs from built-in D's dynamic arrays and they cannot be cast as T[]
+however, most of the slicing operations are possible.
+</p>
+
+
+</div>
+<div class="section"><h2>TODO</h2>
+<ul>
+<li>concatenation.
+</li>
+<li>assign from built-in arrays slices.
+</li>
+</ul>
+
+
+</div>
+</div><a class="anchor" id="granurality"></a><div class="symbol"><div class="description"><pre><code>public @property @nogc <a href="http://dlang.org/type.html#basic-data-types">uint</a> <a href="iz\containers\izArray.html#granurality">granurality</a>()
+</code></pre>
+<div class="section "><p>Indicates the memory allocation block-size.
+</p>
+
+
+</div>
+</div></div><a class="anchor" id="granularity"></a><div class="symbol"><div class="description"><pre><code>public @property @nogc <a href="http://dlang.org/type.html#basic-data-types">void</a> <a href="iz\containers\izArray.html#granularity">granularity</a>(<a href="http://dlang.org/type.html#basic-data-types">uint</a> aValue)
+</code></pre>
+<div class="section "><p>Sets the memory allocation block-size.
+aValue should be set to 16 or 4096 (the default).
+</p>
+
+
+</div>
+</div></div><a class="anchor" id="blockCount"></a><div class="symbol"><div class="description"><pre><code>public @property @nogc size_t <a href="iz\containers\izArray.html#blockCount">blockCount</a>()
+</code></pre>
+<div class="section "><p>Indicates how many block the array is made of.
+</p>
+
+
+</div>
+</div></div><a class="anchor" id="length"></a><div class="symbol"><div class="description"><pre><code>public @property @nogc size_t <a href="iz\containers\izArray.html#length">length</a>()
+</code></pre>
+<div class="section "><p>Element count.
+</p>
+
+
+</div>
+</div></div><a class="anchor" id="length"></a><div class="symbol"><div class="description"><pre><code>public @property @nogc <a href="http://dlang.org/type.html#basic-data-types">void</a> <a href="iz\containers\izArray.html#length">length</a>(size_t aLength)
+</code></pre>
+<div class="section "><p>Element count.
+</p>
+
+
+</div>
+</div></div><a class="anchor" id="ptr"></a><div class="symbol"><div class="description"><pre><code>public @property @nogc <a href="iz\types.html#izPtr">izPtr</a> <a href="iz\containers\izArray.html#ptr">ptr</a>()
+</code></pre>
+<div class="section "><p>Pointer to the first element.
+As it's always assigned It cannot be used to determine if the array is empty.
+</p>
+
+
+</div>
+</div></div><a class="anchor" id="toString"></a><div class="symbol"><div class="description"><pre><code>public @property string <a href="iz\containers\izArray.html#toString">toString</a>()
+</code></pre>
+<div class="section "><p>Returns the string representation of the elements.
+</p>
+
+
+</div>
+</div></div><a class="anchor" id="dup"></a><div class="symbol"><div class="description"><pre><code>public @property @nogc <a href="iz\containers\izArray.html">izArray</a>!T <a href="iz\containers\izArray.html#dup">dup</a>()
+</code></pre>
+<div class="section "><p>Returns a mutable copy of the array.
+</p>
+
+
+</div>
+</div></div><a class="anchor" id="opEquals"></a><div class="symbol"><div class="description"><pre><code>public @nogc <a href="http://dlang.org/type.html#basic-data-types">bool</a> <a href="iz\containers\izArray.html#opEquals">opEquals</a>(AT)(auto ref AT anArray) 
+if((is(AT == <a href="iz\containers\izArray.html">izArray</a>!T)) | (is(AT == T[])))
+</code></pre>
+<div class="section "><p>Class operators
+</p>
+
+
+</div>
+</div></div><a class="anchor" id="opIndex"></a><div class="symbol"><div class="description"><pre><code>public @nogc T <a href="iz\containers\izArray.html#opIndex">opIndex</a>(size_t i)
+</code></pre>
+<div class="section "><p>Class operators
+</p>
+
+
+</div>
+</div></div><a class="anchor" id="opIndexAssign"></a><div class="symbol"><div class="description"><pre><code>public @nogc <a href="http://dlang.org/type.html#basic-data-types">void</a> <a href="iz\containers\izArray.html#opIndexAssign">opIndexAssign</a>(
+    T anItem, 
+    size_t i)
+</code></pre>
+<div class="section "><p>Class operators
+</p>
+
+
+</div>
+</div></div><a class="anchor" id="opApply"></a><div class="symbol"><div class="description"><pre><code>public <a href="http://dlang.org/type.html#basic-data-types">int</a> <a href="iz\containers\izArray.html#opApply">opApply</a>(<a href="http://dlang.org/type.html#basic-data-types">int</a> delegate(ref T) dg)
+</code></pre>
+<div class="section "><p>Class operators
+</p>
+
+
+</div>
+</div></div><a class="anchor" id="opApplyReverse"></a><div class="symbol"><div class="description"><pre><code>public <a href="http://dlang.org/type.html#basic-data-types">int</a> <a href="iz\containers\izArray.html#opApplyReverse">opApplyReverse</a>(<a href="http://dlang.org/type.html#basic-data-types">int</a> delegate(ref T) dg)
+</code></pre>
+<div class="section "><p>Class operators
+</p>
+
+
+</div>
+</div></div><a class="anchor" id="opDollar"></a><div class="symbol"><div class="description"><pre><code>public @nogc size_t <a href="iz\containers\izArray.html#opDollar">opDollar</a>()
+</code></pre>
+<div class="section "><p>Class operators
+</p>
+
+
+</div>
+</div></div><a class="anchor" id="opAssign"></a><div class="symbol"><div class="description"><pre><code>public @nogc <a href="http://dlang.org/type.html#basic-data-types">void</a> <a href="iz\containers\izArray.html#opAssign">opAssign</a>(T[] someElements)
+</code></pre>
+<div class="section "><p>Class operators
+</p>
+
+
+</div>
+</div></div><a class="anchor" id="opSlice"></a><div class="symbol"><div class="description"><pre><code>public @nogc <a href="iz\containers\izArray.html">izArray</a>!T <a href="iz\containers\izArray.html#opSlice">opSlice</a>()
+</code></pre>
+<div class="section "><p>Class operators
+</p>
+
+
+</div>
+</div></div><a class="anchor" id="opSlice"></a><div class="symbol"><div class="description"><pre><code>public @nogc <a href="iz\containers\izArray.html">izArray</a>!T <a href="iz\containers\izArray.html#opSlice">opSlice</a>(
+    size_t aFrom, 
+    size_t aTo)
+</code></pre>
+<div class="section "><p>Class operators
+</p>
+
+
+</div>
+</div></div><a class="anchor" id="opSliceAssign"></a><div class="symbol"><div class="description"><pre><code>public @nogc T <a href="iz\containers\izArray.html#opSliceAssign">opSliceAssign</a>(T aValue)
+</code></pre>
+<div class="section "><p>Class operators
+</p>
+
+
+</div>
+</div></div><a class="anchor" id="opSliceAssign"></a><div class="symbol"><div class="description"><pre><code>public @nogc T <a href="iz\containers\izArray.html#opSliceAssign">opSliceAssign</a>(
+    T aValue, 
+    size_t aFrom, 
+    size_t aTo)
+</code></pre>
+<div class="section "><p>Class operators
+</p>
+
+
+</div>
+</div></div><div class="section members"><h2>Functions</h2><table><tr><td><span class="extrainfo"><span class="attribs"><span class="attr-property">@property</span>, <span class="attr-nogc">@nogc</span></span></span><a href="iz\containers\izArray.html#granurality">granurality</a><span class="extrainfo"></span></td><td></td><td><p>Indicates the memory allocation block-size.
+</p>
+</td></tr><tr><td><span class="extrainfo"><span class="attribs"><span class="attr-property">@property</span>, <span class="attr-nogc">@nogc</span></span></span><a href="iz\containers\izArray.html#granularity">granularity</a><span class="extrainfo"></span></td><td></td><td><p>Sets the memory allocation block-size.
+aValue should be set to 16 or 4096 (the default).
+</p>
+</td></tr><tr><td><span class="extrainfo"><span class="attribs"><span class="attr-property">@property</span>, <span class="attr-nogc">@nogc</span></span></span><a href="iz\containers\izArray.html#blockCount">blockCount</a><span class="extrainfo"></span></td><td></td><td><p>Indicates how many block the array is made of.
+</p>
+</td></tr><tr><td><span class="extrainfo"><span class="attribs"><span class="attr-property">@property</span>, <span class="attr-nogc">@nogc</span></span></span><a href="iz\containers\izArray.html#length">length</a><span class="extrainfo"></span></td><td></td><td><p>Element count.
+</p>
+</td></tr><tr><td><span class="extrainfo"><span class="attribs"><span class="attr-property">@property</span>, <span class="attr-nogc">@nogc</span></span></span><a href="iz\containers\izArray.html#length">length</a><span class="extrainfo"></span></td><td></td><td><p>Element count.
+</p>
+</td></tr><tr><td><span class="extrainfo"><span class="attribs"><span class="attr-property">@property</span>, <span class="attr-nogc">@nogc</span></span></span><a href="iz\containers\izArray.html#ptr">ptr</a><span class="extrainfo"></span></td><td></td><td><p>Pointer to the first element.
+As it's always assigned It cannot be used to determine if the array is empty.
+</p>
+</td></tr><tr><td><span class="extrainfo"><span class="attribs"><span class="attr-property">@property</span></span></span><a href="iz\containers\izArray.html#toString">toString</a><span class="extrainfo"></span></td><td></td><td><p>Returns the string representation of the elements.
+</p>
+</td></tr><tr><td><span class="extrainfo"><span class="attribs"><span class="attr-property">@property</span>, <span class="attr-nogc">@nogc</span></span></span><a href="iz\containers\izArray.html#dup">dup</a><span class="extrainfo"></span></td><td></td><td><p>Returns a mutable copy of the array.
+</p>
+</td></tr><tr><td><span class="extrainfo"><span class="attribs"><span class="attr-nogc">@nogc</span></span></span><a href="iz\containers\izArray.html#opEquals">opEquals</a><span class="extrainfo"></span></td><td></td><td><p>Class operators
+</p>
+</td></tr><tr><td><span class="extrainfo"><span class="attribs"><span class="attr-nogc">@nogc</span></span></span><a href="iz\containers\izArray.html#opIndex">opIndex</a><span class="extrainfo"></span></td><td></td><td><p>Class operators
+</p>
+</td></tr><tr><td><span class="extrainfo"><span class="attribs"><span class="attr-nogc">@nogc</span></span></span><a href="iz\containers\izArray.html#opIndexAssign">opIndexAssign</a><span class="extrainfo"></span></td><td></td><td><p>Class operators
+</p>
+</td></tr><tr><td><a href="iz\containers\izArray.html#opApply">opApply</a><span class="extrainfo"></span></td><td></td><td><p>Class operators
+</p>
+</td></tr><tr><td><a href="iz\containers\izArray.html#opApplyReverse">opApplyReverse</a><span class="extrainfo"></span></td><td></td><td><p>Class operators
+</p>
+</td></tr><tr><td><span class="extrainfo"><span class="attribs"><span class="attr-nogc">@nogc</span></span></span><a href="iz\containers\izArray.html#opDollar">opDollar</a><span class="extrainfo"></span></td><td></td><td><p>Class operators
+</p>
+</td></tr><tr><td><span class="extrainfo"><span class="attribs"><span class="attr-nogc">@nogc</span></span></span><a href="iz\containers\izArray.html#opAssign">opAssign</a><span class="extrainfo"></span></td><td></td><td><p>Class operators
+</p>
+</td></tr><tr><td><span class="extrainfo"><span class="attribs"><span class="attr-nogc">@nogc</span></span></span><a href="iz\containers\izArray.html#opSlice">opSlice</a><span class="extrainfo"></span></td><td></td><td><p>Class operators
+</p>
+</td></tr><tr><td><span class="extrainfo"><span class="attribs"><span class="attr-nogc">@nogc</span></span></span><a href="iz\containers\izArray.html#opSlice">opSlice</a><span class="extrainfo"></span></td><td></td><td><p>Class operators
+</p>
+</td></tr><tr><td><span class="extrainfo"><span class="attribs"><span class="attr-nogc">@nogc</span></span></span><a href="iz\containers\izArray.html#opSliceAssign">opSliceAssign</a><span class="extrainfo"></span></td><td></td><td><p>Class operators
+</p>
+</td></tr><tr><td><span class="extrainfo"><span class="attribs"><span class="attr-nogc">@nogc</span></span></span><a href="iz\containers\izArray.html#opSliceAssign">opSliceAssign</a><span class="extrainfo"></span></td><td></td><td><p>Class operators
+</p>
+</td></tr></table>
+</div>
+</div><script>hljs.initHighlightingOnLoad();</script>
+
+</div>
+<footer>
+Generated with <a href="https://github.com/kiith-sa/harbored-mod">harbored-mod</a>
+</footer>
+</div>
+</body>
+</html>

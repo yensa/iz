@@ -1,0 +1,345 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8"/>
+<link rel="stylesheet" type="text/css" href="../../style.css"/>
+<script src="../../highlight.pack.js"></script>
+<title>izPropDescriptor</title>
+<base href="../../"/>
+<script src="search.js"></script>
+<script src="show_hide.js"></script>
+</head>
+<body>
+<div class="main">
+<div class="breadcrumbs">
+<table id="results"></table>
+<a href="index.html" class="home">⌂</a><input type="search" id="search" placeholder="Search" onkeyup="searchSubmit(this.value, event)"/>
+<small>iz.<a href=iz\properties.html>properties</a>.</small><span class="highlight">izPropDescriptor</span>
+</div>
+<div class="sidebar">
+<a href="iz\properties.html#hide-toc" class="hide" id="hide-toc">&#171;</a>
+<a href="iz\properties.html#show-toc" class="show" id="show-toc">&#187;</a>
+<div id="toc-id" class="toc">
+<ul><li><span class="package" onclick="show_hide('iz');">iz</span>
+<ul id="iz" style='display:block'>
+<li>iz.<a href="iz\classes.html">classes</a></li>
+<li>iz.<a href="iz\containers.html">containers</a></li>
+<li>iz.<a href="iz\enumset.html">enumset</a></li>
+<li>iz.<a href="iz\observer.html">observer</a></li>
+<li><span class=" selected">iz.<a href="iz\properties.html">properties</a></span>
+</li>
+<li>iz.<a href="iz\referencable.html">referencable</a></li>
+<li>iz.<a href="iz\serializer.html">serializer</a></li>
+<li>iz.<a href="iz\streams.html">streams</a></li>
+<li>iz.<a href="iz\types.html">types</a></li>
+</ul>
+</li>
+
+</ul>
+</div></div>
+<div class="content">
+<div class="aggregate-symbol"><div class="description"><pre><code>public struct izPropDescriptor(T)
+</code></pre>
+<div class="section "><p>Describes the property of type T of an Object. Its members includes:
+<li> a setter: either as an izPropSetter method or as pointer to the field.</li>
+<li> a getter: either as an izPropGetter method or as pointer to the field.</li>
+<li> a name: optionally used, according to the context.</li>
+<li> a declarator: the Object declaring the props. the declarator is automatically set
+	when the descriptor uses at least one accessor method.</li>
+</p>
+
+
+</div>
+</div><a class="anchor" id="izPropSetter"></a><div class="symbol"><div class="description"><pre><code>alias izPropSetter = <a href="http://dlang.org/type.html#basic-data-types">void</a> delegate(T value)
+</code></pre>
+<div class="section "><p>standard setter proptotype
+</p>
+
+
+</div>
+</div></div><a class="anchor" id="izPropGetter"></a><div class="symbol"><div class="description"><pre><code>alias izPropGetter = T delegate()
+</code></pre>
+<div class="section "><p>standard getter prototype
+</p>
+
+
+</div>
+</div></div><a class="anchor" id="izPropSetterConst"></a><div class="symbol"><div class="description"><pre><code>alias izPropSetterConst = <a href="http://dlang.org/type.html#basic-data-types">void</a> delegate(const T value)
+</code></pre>
+<div class="section "><p>alternative setter kind. Internally casted as a izPropSetter.
+</p>
+
+
+</div>
+</div></div><a class="anchor" id="internalSetter"></a><div class="symbol"><div class="description"><pre><code>private <a href="http://dlang.org/type.html#basic-data-types">void</a> <a href="iz\properties\izPropDescriptor.html#internalSetter">internalSetter</a>(T value)
+</code></pre>
+<div class="section "><p>pseudo setter internally used when a T is directly written.
+</p>
+
+
+</div>
+</div></div><a class="anchor" id="internalGetter"></a><div class="symbol"><div class="description"><pre><code>private T <a href="iz\properties\izPropDescriptor.html#internalGetter">internalGetter</a>()
+</code></pre>
+<div class="section "><p>pseudo getter internally used when a T is directly read
+</p>
+
+
+</div>
+</div></div><a class="anchor" id="this"></a><div class="symbol"><div class="description"><pre><code>public this(
+    <a href="iz\properties\izPropDescriptor.html#izPropSetter">izPropSetter</a> aSetter, 
+    <a href="iz\properties\izPropDescriptor.html#izPropGetter">izPropGetter</a> aGetter, 
+    in <a href="http://dlang.org/type.html#basic-data-types">char</a>[] aName = "")
+</code></pre>
+<div class="section "><p>Constructs a property descriptor from an izPropSetter and an izPropGetter method.
+</p>
+
+
+</div>
+<div class="section "><h2>Contracts</h2><pre><code>in
+{
+    assert (aSetter);
+    assert (aGetter);
+}
+</code></pre>
+
+</div>
+</div></div><a class="anchor" id="this"></a><div class="symbol"><div class="description"><pre><code>public this(
+    <a href="iz\properties\izPropDescriptor.html#izPropSetterConst">izPropSetterConst</a> aSetter, 
+    <a href="iz\properties\izPropDescriptor.html#izPropGetter">izPropGetter</a> aGetter, 
+    in <a href="http://dlang.org/type.html#basic-data-types">char</a>[] aName = "")
+</code></pre>
+<div class="section "><p>Constructs a property descriptor from an izPropSetterConst and an izPropGetter method.
+</p>
+
+
+</div>
+<div class="section "><h2>Contracts</h2><pre><code>in
+{
+    assert (aSetter);
+    assert (aGetter);
+}
+</code></pre>
+
+</div>
+</div></div><a class="anchor" id="this"></a><div class="symbol"><div class="description"><pre><code>public this(
+    <a href="iz\properties\izPropDescriptor.html#izPropSetter">izPropSetter</a> aSetter, 
+    T* aSourceData, 
+    in <a href="http://dlang.org/type.html#basic-data-types">char</a>[] aName = "")
+</code></pre>
+<div class="section "><p>Constructs a property descriptor from an izPropSetter method and a direct variable.
+</p>
+
+
+</div>
+<div class="section "><h2>Contracts</h2><pre><code>in
+{
+    assert (aSetter);
+    assert (aSourceData);
+}
+</code></pre>
+
+</div>
+</div></div><a class="anchor" id="this"></a><div class="symbol"><div class="description"><pre><code>public this(
+    T* aData, 
+    in <a href="http://dlang.org/type.html#basic-data-types">char</a>[] aName = "")
+</code></pre>
+<div class="section "><p>Constructs a property descriptor from a single variable used as source/target
+</p>
+
+
+</div>
+<div class="section "><h2>Contracts</h2><pre><code>in
+{
+    assert (aData);
+}
+</code></pre>
+
+</div>
+</div></div><a class="anchor" id="define"></a><div class="symbol"><div class="description"><pre><code>public <a href="http://dlang.org/type.html#basic-data-types">void</a> <a href="iz\properties\izPropDescriptor.html#define">define</a>(
+    <a href="iz\properties\izPropDescriptor.html#izPropSetter">izPropSetter</a> aSetter, 
+    <a href="iz\properties\izPropDescriptor.html#izPropGetter">izPropGetter</a> aGetter, 
+    in <a href="http://dlang.org/type.html#basic-data-types">char</a>[] aName = "")
+</code></pre>
+<div class="section "><p>Defines a property descriptor from an izPropSetter and an izPropGetter.
+</p>
+
+
+</div>
+</div></div><a class="anchor" id="define"></a><div class="symbol"><div class="description"><pre><code>public <a href="http://dlang.org/type.html#basic-data-types">void</a> <a href="iz\properties\izPropDescriptor.html#define">define</a>(
+    <a href="iz\properties\izPropDescriptor.html#izPropSetter">izPropSetter</a> aSetter, 
+    T* aSourceData, 
+    in <a href="http://dlang.org/type.html#basic-data-types">char</a>[] aName = "")
+</code></pre>
+<div class="section "><p>Defines a property descriptor from an izPropSetter method and a direct variable.
+</p>
+
+
+</div>
+</div></div><a class="anchor" id="define"></a><div class="symbol"><div class="description"><pre><code>public <a href="http://dlang.org/type.html#basic-data-types">void</a> <a href="iz\properties\izPropDescriptor.html#define">define</a>(
+    T* aData, 
+    in <a href="http://dlang.org/type.html#basic-data-types">char</a>[] aName = "", 
+    Object aDeclarator = null)
+</code></pre>
+<div class="section "><p>Defines a property descriptor from a single variable used as source/target
+</p>
+
+
+</div>
+</div></div><a class="anchor" id="setter"></a><div class="symbol"><div class="description"><pre><code>public @property <a href="http://dlang.org/type.html#basic-data-types">void</a> <a href="iz\properties\izPropDescriptor.html#setter">setter</a>(<a href="iz\properties\izPropDescriptor.html#izPropSetter">izPropSetter</a> aSetter)
+</code></pre>
+<div class="section "><p>Sets the property setter using a standard method.
+</p>
+
+
+</div>
+</div></div><a class="anchor" id="setter"></a><div class="symbol"><div class="description"><pre><code>public @property <a href="iz\properties\izPropDescriptor.html#izPropSetter">izPropSetter</a> <a href="iz\properties\izPropDescriptor.html#setter">setter</a>()
+</code></pre>
+<div class="section "><p>Sets the property setter using a standard method.
+</p>
+
+
+</div>
+</div></div><a class="anchor" id="setDirectTarget"></a><div class="symbol"><div class="description"><pre><code>public <a href="http://dlang.org/type.html#basic-data-types">void</a> <a href="iz\properties\izPropDescriptor.html#setDirectTarget">setDirectTarget</a>(T* aLoc)
+</code></pre>
+<div class="section "><p>Sets the property setter using a pointer to a variable
+</p>
+
+
+</div>
+</div></div><a class="anchor" id="set"></a><div class="symbol"><div class="description"><pre><code>public <a href="http://dlang.org/type.html#basic-data-types">void</a> <a href="iz\properties\izPropDescriptor.html#set">set</a>(T aValue)
+</code></pre>
+<div class="section "><p>Sets the property value
+</p>
+
+
+</div>
+</div></div><a class="anchor" id="getter"></a><div class="symbol"><div class="description"><pre><code>public @property <a href="http://dlang.org/type.html#basic-data-types">void</a> <a href="iz\properties\izPropDescriptor.html#getter">getter</a>(<a href="iz\properties\izPropDescriptor.html#izPropGetter">izPropGetter</a> aGetter)
+</code></pre>
+<div class="section "><p>Sets the property getter using a standard method.
+</p>
+
+
+</div>
+</div></div><a class="anchor" id="getter"></a><div class="symbol"><div class="description"><pre><code>public @property <a href="iz\properties\izPropDescriptor.html#izPropGetter">izPropGetter</a> <a href="iz\properties\izPropDescriptor.html#getter">getter</a>()
+</code></pre>
+<div class="section "><p>Sets the property getter using a standard method.
+</p>
+
+
+</div>
+</div></div><a class="anchor" id="setDirectSource"></a><div class="symbol"><div class="description"><pre><code>public <a href="http://dlang.org/type.html#basic-data-types">void</a> <a href="iz\properties\izPropDescriptor.html#setDirectSource">setDirectSource</a>(T* aLoc)
+</code></pre>
+<div class="section "><p>Sets the property getter using a pointer to a variable
+</p>
+
+
+</div>
+</div></div><a class="anchor" id="get"></a><div class="symbol"><div class="description"><pre><code>public T <a href="iz\properties\izPropDescriptor.html#get">get</a>()
+</code></pre>
+<div class="section "><p>Gets the property value
+</p>
+
+
+</div>
+</div></div><a class="anchor" id="access"></a><div class="symbol"><div class="description"><pre><code>public @property const(<a href="iz\properties\izPropAccess.html">izPropAccess</a>) <a href="iz\properties\izPropDescriptor.html#access">access</a>()
+</code></pre>
+<div class="section "><p>Information about the prop accessibility
+</p>
+
+
+</div>
+</div></div><a class="anchor" id="name"></a><div class="symbol"><div class="description"><pre><code>public @property <a href="http://dlang.org/type.html#basic-data-types">void</a> <a href="iz\properties\izPropDescriptor.html#name">name</a>(in <a href="http://dlang.org/type.html#basic-data-types">char</a>[] aName)
+</code></pre>
+<div class="section "><p>Defines a string used to identify the prop
+</p>
+
+
+</div>
+</div></div><a class="anchor" id="name"></a><div class="symbol"><div class="description"><pre><code>public @property string <a href="iz\properties\izPropDescriptor.html#name">name</a>()
+</code></pre>
+<div class="section "><p>Defines a string used to identify the prop
+</p>
+
+
+</div>
+</div></div><a class="anchor" id="declarator"></a><div class="symbol"><div class="description"><pre><code>public @property <a href="http://dlang.org/type.html#basic-data-types">void</a> <a href="iz\properties\izPropDescriptor.html#declarator">declarator</a>(Object aDeclarator)
+</code></pre>
+<div class="section "><p>Defines the object declaring the property.
+</p>
+
+
+</div>
+</div></div><a class="anchor" id="declarator"></a><div class="symbol"><div class="description"><pre><code>public @property Object <a href="iz\properties\izPropDescriptor.html#declarator">declarator</a>()
+</code></pre>
+<div class="section "><p>Defines the object declaring the property.
+</p>
+
+
+</div>
+</div></div><div class="section members"><h2>Aliases</h2><table><tr><td><a href="iz\properties\izPropDescriptor.html#izPropSetter">izPropSetter</a></td><td><pre><code><a href="http://dlang.org/type.html#basic-data-types">void</a> delegate(T value)
+</code></pre>
+</td><td><p>standard setter proptotype
+</p>
+</td></tr><tr><td><a href="iz\properties\izPropDescriptor.html#izPropGetter">izPropGetter</a></td><td><pre><code>T delegate()
+</code></pre>
+</td><td><p>standard getter prototype
+</p>
+</td></tr><tr><td><a href="iz\properties\izPropDescriptor.html#izPropSetterConst">izPropSetterConst</a></td><td><pre><code><a href="http://dlang.org/type.html#basic-data-types">void</a> delegate(const T value)
+</code></pre>
+</td><td><p>alternative setter kind. Internally casted as a izPropSetter.
+</p>
+</td></tr></table><h2>Functions</h2><table><tr><td><a href="iz\properties\izPropDescriptor.html#internalSetter">internalSetter</a><span class="extrainfo"></span></td><td></td><td><p>pseudo setter internally used when a T is directly written.
+</p>
+</td></tr><tr><td><a href="iz\properties\izPropDescriptor.html#internalGetter">internalGetter</a><span class="extrainfo"></span></td><td></td><td><p>pseudo getter internally used when a T is directly read
+</p>
+</td></tr><tr><td><a href="iz\properties\izPropDescriptor.html#this">this</a></td><td></td><td><p>Constructs a property descriptor from an izPropSetter and an izPropGetter method.
+</p>
+</td></tr><tr><td><a href="iz\properties\izPropDescriptor.html#this">this</a></td><td></td><td><p>Constructs a property descriptor from an izPropSetterConst and an izPropGetter method.
+</p>
+</td></tr><tr><td><a href="iz\properties\izPropDescriptor.html#this">this</a></td><td></td><td><p>Constructs a property descriptor from an izPropSetter method and a direct variable.
+</p>
+</td></tr><tr><td><a href="iz\properties\izPropDescriptor.html#this">this</a></td><td></td><td><p>Constructs a property descriptor from a single variable used as source/target
+</p>
+</td></tr><tr><td><a href="iz\properties\izPropDescriptor.html#define">define</a><span class="extrainfo"></span></td><td></td><td><p>Defines a property descriptor from an izPropSetter and an izPropGetter.
+</p>
+</td></tr><tr><td><a href="iz\properties\izPropDescriptor.html#define">define</a><span class="extrainfo"></span></td><td></td><td><p>Defines a property descriptor from an izPropSetter method and a direct variable.
+</p>
+</td></tr><tr><td><a href="iz\properties\izPropDescriptor.html#define">define</a><span class="extrainfo"></span></td><td></td><td><p>Defines a property descriptor from a single variable used as source/target
+</p>
+</td></tr><tr><td><span class="extrainfo"><span class="attribs"><span class="attr-property">@property</span></span></span><a href="iz\properties\izPropDescriptor.html#setter">setter</a><span class="extrainfo"></span></td><td></td><td><p>Sets the property setter using a standard method.
+</p>
+</td></tr><tr><td><span class="extrainfo"><span class="attribs"><span class="attr-property">@property</span></span></span><a href="iz\properties\izPropDescriptor.html#setter">setter</a><span class="extrainfo"></span></td><td></td><td><p>Sets the property setter using a standard method.
+</p>
+</td></tr><tr><td><a href="iz\properties\izPropDescriptor.html#setDirectTarget">setDirectTarget</a><span class="extrainfo"></span></td><td></td><td><p>Sets the property setter using a pointer to a variable
+</p>
+</td></tr><tr><td><a href="iz\properties\izPropDescriptor.html#set">set</a><span class="extrainfo"></span></td><td></td><td><p>Sets the property value
+</p>
+</td></tr><tr><td><span class="extrainfo"><span class="attribs"><span class="attr-property">@property</span></span></span><a href="iz\properties\izPropDescriptor.html#getter">getter</a><span class="extrainfo"></span></td><td></td><td><p>Sets the property getter using a standard method.
+</p>
+</td></tr><tr><td><span class="extrainfo"><span class="attribs"><span class="attr-property">@property</span></span></span><a href="iz\properties\izPropDescriptor.html#getter">getter</a><span class="extrainfo"></span></td><td></td><td><p>Sets the property getter using a standard method.
+</p>
+</td></tr><tr><td><a href="iz\properties\izPropDescriptor.html#setDirectSource">setDirectSource</a><span class="extrainfo"></span></td><td></td><td><p>Sets the property getter using a pointer to a variable
+</p>
+</td></tr><tr><td><a href="iz\properties\izPropDescriptor.html#get">get</a><span class="extrainfo"></span></td><td></td><td><p>Gets the property value
+</p>
+</td></tr><tr><td><span class="extrainfo"><span class="attribs"><span class="attr-property">@property</span></span></span><a href="iz\properties\izPropDescriptor.html#access">access</a><span class="extrainfo"></span></td><td></td><td><p>Information about the prop accessibility
+</p>
+</td></tr><tr><td><span class="extrainfo"><span class="attribs"><span class="attr-property">@property</span></span></span><a href="iz\properties\izPropDescriptor.html#name">name</a><span class="extrainfo"></span></td><td></td><td><p>Defines a string used to identify the prop
+</p>
+</td></tr><tr><td><span class="extrainfo"><span class="attribs"><span class="attr-property">@property</span></span></span><a href="iz\properties\izPropDescriptor.html#name">name</a><span class="extrainfo"></span></td><td></td><td><p>Defines a string used to identify the prop
+</p>
+</td></tr><tr><td><span class="extrainfo"><span class="attribs"><span class="attr-property">@property</span></span></span><a href="iz\properties\izPropDescriptor.html#declarator">declarator</a><span class="extrainfo"></span></td><td></td><td><p>Defines the object declaring the property.
+</p>
+</td></tr><tr><td><span class="extrainfo"><span class="attribs"><span class="attr-property">@property</span></span></span><a href="iz\properties\izPropDescriptor.html#declarator">declarator</a><span class="extrainfo"></span></td><td></td><td><p>Defines the object declaring the property.
+</p>
+</td></tr></table>
+</div>
+</div><script>hljs.initHighlightingOnLoad();</script>
+
+</div>
+<footer>
+Generated with <a href="https://github.com/kiith-sa/harbored-mod">harbored-mod</a>
+</footer>
+</div>
+</body>
+</html>

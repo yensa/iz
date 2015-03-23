@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8"/>
+<link rel="stylesheet" type="text/css" href="../../style.css"/>
+<script src="../../highlight.pack.js"></script>
+<title>izStaticList</title>
+<base href="../../"/>
+<script src="search.js"></script>
+<script src="show_hide.js"></script>
+</head>
+<body>
+<div class="main">
+<div class="breadcrumbs">
+<table id="results"></table>
+<a href="index.html" class="home">⌂</a><input type="search" id="search" placeholder="Search" onkeyup="searchSubmit(this.value, event)"/>
+<small>iz.<a href=iz\containers.html>containers</a>.</small><span class="highlight">izStaticList</span>
+</div>
+<div class="sidebar">
+<a href="iz\containers.html#hide-toc" class="hide" id="hide-toc">&#171;</a>
+<a href="iz\containers.html#show-toc" class="show" id="show-toc">&#187;</a>
+<div id="toc-id" class="toc">
+<ul><li><span class="package" onclick="show_hide('iz');">iz</span>
+<ul id="iz" style='display:block'>
+<li>iz.<a href="iz\classes.html">classes</a></li>
+<li><span class=" selected">iz.<a href="iz\containers.html">containers</a></span>
+</li>
+<li>iz.<a href="iz\enumset.html">enumset</a></li>
+<li>iz.<a href="iz\observer.html">observer</a></li>
+<li>iz.<a href="iz\properties.html">properties</a></li>
+<li>iz.<a href="iz\referencable.html">referencable</a></li>
+<li>iz.<a href="iz\serializer.html">serializer</a></li>
+<li>iz.<a href="iz\streams.html">streams</a></li>
+<li>iz.<a href="iz\types.html">types</a></li>
+</ul>
+</li>
+
+</ul>
+</div></div>
+<div class="content">
+<div class="aggregate-symbol"><div class="description"><pre><code>public class izStaticList(T) : <a href="iz\containers\izList.html">izList</a>!T
+</code></pre>
+<div class="section "><p>An izList implementation, fast to be iterated, slow to be reorganized.
+Encapsulates an izArray!T and interfaces it as an izList.
+</p>
+
+
+</div>
+</div><a class="anchor" id="add"></a><div class="symbol"><div class="description"><pre><code>public ptrdiff_t <a href="iz\containers\izStaticList.html#add">add</a>(T anItem)
+</code></pre>
+<div class="section "><p>Adds an item at the end of the list.
+To be preferred in this izList implementation.
+</p>
+
+
+</div>
+</div></div><a class="anchor" id="insert"></a><div class="symbol"><div class="description"><pre><code>public ptrdiff_t <a href="iz\containers\izStaticList.html#insert">insert</a>(T anItem)
+</code></pre>
+<div class="section "><p>Inserts an item at the beginning of the list.
+To be avoided in this izList implementation.
+</p>
+
+
+</div>
+</div></div><a class="anchor" id="insert"></a><div class="symbol"><div class="description"><pre><code>public ptrdiff_t <a href="iz\containers\izStaticList.html#insert">insert</a>(
+    size_t aPosition, 
+    T anItem)
+</code></pre>
+<div class="section "><p>Inserts an item at the beginning of the list.
+To be avoided in this izList implementation.
+</p>
+
+
+</div>
+</div></div><div class="section members"><h2>Functions</h2><table><tr><td><a href="iz\containers\izStaticList.html#add">add</a><span class="extrainfo"></span></td><td></td><td><p>Adds an item at the end of the list.
+To be preferred in this izList implementation.
+</p>
+</td></tr><tr><td><a href="iz\containers\izStaticList.html#insert">insert</a><span class="extrainfo"></span></td><td></td><td><p>Inserts an item at the beginning of the list.
+To be avoided in this izList implementation.
+</p>
+</td></tr><tr><td><a href="iz\containers\izStaticList.html#insert">insert</a><span class="extrainfo"></span></td><td></td><td><p>Inserts an item at the beginning of the list.
+To be avoided in this izList implementation.
+</p>
+</td></tr></table>
+</div>
+</div><script>hljs.initHighlightingOnLoad();</script>
+
+</div>
+<footer>
+Generated with <a href="https://github.com/kiith-sa/harbored-mod">harbored-mod</a>
+</footer>
+</div>
+</body>
+</html>

@@ -1,0 +1,260 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8"/>
+<link rel="stylesheet" type="text/css" href="../../style.css"/>
+<script src="../../highlight.pack.js"></script>
+<title>izEnumProcs</title>
+<base href="../../"/>
+<script src="search.js"></script>
+<script src="show_hide.js"></script>
+</head>
+<body>
+<div class="main">
+<div class="breadcrumbs">
+<table id="results"></table>
+<a href="index.html" class="home">⌂</a><input type="search" id="search" placeholder="Search" onkeyup="searchSubmit(this.value, event)"/>
+<small>iz.<a href=iz\bitsets.html>bitsets</a>.</small><span class="highlight">izEnumProcs</span>
+</div>
+<div class="sidebar">
+<a href="iz\bitsets.html#hide-toc" class="hide" id="hide-toc">&#171;</a>
+<a href="iz\bitsets.html#show-toc" class="show" id="show-toc">&#187;</a>
+<div id="toc-id" class="toc">
+<ul><li><span class="package" onclick="show_hide('iz');">iz</span>
+<ul id="iz" style='display:block'>
+<li><span class=" selected">iz.<a href="iz\bitsets.html">bitsets</a></span>
+</li>
+<li>iz.<a href="iz\classes.html">classes</a></li>
+<li>iz.<a href="iz\containers.html">containers</a></li>
+<li>iz.<a href="iz\observer.html">observer</a></li>
+<li>iz.<a href="iz\properties.html">properties</a></li>
+<li>iz.<a href="iz\referencable.html">referencable</a></li>
+<li>iz.<a href="iz\serializer.html">serializer</a></li>
+<li>iz.<a href="iz\streams.html">streams</a></li>
+<li>iz.<a href="iz\types.html">types</a></li>
+</ul>
+</li>
+
+</ul>
+</div></div>
+<div class="content">
+<div class="aggregate-symbol"><div class="description"><pre><code>public struct izEnumProcs(E, T)
+if(<a href="iz\bitsets.html#isCallableFromEnum">isCallableFromEnum</a>!(T, E))
+</code></pre>
+<div class="section "><p>CallTable based on an enum. It can be compared to an associative array of type E[T].
+Additionally a bitset can be used to fire a burst of call.
+</p>
+
+
+</div>
+<div class="section"><h2>E</h2>
+<p> an enum.
+</p>
+
+
+</div>
+<div class="section"><h2>T</h2>
+<p> a callable type.
+</p>
+
+
+</div>
+<div class="section "><h2>Example</h2>
+<div class="section ">operator operations
+
+</div>
+<pre><code>
+alias bs8 = <a href="iz\bitsets\izBitSet.html">izBitSet</a>!(<a href="iz\bitsets.html#set8">set8</a>,a8);
+bs8 set = bs8(a8.a0,a8.a1,a8.a2,a8.a3,a8.a4,a8.a5,a8.a6,a8.a7);
+assert(set == 0b1111_1111);
+assert(set.all);
+set = set - a8.a0;
+assert(set == 0b1111_1110);
+set = set - a8.a1;
+assert(set == 0b1111_1100);
+set = set - a8.a7;
+assert(set == 0b0111_1100);
+set = 0;
+assert(set.none);
+assert(set == 0b0000_0000);
+set = set + a8.a4;
+assert(set == 0b0001_0000);
+set = set + a8.a5;
+assert(set != 0b0001_0000);
+set = 0;
+assert(set == 0b0000_0000);
+set = set + [a8.a0, a8.a1, a8.a3];
+assert(set == 0b0000_1011);
+set = set - [a8.a1, a8.a3];
+assert(set == 0b0000_001);
+set = set.max;
+set = set - [a8.a5,a8.a6,a8.a7];
+assert(set == [a8.a0,a8.a1,a8.a2,a8.a3,a8.a4]);
+set = [a8.a0,a8.a2,a8.a4];
+assert(set == 0b0001_0101);
+set = [a8.a0,a8.a1];
+assert(set == 0b0000_0011);
+set += [a8.a2,a8.a3];
+assert(set == 0b0000_1111);
+set -= [a8.a0,a8.a1];
+assert(set == 0b0000_1100);
+version(coeditmessages)
+    writeln("<a href="iz\bitsets\izBitSet.html">izBitSet</a> passed the tests(operators)");
+
+</code></pre>
+
+</div>
+<div class="section "><h2>Example</h2>
+<div class="section ">callprocs
+
+</div>
+<pre><code>
+enum A {t1=8,t2,t3}
+void At1(){}
+void At2(){}
+void At3(){}
+
+auto ACaller = <a href="iz\bitsets\izEnumProcs.html">izEnumProcs</a>!(A, typeof(&At1))(&At1,&At2,&At3);
+
+int Bt1(int p){return 10 + p;}
+int Bt2(int p){return 20 + p;}
+int Bt3(int p){return 30 + p;}
+auto BCaller = <a href="iz\bitsets\izEnumProcs.html">izEnumProcs</a>!(A, typeof(&Bt1))(&Bt1,&Bt2,&Bt3);
+assert( BCaller(A.t1, 1) == 11);
+assert( BCaller(A.t2, 2) == 22);
+assert( BCaller(A.t3, 3) == 33);
+
+auto bs = <a href="iz\bitsets\izBitSet.html">izBitSet</a>!(<a href="iz\bitsets.html#set8">set8</a>,A)();
+bs.include(A.t1,A.t3);
+
+auto arr0 = BCaller(bs,8);
+assert(arr0[0] == 18);
+assert(arr0[1] == 0);
+assert(arr0[2] == 38);
+
+bs.include(A.t2);
+auto arr1 = BCaller(bs,[4,5,6]);
+assert(arr1[0] == 14);
+assert(arr1[1] == 25);
+assert(arr1[2] == 36);
+
+int Ct1(int p[2]){return p[0] + p[1];}
+int Ct2(int p[2]){return p[0] * p[1];}
+int Ct3(int p[2]){return p[0] - p[1];}
+auto CCaller = <a href="iz\bitsets\izEnumProcs.html">izEnumProcs</a>!(A, typeof(&Ct1))(&Ct1,&Ct2,&Ct3);
+assert(bs.all);
+auto arr2 = CCaller(bs,[cast(int[2])[2,2],cast(int[2])[3,3],cast(int[2])[9,8]]);
+assert(arr2[0] == 4);
+assert(arr2[1] == 9);
+assert(arr2[2] == 1);
+
+int Dt1(int p, int c, int m){return 1 + p + c + m;}
+int Dt2(int p, int c, int m){return 2 + p + c + m;}
+int Dt3(int p, int c, int m){return 3 + p + c + m;}
+auto DCaller = <a href="iz\bitsets\izEnumProcs.html">izEnumProcs</a>!(A, typeof(&Dt1))(&Dt1,&Dt2,&Dt3);
+assert(bs.all);
+auto arr3 = DCaller(bs,1,2,3);
+assert(arr3[0] == 7);
+assert(arr3[1] == 8);
+assert(arr3[2] == 9);
+
+version(coeditmessages)
+    writeln("<a href="iz\bitsets\izEnumProcs.html">izEnumProcs</a> passed the tests");
+
+</code></pre>
+
+</div>
+</div><a class="anchor" id="this"></a><div class="symbol"><div class="description"><pre><code>public nothrow this(A...)(A a)
+</code></pre>
+<div class="section "><p>constructs an enumCallee with a set of T.
+</p>
+
+
+</div>
+<div class="section"><h2>a</h2>
+<p> a list of T.
+</p>
+
+
+</div>
+</div></div><a class="anchor" id="this"></a><div class="symbol"><div class="description"><pre><code>public nothrow this(T[] someItems)
+</code></pre>
+<div class="section "><p>constructs an enumCallee with an array of T.
+</p>
+
+
+</div>
+<div class="section"><h2>someItems</h2>
+<p> an array of T.
+</p>
+
+
+</div>
+</div></div><a class="anchor" id="opCall"></a><div class="symbol"><div class="description"><pre><code>public retT <a href="iz\bitsets\izEnumProcs.html#opCall">opCall</a>(CallParams...)(
+    E selector, 
+    CallParams prms)
+</code></pre>
+<div class="section "><p>calls the function matching to selector rank.
+</p>
+
+
+</div>
+<div class="section"><h2>selector</h2>
+<p> an E member.
+</p>
+
+
+</div>
+<div class="section"><h2>prms</h2>
+<p> arguments for calling the function.
+</p>
+
+
+</div>
+</div></div><a class="anchor" id="opCall"></a><div class="symbol"><div class="description"><pre><code>public retT[] <a href="iz\bitsets\izEnumProcs.html#opCall">opCall</a>(BS, CallParams...)(
+    BS selectors, 
+    CallParams prms) 
+if((is(BS == <a href="iz\bitsets\izBitSet.html">izBitSet</a>!(<a href="iz\bitsets.html#set8">set8</a>, E))) || (is(BS == <a href="iz\bitsets\izBitSet.html">izBitSet</a>!(<a href="iz\bitsets.html#set16">set16</a>, E))) || (is(BS == <a href="iz\bitsets\izBitSet.html">izBitSet</a>!(<a href="iz\bitsets.html#set32">set32</a>, E))) || (is(BS == <a href="iz\bitsets\izBitSet.html">izBitSet</a>!(<a href="iz\bitsets.html#set64">set64</a>, E))))
+</code></pre>
+<div class="section "><p>calls the functions matching to a set of selectors.
+</p>
+
+
+</div>
+<div class="section"><h2>selectors</h2>
+<p> a set of E.
+</p>
+
+
+</div>
+<div class="section"><h2>prms</h2>
+<p> common or selector-sepcific arguments for calling the functions.
+</p>
+
+
+</div>
+<div class="section"><h2>return</h2>
+<p> an array representing the result of each selector, by rank.
+</p>
+
+
+</div>
+</div></div><div class="section members"><h2>Functions</h2><table><tr><td><a href="iz\bitsets\izEnumProcs.html#this">this</a></td><td></td><td><p>constructs an enumCallee with a set of T.
+</p>
+</td></tr><tr><td><a href="iz\bitsets\izEnumProcs.html#this">this</a></td><td></td><td><p>constructs an enumCallee with an array of T.
+</p>
+</td></tr><tr><td><a href="iz\bitsets\izEnumProcs.html#opCall">opCall</a><span class="extrainfo"></span></td><td></td><td><p>calls the function matching to selector rank.
+</p>
+</td></tr><tr><td><a href="iz\bitsets\izEnumProcs.html#opCall">opCall</a><span class="extrainfo"></span></td><td></td><td><p>calls the functions matching to a set of selectors.
+</p>
+</td></tr></table>
+</div>
+</div><script>hljs.initHighlightingOnLoad();</script>
+
+</div>
+<footer>
+Generated with <a href="https://github.com/kiith-sa/harbored-mod">harbored-mod</a>
+</footer>
+</div>
+</body>
+</html>
