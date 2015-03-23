@@ -217,7 +217,7 @@ public struct izSerNodeInfo
     izSerType type;
     izPtr   descriptor;
     ubyte[] value;
-    char[]  name;
+    string  name;
     uint    level;
     bool    isArray;
     bool    isDamaged;
@@ -634,7 +634,7 @@ void readText(izStream stream, izIstNode istNode)
     identifier = identifier.init;
     while(propText[i] != ' ') 
         identifier ~= propText[i++];
-    istNode.nodeInfo.name = identifier; 
+    istNode.nodeInfo.name = identifier.idup; 
     
     // name value separators
     i++;
@@ -750,13 +750,13 @@ void readBin(izStream stream, izIstNode istNode)
     istNode.nodeInfo.isArray = cast(bool) data[5];      
     // name length then name;
     datalength = *cast(uint*) (data.ptr + 6);
-    istNode.nodeInfo.name = cast(char[]) (data[10.. 10 + datalength].dup); 
+    istNode.nodeInfo.name = cast(string) data[10.. 10 + datalength].idup; 
     beg =  10 +  datalength;      
     // value length then value
     version(LittleEndian)
     {
         datalength = *cast(uint*) (data.ptr + beg);
-        istNode.nodeInfo.value = data[beg + 4 .. beg + 4 + datalength].dup;    
+        istNode.nodeInfo.value = data[beg + 4 .. beg + 4 + datalength];    
     }
     else
     {
@@ -1349,9 +1349,11 @@ version(unittest)
 
     unittest 
     {
-        testByFormat!(izSerFormat.iztxt)();
-        testByFormat!(izSerFormat.izbin)();
-        testByFormat!(izSerFormat.json)();
+        foreach(fmt;EnumMembers!izSerFormat)
+            testByFormat!fmt();
+        //testByFormat!(izSerFormat.iztxt)();
+        //testByFormat!(izSerFormat.izbin)();
+        //testByFormat!(izSerFormat.json)();
     }
     
     class Referenced1 {}
