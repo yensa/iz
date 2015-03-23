@@ -10,12 +10,6 @@ object _1: TCEProject
       outputOptions.optimizations = True
       outputOptions.release = True
       pathsOptions.outputFilename = 'lib\iz.lib'
-      preBuildProcess.options = []
-      preBuildProcess.showWindow = swoNone
-      postBuildProcess.options = []
-      postBuildProcess.showWindow = swoNone
-      runOptions.options = []
-      runOptions.showWindow = swoNone
     end  
     item
       name = 'debug'
@@ -26,12 +20,6 @@ object _1: TCEProject
       outputOptions.binaryKind = staticlib
       outputOptions.boundsCheck = onAlways
       pathsOptions.outputFilename = 'lib\iz.lib'
-      preBuildProcess.options = []
-      preBuildProcess.showWindow = swoNone
-      postBuildProcess.options = []
-      postBuildProcess.showWindow = swoNone
-      runOptions.options = []
-      runOptions.showWindow = swoNone
     end  
     item
       name = 'unittest'
@@ -44,10 +32,6 @@ object _1: TCEProject
         'coeditmessages'
       )
       pathsOptions.outputFilename = 'temp\iztests.exe'
-      preBuildProcess.options = []
-      preBuildProcess.showWindow = swoNone
-      postBuildProcess.options = []
-      postBuildProcess.showWindow = swoNone
       runOptions.options = [poUsePipes, poStderrToOutPut]
       runOptions.showWindow = swoHIDE
     end  
@@ -61,12 +45,6 @@ object _1: TCEProject
       outputOptions.binaryKind = staticlib
       outputOptions.boundsCheck = onAlways
       pathsOptions.outputFilename = 'lib\iz.lib'
-      preBuildProcess.options = []
-      preBuildProcess.showWindow = swoNone
-      postBuildProcess.options = []
-      postBuildProcess.showWindow = swoNone
-      runOptions.options = []
-      runOptions.showWindow = swoNone
     end>
   Sources.Strings = (
     'import\iz\types.d'
