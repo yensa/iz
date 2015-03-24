@@ -870,7 +870,7 @@ private template dlistPayload(T)
 			mov     RAX, [RCX + dataOffs];
 			ret;
 		}
-		else version(linux64) asm @nogc nothrow
+		else version(Nux64) asm @nogc nothrow
 		{
 			naked;
 			mov     RAX, [RDI + dataOffs];
