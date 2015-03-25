@@ -234,7 +234,7 @@ public struct izSerNodeInfo
  * stop = the callee can set this value to true in order to stop the restoration 
  * process. According to the serialization context, this value can be noop.
  */
-alias WantDescriptorEvent = void delegate(const(izSerNodeInfo*) nodeInfo, out void * matchingDescriptor, out bool stop);
+alias WantDescriptorEvent = void delegate(izIstNode node, out void * matchingDescriptor, out bool stop);
 
 // add double quotes escape 
 char[] add_dqe(char[] input)
@@ -911,17 +911,23 @@ public class izSerializer
             fRootNode.setDescriptor(&fRootDescr);
         }
         
-        bool doWantDescriptor(izIstNode node, out bool stop)
+        bool restoreFromEvent(izIstNode node, out bool stop)
         {
-            if(!fOnWantDescriptor) 
+            if (!fOnWantDescriptor) 
                 return false;
             void * descr;
             bool done;
-            fOnWantDescriptor(node.nodeInfo, descr, stop);
+            fOnWantDescriptor(node, descr, stop);
             done = (descr != null);
             if (done) 
+            {
                 node.nodeInfo.descriptor = descr;
-            return done;
+                    nodeInfo2Declarator(node.nodeInfo);
+                return true;
+            }
+            else if (isSerObjectType(node.nodeInfo.type))
+                return true;
+            return false;
         }
     }
     
@@ -1163,31 +1169,28 @@ public class izSerializer
          */  
         void istToObject(izIstNode node, bool recursive = false)
         {
-            bool restore(izIstNode node)
+            bool restore(izIstNode current)
             {
                 bool result = true;
-                if (node.nodeInfo.descriptor)
-                    nodeInfo2Declarator(node.nodeInfo);
-                else if(fOnWantDescriptor) 
-                {   
-                    void * descr;
-                    fOnWantDescriptor(cast(const(izSerNodeInfo*)) node.nodeInfo, descr, result);
-                    node.nodeInfo.descriptor = descr;
-                    if (node.nodeInfo.descriptor)
-                        nodeInfo2Declarator(node.nodeInfo);
-                    result = !result;         
+                if (current.nodeInfo.descriptor)
+                    nodeInfo2Declarator(current.nodeInfo);
+                else
+                {
+                    bool stop;
+                    result = restoreFromEvent(current, stop);
+                    result &= !stop;
                 }
                 return result;    
             }
             
-            bool restoreLoop(izIstNode node)
+            bool restoreLoop(izIstNode current)
             {
-                if (!restore(node)) return false;
-                foreach(child; node.children)
+                if (!restore(current)) return false;
+                foreach(child; current.children)
                 {
                     auto childNode = cast(izIstNode) child;
                     if (!restore(childNode)) return false;
-                    if (isSerObjectType(childNode.nodeInfo.type) && recursive)
+                    if (isSerObjectType(childNode.nodeInfo.type) & recursive)
                         if (!restoreLoop(childNode)) return false;
                 }
                 return true;
@@ -1215,8 +1218,7 @@ public class izSerializer
             else 
             {
                 bool noop;
-                if (doWantDescriptor(node, noop))
-                    nodeInfo2Declarator(node.nodeInfo);
+                restoreFromEvent(node, noop);
             }   
         }        
 
@@ -1261,8 +1263,7 @@ public class izSerializer
                 else 
                 {
                     bool noop;
-                    if (doWantDescriptor(fCurrNode, noop))
-                        nodeInfo2Declarator(fCurrNode.nodeInfo);
+                    restoreFromEvent(fCurrNode, noop);
                 }
             }
             
@@ -1454,7 +1455,7 @@ version(unittest)
             char[] _someChars;
         public:
             this() {
-                analyzeVirtualSetGet;
+                analyzeAll;
                 _anIntArray = [0, 1, 2, 3];
                 _aFloat = 0.123456f;
                 _someChars = "azertyuiop".dup;
@@ -1601,20 +1602,16 @@ version(unittest)
         assert(b.someChars == "azertyuiop");      
         //----
             
-        // decomposed de/serialization phases with event ---+
-        string currObj = "Root";  
-        void wantDescr(const(izSerNodeInfo*) nodeInfo, out void * matchingDescriptor, out bool stop)
+        // decomposed de/serialization phases with event ---+ 
+        void wantDescr(izIstNode node, out void * matchingDescriptor, out bool stop)
         {
-            if (isSerObjectType(nodeInfo.type)) currObj = nodeInfo.name.idup;
-            
-            //TODO -cfeature: a izSerializable method to get the fully qualified (parent)name of a node.
-            
-            if (currObj == "Root")
-                matchingDescriptor = a.getUntypedDescriptor(nodeInfo.name.idup);
-            if (currObj == "aB1")
-                matchingDescriptor = a._aB1.getUntypedDescriptor(nodeInfo.name.idup);
-            if (currObj == "aB2")
-                matchingDescriptor = a._aB2.getUntypedDescriptor(nodeInfo.name.idup);                      
+            string chain = node.parentIdentifiers;
+            if (chain == "Root")
+                matchingDescriptor = a.getUntypedDescriptor(node.nodeInfo.name);
+            else if (chain == "Root.aB1")
+                matchingDescriptor = a._aB1.getUntypedDescriptor(node.nodeInfo.name);
+            else if (chain == "Root.aB2")
+                matchingDescriptor = a._aB2.getUntypedDescriptor(node.nodeInfo.name);                      
         }
           
         str.clear;
