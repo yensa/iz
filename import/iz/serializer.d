@@ -455,16 +455,43 @@ public class izIstNode : izTreeItem
     private izSerNodeInfo fNodeInfo;
     public
     {
-        //!\ generate all the possible instance /!\
+        /**
+         * Sets the infomations describing the property associated
+         * to this IST node.
+         */
         void setDescriptor(T)(izPropDescriptor!T * descriptor)
         {
             if(descriptor)
                 setNodeInfo!T(&fNodeInfo, descriptor);
         }
+        /** 
+         * Returns a pointer to the information describing the property
+         * associated to this IST node.
+         */
         izSerNodeInfo * nodeInfo()
         {
             return &fNodeInfo;
         }   
+        /**
+         * Returns the identifier chain of the parents.
+         */
+        string parentIdentifiers()
+        {
+            if (!level) return "";
+            //   
+            import std.array;
+            string[] items;
+            items.length = level * 2;
+            auto cnt = items.length - 1;
+            izIstNode curr = cast(izIstNode) parent;
+            while (curr)
+            {
+                items[cnt--] = ".";
+                items[cnt--] = curr.nodeInfo.name;
+                curr = cast(izIstNode) curr.parent;
+            }
+            return items.join[0..$-1];    
+        }
     }
 }
 
