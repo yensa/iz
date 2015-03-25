@@ -883,6 +883,19 @@ public class izSerializer
             fRootDescr.define(&fRootSerializable, "Root");
             fRootNode.setDescriptor(&fRootDescr);
         }
+        
+        bool doWantDescriptor(izIstNode node, out bool stop)
+        {
+            if(!fOnWantDescriptor) 
+                return false;
+            void * descr;
+            bool done;
+            fOnWantDescriptor(node.nodeInfo, descr, stop);
+            done = (descr != null);
+            if (done) 
+                node.nodeInfo.descriptor = descr;
+            return done;
+        }
     }
     
     public 
@@ -1172,15 +1185,12 @@ public class izSerializer
                 node.nodeInfo.descriptor = aDescriptor;
                 nodeInfo2Declarator(node.nodeInfo);
             }
-            else if(fOnWantDescriptor)
+            else 
             {
                 bool noop;
-                void * descr;
-                fOnWantDescriptor(cast(const(izSerNodeInfo*)) node.nodeInfo, descr, noop);
-                node.nodeInfo.descriptor = descr;
-                if (node.nodeInfo.descriptor)
+                if (doWantDescriptor(node, noop))
                     nodeInfo2Declarator(node.nodeInfo);
-            }
+            }   
         }        
 
 //------------------------------------------------------------------------------
@@ -1221,13 +1231,11 @@ public class izSerializer
                 readFormat(fFormat)(fStream, fCurrNode);
                 if (fCurrNode.nodeInfo.descriptor)
                     nodeInfo2Declarator(fCurrNode.nodeInfo);
-                else if(fOnWantDescriptor) 
-                {   
-                    void * descr; bool b;
-                    fOnWantDescriptor(cast(const(izSerNodeInfo*)) fCurrNode.nodeInfo, descr, b);
-                    fCurrNode.nodeInfo.descriptor = descr;
-                    if (fCurrNode.nodeInfo.descriptor)
-                        nodeInfo2Declarator(fCurrNode.nodeInfo);    
+                else 
+                {
+                    bool noop;
+                    if (doWantDescriptor(fCurrNode, noop))
+                        nodeInfo2Declarator(fCurrNode.nodeInfo);
                 }
             }
             
