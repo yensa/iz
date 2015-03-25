@@ -974,9 +974,9 @@ public class izSerializer
             void writeNodesFrom(izIstNode parent)
             {
                 writeFormat(fFormat)(parent, fStream); 
-                for (auto i = 0; i < parent.childrenCount; i++)
+                foreach(node; parent.children)
                 {
-                    auto child = cast(izIstNode) parent.children[i];           
+                    auto child = cast(izIstNode) node;           
                     if (isSerObjectType(child.nodeInfo.type))
                         writeNodesFrom(child);
                     else writeFormat(fFormat)(child, fStream); 
@@ -1096,9 +1096,9 @@ public class izSerializer
             izIstNode scanNode(izIstNode parent, in char[] namePipe)
             {
                 izIstNode result;
-                for(auto i = 0; i < parent.childrenCount; i++)
+                foreach(node; parent.children)
                 {
-                    auto child = cast(izIstNode) parent.children[i]; 
+                    auto child = cast(izIstNode) node;//parent.children[i]; 
                     if ( namePipe ~ "." ~ child.nodeInfo.name == descriptorName)
                         return child;
                     if (child.childrenCount)
