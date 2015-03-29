@@ -1445,6 +1445,7 @@ public interface izTreeItem
             /// Operators
 			@safe final izTreeItem opIndex(ptrdiff_t i)
 			{
+                if (!item) return null;
 				auto old = item.firstSibling;
 				ptrdiff_t cnt = 0;
 				while(cnt < i)
@@ -1457,6 +1458,7 @@ public interface izTreeItem
 			/// ditto
 			final void opIndexAssign(izTreeItem anItem, size_t i)
 			{
+                if (!item) return;
 				if (anItem is null)
 				{
 					if (opIndex(i) != item) item.removeSibling(i);
@@ -1481,6 +1483,7 @@ public interface izTreeItem
 			final int opApply(int delegate(ref izTreeItem) dg)
 			{
 				int result = 0;
+                if (!item) return result;
 				auto old = item.firstSibling;
 				while (old)
 				{
@@ -1494,6 +1497,7 @@ public interface izTreeItem
 			final int opApplyReverse(int delegate(ref izTreeItem) dg)
 			{
 				int result = 0;
+                if (!item) return result;
 				auto old = item.lastSibling;
 				while (old)
 				{
@@ -1935,6 +1939,8 @@ public interface izTreeItem
 
 	/**
 	 * Removes the children.
+     * Params:
+     * unlinkSiblings = when true, the previous links to the sibling are cleaned.
 	 */
 	@safe final void clearChildren(bool unlinkSiblings = false)
 	{
@@ -2126,6 +2132,9 @@ version(unittest)
 			auto a = construct!linkedBarTest;
             scope(exit) destruct(a);
 			assert(cast(izTreeItem)a);
+            
+            foreach(item; a.children){}
+            
 			writeln("izMakeLinkedClass passed the tests");
 		}
 	}
