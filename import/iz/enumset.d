@@ -452,16 +452,16 @@ public struct izEnumSet(E, S) if (setConstraint!(E, S))
         nothrow @safe void exclude(E...)(E someMembers)
         {
             static if (someMembers.length == 1)
-                fSet ^= _1 << fRankInfs[someMembers];
+                fSet &= fSet ^ (_1 << fRankInfs[someMembers]);
             else foreach(member; someMembers)
-                fSet ^= _1 << fRankInfs[member];
+                fSet &= fSet ^ (_1 << fRankInfs[member]);
         }
 
         /// ditto
         nothrow @safe void exclude(E[] someMembers)
         {
             foreach(member; someMembers)
-                fSet ^= _1 << fRankInfs[member];
+                fSet &= fSet ^ (_1 << fRankInfs[member]);
         }
 
         /**
@@ -790,6 +790,11 @@ version(unittest)
         assert(set == 0b0000_1111);
         set -= [a8.a0,a8.a1];
         assert(set == 0b0000_1100);
+        set = 0;
+        set.exclude([a8.a0,a8.a1,a8.a2,a8.a3,a8.a4]);
+        assert( set == 0);
+        set -= a8.a0;
+        assert( set == 0);        
 
         writeln("izEnumSet passed the tests(operators)");
     }

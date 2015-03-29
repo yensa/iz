@@ -57,5 +57,5 @@ object _1: TCEProject
     'import\iz\classes.d'
     'import\iz\enumset.d'
   )
-  ConfigurationIndex = 2
+  ConfigurationIndex = 0
 end
