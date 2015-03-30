@@ -895,6 +895,8 @@ public class izDynamicList(T): izList!T
         void* fLast;
         void* fFirst;
         alias payload = dlistPayload!T;
+        size_t fInputRangeIndex;
+        void* fRangeFront;
     }
     protected
     {
@@ -1020,8 +1022,7 @@ public class izDynamicList(T): izList!T
             }
             return -1;
         }
-
-        
+      
         ptrdiff_t add(T anItem) @trusted @nogc
         {
             if (fFirst == null)
@@ -1177,6 +1178,28 @@ public class izDynamicList(T): izList!T
         }
         
         alias length = count;
+        
+        nothrow @safe @property bool empty()
+        {
+            if (fRangeFront == null)
+            {
+                fRangeFront = fFirst;
+                return true;
+            } 
+            else return false; 
+        }
+        
+        nothrow @safe void popFront()
+        {
+            fRangeFront = payload.getNext(fRangeFront);
+        }
+        
+        nothrow @property @safe T front()
+        {
+            return payload.getData(fRangeFront);   
+        }
+        
+        alias put = add;
     }
 }
 
