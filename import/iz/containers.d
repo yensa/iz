@@ -291,11 +291,33 @@ public struct izArray(T)
             }
         }
         /// ditto
+        @nogc void opOpAssign(string op)(T[] someElements)
+        {
+            static if (op == "~")
+            {
+                initLazy;
+                auto old = fLength;
+                setLength(fLength + someElements.length);
+                moveMem( rwPtr(old), someElements.ptr , T.sizeof * someElements.length);
+            }
+            else assert(0, "operator not implemented");
+        }    
+        /// ditto
+        @nogc void opOpAssign(string op)(T aElement)
+        {
+            static if (op == "~")
+            {
+                grow;
+                opIndexAssign(aElement,fLength-1);
+            }
+            else assert(0, "operator not implemented");
+        }      
+        /// ditto
         @nogc izArray!T opSlice()
         {
             izArray!T result;
             result.length = length;
-            moveMem( result.ptr, fElems , T.sizeof * fLength);
+            moveMem( result.ptr, fElems, T.sizeof * fLength);
             return result;
         }
         /// ditto
@@ -522,17 +544,23 @@ public interface izList(T)
      * Returns 0 when the operation is successful otherwise -1.
      */
     ptrdiff_t add(T anItem);
+    
+    /**
+     * Adds someItems at the end of list.
+     * Returns the index of the last item when the operation is successful otherwise -1.
+     */    
+    ptrdiff_t add(T[] someItems);
 
     /**
      * Inserts an item at the beginning of the list.
-     * Returns 0 when the operation is successful otherwise -1.
+     * Returns the index of the last item when the operation is successful otherwise -1.
      */
     ptrdiff_t insert(T anItem);
 
     /**
      * Inserts anItem before the one standing at aPosition.
      * If aPosition is greater than count than anItem is added to the end of list.
-     * Returns the item position when the operation is successful otherwise -1.
+     * Returns the index of the last item when the operation is successful otherwise -1.
      */
     ptrdiff_t insert(size_t aPosition, T anItem);
 
@@ -662,6 +690,12 @@ public class izStaticList(T): izList!T
             fItems.grow;
             fItems[$-1] = anItem;
             return fItems.length - 1;
+        }
+        
+        ptrdiff_t add(T[] someItems)
+        {
+            fItems ~= someItems;  
+            return fItems.length - 1;  
         }
 
         /**
@@ -1027,8 +1061,7 @@ public class izDynamicList(T): izList!T
         {
             if (fFirst == null)
             {
-                insert(anItem);
-                return 0;
+                return insert(anItem);
             }
             else
             {
@@ -1037,6 +1070,13 @@ public class izDynamicList(T): izList!T
                 fLast = _pld;
                 return fCount++;
             }
+        }
+        
+        ptrdiff_t add(T[] someItems) @trusted @nogc
+        {
+            for (auto i = 0; i < someItems.length; i++)
+                add(someItems[i]);
+            return fCount - 1;   
         }
   
         ptrdiff_t insert(T anItem) @trusted @nogc
@@ -2344,3 +2384,4 @@ private class foo: izTreeItem
         writeln("izTreeItem passed the tests");
     }
 }
+
