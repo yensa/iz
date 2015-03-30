@@ -1037,23 +1037,23 @@ public class izDynamicList(T): izList!T
                 return fCount++;
             }
         }
-
-        
+  
         ptrdiff_t insert(T anItem) @trusted @nogc
         {
             auto _pld = payload.newPld(null, fFirst, anItem);
             if (fFirst) payload.setPrev(fFirst, _pld);
             else fLast = _pld;
             fFirst = _pld;
-            return fCount++;
+            fRangeFront = fFirst;
+            ++fCount;
+            return 0;
         }
 
         ptrdiff_t insert(size_t aPosition, T anItem) @trusted @nogc 
         {
-            if (fFirst == null)
+            if (fFirst == null || aPosition == 0)
             {
-                insert(anItem);
-                return 0;
+                return insert(anItem);
             }
             else if (aPosition >= fCount)
             {
