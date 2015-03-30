@@ -14,7 +14,7 @@ public immutable int cmAlways   = 2;
 
 version (Windows) 
 {
-	import core.sys.windows.windows, std.windows.syserror, std.c.windows.windows;
+    import core.sys.windows.windows, std.windows.syserror, std.c.windows.windows;
 
     private immutable READ_WRITE =  GENERIC_READ | GENERIC_WRITE;
     private immutable FILE_SHARE_ALL = FILE_SHARE_READ | FILE_SHARE_WRITE;
@@ -71,7 +71,7 @@ version (Windows)
 }
 version (Posix) 
 {
-	import core.sys.posix.fcntl, core.sys.posix.unistd;
+    import core.sys.posix.fcntl, core.sys.posix.unistd;
 
     public alias izStreamHandle = int;
 
@@ -131,9 +131,9 @@ public enum izSeekMode {
 public interface izStreamPersist
 {
     /// Saves something in aStream
-	void saveToStream(izStream aStream);
+    void saveToStream(izStream aStream);
     /// Loads something from aStream. aStream initial position is preserved.
-	void loadFromStream(izStream aStream);
+    void loadFromStream(izStream aStream);
 }
 
 /**
@@ -142,9 +142,9 @@ public interface izStreamPersist
 public interface izFilePersist8
 {
     /// Saves something to aFilename.
-	void saveToFile(in char[] aFilename);
+    void saveToFile(in char[] aFilename);
     /// Loads something to aFilename.
-	void loadFromFile(in char[] aFilename);
+    void loadFromFile(in char[] aFilename);
     /// Returns the filename passed as argument in saveToFile or loadFromFile.
     string filename();
 }
@@ -171,60 +171,60 @@ private template genReadWriteVar()
  */
 public interface izStream
 {
-	/**
-	 * Reads aCount bytes from aBuffer.
-	 * Returns the count of bytes effectively read.
-	 */
-	size_t read(izPtr aBuffer, size_t aCount);
-	/**
-	 * Read T.sizeof bytes in aValue.
-	 * Returns the count of bytes effectively read (either T.sizeof or 0).
-	 * T must verify isConstantSize.
+    /**
+     * Reads aCount bytes from aBuffer.
+     * Returns the count of bytes effectively read.
+     */
+    size_t read(izPtr aBuffer, size_t aCount);
+    /**
+     * Read T.sizeof bytes in aValue.
+     * Returns the count of bytes effectively read (either T.sizeof or 0).
+     * T must verify isConstantSize.
      * A typed reader is generated for each type in izConstantSizeTypes
      * and named readint, readchar, etc.
-	 */
-	size_t readVariable(T)(T* aValue);
-	/**
-	 * Writes aCount bytes to aBuffer.
-	 * Returns the count of bytes effectively written.
-	 */
-	size_t write(izPtr aBuffer, size_t aCount);
-	/**
-	 * Writes T.sizeof bytes to the pointer aValue.
-	 * Returns the count of bytes effectively written (either T.sizeof or 0).
-	 * T must verify isConstantSize.
+     */
+    size_t readVariable(T)(T* aValue);
+    /**
+     * Writes aCount bytes to aBuffer.
+     * Returns the count of bytes effectively written.
+     */
+    size_t write(izPtr aBuffer, size_t aCount);
+    /**
+     * Writes T.sizeof bytes to the pointer aValue.
+     * Returns the count of bytes effectively written (either T.sizeof or 0).
+     * T must verify isConstantSize.
      * A typed writer is generated for each type in izConstantSizeTypes
      * and named writeint, writechar, etc.
-	 */
-	size_t writeVariable(T)(T* aValue);
-	/**
-	 * Sets the position to anOffset if anOrigin = 0,
-	 * to Position + anOffset if anOrigin = 1 or
-	 * to Size + anOffset if anOrigin = 2.
-	 */
-	ulong seek(ulong anOffset, izSeekMode aMode);
-	/// ditto
-	ulong seek(uint anOffset, izSeekMode aMode);
-	/**
-	 * Sets or gets the stream size.
-	 */
-	@property ulong size();
-	/// ditto
-	@property void size(ulong aValue);
-	/// ditto
-	@property void size(uint aValue);
-	/**
-	 * Sets or gets the position in the stream.
-	 */
-	@property ulong position();
-	/// ditto
-	@property void position(ulong aValue);
-	/// ditto
-	@property void position(uint aValue);
-	/**
-	 * Resets the stream size to 0.
-	 */
-	void clear();
+     */
+    size_t writeVariable(T)(T* aValue);
+    /**
+     * Sets the position to anOffset if anOrigin = 0,
+     * to Position + anOffset if anOrigin = 1 or
+     * to Size + anOffset if anOrigin = 2.
+     */
+    ulong seek(ulong anOffset, izSeekMode aMode);
+    /// ditto
+    ulong seek(uint anOffset, izSeekMode aMode);
+    /**
+     * Sets or gets the stream size.
+     */
+    @property ulong size();
+    /// ditto
+    @property void size(ulong aValue);
+    /// ditto
+    @property void size(uint aValue);
+    /**
+     * Sets or gets the position in the stream.
+     */
+    @property ulong position();
+    /// ditto
+    @property void position(ulong aValue);
+    /// ditto
+    @property void position(uint aValue);
+    /**
+     * Resets the stream size to 0.
+     */
+    void clear();
     /// support for the concatenation operator.
     final void opOpAssign(string op)(izStream rhs)
     {
@@ -265,26 +265,26 @@ public interface izStream
  */
 public void copyStream(izStream aSource, izStream aTarget)
 {
-	auto oldpos = aSource.position; 
-	auto buffsz = 4096;
-	auto buff = getMem(buffsz);
-	if (!buff) throw new OutOfMemoryError();
-	
-	scope(exit)
-	{
-		aSource.position = oldpos;
-		freeMem(buff);
-	}
-	
-	aSource.position = 0;
-	aTarget.size = aSource.size;
-	aTarget.position = 0;
-	
-	while(aSource.position != aSource.size)
-	{
-		auto cnt = aSource.read(buff, buffsz);
-		aTarget.write(buff, cnt);
-	}
+    auto oldpos = aSource.position; 
+    auto buffsz = 4096;
+    auto buff = getMem(buffsz);
+    if (!buff) throw new OutOfMemoryError();
+    
+    scope(exit)
+    {
+        aSource.position = oldpos;
+        freeMem(buff);
+    }
+    
+    aSource.position = 0;
+    aTarget.size = aSource.size;
+    aTarget.position = 0;
+    
+    while(aSource.position != aSource.size)
+    {
+        auto cnt = aSource.read(buff, buffsz);
+        aTarget.write(buff, cnt);
+    }
 }
 
 unittest
@@ -323,21 +323,21 @@ package class izSystemStream: izStream, izStreamPersist
         size_t read(izPtr aBuffer, size_t aCount)
         {
             if (!fHandle.isHandleValid) return 0;
-			version(Windows)
-			{
-				uint lCount = cast(uint) aCount;
-				LARGE_INTEGER Li;
-				Li.QuadPart = aCount;
-				ReadFile(fHandle, aBuffer, Li.LowPart, &lCount, null);
-				return lCount;
-			}
-			version(Posix)
-			{
-				return core.sys.posix.unistd.read(fHandle, aBuffer, aCount);
-			}
+            version(Windows)
+            {
+                uint lCount = cast(uint) aCount;
+                LARGE_INTEGER Li;
+                Li.QuadPart = aCount;
+                ReadFile(fHandle, aBuffer, Li.LowPart, &lCount, null);
+                return lCount;
+            }
+            version(Posix)
+            {
+                return core.sys.posix.unistd.read(fHandle, aBuffer, aCount);
+            }
         }
 
-	    size_t readVariable(T)(T* aValue)
+        size_t readVariable(T)(T* aValue)
         {
             return read(&aValue, T.sizeof);
         }
@@ -345,103 +345,103 @@ package class izSystemStream: izStream, izStreamPersist
         size_t write(izPtr aBuffer, size_t aCount)
         {
             if (!fHandle.isHandleValid) return 0;
-			version(Windows)
-			{
-				uint lCount = cast(uint) aCount;
-				LARGE_INTEGER Li;
-				Li.QuadPart = aCount;
-				WriteFile(fHandle, aBuffer, Li.LowPart, &lCount, null);
-				return lCount;
-			}
-			version(Posix)
-			{
-				return core.sys.posix.unistd.write(fHandle, aBuffer, aCount);
-			}
+            version(Windows)
+            {
+                uint lCount = cast(uint) aCount;
+                LARGE_INTEGER Li;
+                Li.QuadPart = aCount;
+                WriteFile(fHandle, aBuffer, Li.LowPart, &lCount, null);
+                return lCount;
+            }
+            version(Posix)
+            {
+                return core.sys.posix.unistd.write(fHandle, aBuffer, aCount);
+            }
         }
 
-	    size_t writeVariable(T)(T* aValue)
+        size_t writeVariable(T)(T* aValue)
         {
             return write(&aValue, T.sizeof);
         }
 
-	    ulong seek(ulong anOffset, izSeekMode aMode)
+        ulong seek(ulong anOffset, izSeekMode aMode)
         {
             if (!fHandle.isHandleValid) return 0;
-			version(Windows)
-			{
-				LARGE_INTEGER Li;
-				Li.QuadPart = anOffset;
-				Li.LowPart = SetFilePointer(fHandle, Li.LowPart, &Li.HighPart, aMode);
-				return Li.QuadPart;
-			}
-			version(Posix)
-			{
-				return core.sys.posix.unistd.lseek64(fHandle, anOffset, aMode);
-			}
+            version(Windows)
+            {
+                LARGE_INTEGER Li;
+                Li.QuadPart = anOffset;
+                Li.LowPart = SetFilePointer(fHandle, Li.LowPart, &Li.HighPart, aMode);
+                return Li.QuadPart;
+            }
+            version(Posix)
+            {
+                return core.sys.posix.unistd.lseek64(fHandle, anOffset, aMode);
+            }
         }
 
-	    ulong seek(uint anOffset, izSeekMode aMode)
+        ulong seek(uint anOffset, izSeekMode aMode)
         {
             return seek(cast(ulong)anOffset, aMode);
         }
 
-	    @property ulong size()
+        @property ulong size()
         {
             if (!fHandle.isHandleValid) return 0;
-			ulong lRes, lSaved;
+            ulong lRes, lSaved;
 
-			lSaved = seek(0, izSeekMode.cur);
-			lRes = seek(0, izSeekMode.end);
-			seek(lSaved, izSeekMode.beg);
+            lSaved = seek(0, izSeekMode.cur);
+            lRes = seek(0, izSeekMode.end);
+            seek(lSaved, izSeekMode.beg);
 
-			return lRes;
+            return lRes;
         }
 
-	    @property void size(ulong aValue)
+        @property void size(ulong aValue)
         {
             if (!fHandle.isHandleValid) return;
-			if (size == aValue) return;
+            if (size == aValue) return;
 
-			version(Windows)
-			{
-				LARGE_INTEGER Li;
-				Li.QuadPart = aValue;
-				SetFilePointer(fHandle, Li.LowPart, &Li.HighPart, FILE_BEGIN);
-				SetEndOfFile(fHandle);
-			}
-			version(Posix)
-			{
-				ftruncate(fHandle, aValue);
-			}
+            version(Windows)
+            {
+                LARGE_INTEGER Li;
+                Li.QuadPart = aValue;
+                SetFilePointer(fHandle, Li.LowPart, &Li.HighPart, FILE_BEGIN);
+                SetEndOfFile(fHandle);
+            }
+            version(Posix)
+            {
+                ftruncate(fHandle, aValue);
+            }
         }
 
-	    @property void size(uint aValue)
+        @property void size(uint aValue)
         {
             if (!fHandle.isHandleValid) return;
-			version(Windows)
-			{
-				SetFilePointer(fHandle, aValue, null, FILE_BEGIN);
-				SetEndOfFile(fHandle);
-			}
-			version(Posix)
-			{
-				ftruncate(fHandle, aValue);
-			}
+            version(Windows)
+            {
+                SetFilePointer(fHandle, aValue, null, FILE_BEGIN);
+                SetEndOfFile(fHandle);
+            }
+            version(Posix)
+            {
+                ftruncate(fHandle, aValue);
+            }
         }
 
-	    @property ulong position()
+        @property ulong position()
         {
-			return seek(0, izSeekMode.cur);
+            return seek(0, izSeekMode.cur);
         }
 
-	    @property void position(ulong aValue)
+        @property void position(ulong aValue)
         {
-			ulong lSize = size;
-			if (aValue >  lSize) aValue = lSize;
-			seek(aValue, izSeekMode.beg);
+            ulong lSize = size;
+            if (aValue >  lSize) aValue = lSize;
+            seek(aValue, izSeekMode.beg);
         }
 
-	    @property void position(uint aValue)
+        @property void position(uint aValue)
         {
             seek(aValue, izSeekMode.beg);
         }
@@ -451,7 +451,7 @@ package class izSystemStream: izStream, izStreamPersist
          */
         @property const(izStreamHandle) handle(){return fHandle;}
 
-	    void clear()
+        void clear()
         {
             size(0);
             position(0);
@@ -462,7 +462,7 @@ package class izSystemStream: izStream, izStreamPersist
             copyStream(this, aStream);
         }
 
-	    void loadFromStream(izStream aStream)
+        void loadFromStream(izStream aStream)
         {
             copyStream(aStream, this);
         }
@@ -509,8 +509,8 @@ public class izFileStream: izSystemStream
         {
             version(Windows)
             {
-			    fHandle = CreateFileA(aFilename.toStringz, READ_WRITE, shNone,
-			        (SECURITY_ATTRIBUTES*).init, cmToSystem(creationMode),
+                fHandle = CreateFileA(aFilename.toStringz, READ_WRITE, shNone,
+                    (SECURITY_ATTRIBUTES*).init, cmToSystem(creationMode),
                     FILE_ATTRIBUTE_NORMAL, HANDLE.init);
             }
             version(Posix)
@@ -519,10 +519,10 @@ public class izFileStream: izSystemStream
                     O_RDWR | cmToSystem(creationMode), shNone);
             }
 
-			if (!fHandle.isHandleValid)
-			{
-				throw new Error(format("stream exception: cannot create or open '%s'", aFilename));
-			}
+            if (!fHandle.isHandleValid)
+            {
+                throw new Error(format("stream exception: cannot create or open '%s'", aFilename));
+            }
             fFilename = aFilename.dup;
             return fHandle.isHandleValid;
         }
@@ -534,8 +534,8 @@ public class izFileStream: izSystemStream
         {
             version(Windows)
             {
-			    fHandle = CreateFileA(aFilename.toStringz, READ_WRITE, shAll,
-			        (SECURITY_ATTRIBUTES*).init, cmToSystem(creationMode), FILE_ATTRIBUTE_NORMAL, HANDLE.init);
+                fHandle = CreateFileA(aFilename.toStringz, READ_WRITE, shAll,
+                    (SECURITY_ATTRIBUTES*).init, cmToSystem(creationMode), FILE_ATTRIBUTE_NORMAL, HANDLE.init);
             }
             version(Posix)
             {
@@ -543,10 +543,10 @@ public class izFileStream: izSystemStream
                     O_RDWR | cmToSystem(creationMode), shAll);
             }
 
-			if (!fHandle.isHandleValid)
-			{
-				throw new Error(format("stream exception: cannot create or open '%s'", aFilename));
-			}
+            if (!fHandle.isHandleValid)
+            {
+                throw new Error(format("stream exception: cannot create or open '%s'", aFilename));
+            }
             fFilename = aFilename.dup;
             return fHandle.isHandleValid;
         }
@@ -559,8 +559,8 @@ public class izFileStream: izSystemStream
         {
             version(Windows)
             {
-			    fHandle = CreateFileA(aFilename.toStringz, access, share,
-			        (SECURITY_ATTRIBUTES*).init, cmToSystem(creationMode),
+                fHandle = CreateFileA(aFilename.toStringz, access, share,
+                    (SECURITY_ATTRIBUTES*).init, cmToSystem(creationMode),
                     FILE_ATTRIBUTE_NORMAL, HANDLE.init);
             }
             version(Posix)
@@ -578,17 +578,17 @@ public class izFileStream: izSystemStream
          */
         void closeFile()
         {
-			version(Windows)
-			{
-				if (fHandle.isHandleValid) CloseHandle(fHandle);
-				fHandle = INVALID_HANDLE_VALUE;
-			}
-			version(Posix)
-			{
-				if (fHandle.isHandleValid) core.sys.posix.unistd.close(fHandle);
-				fHandle = -1;
-			}
-			fFilename = "";
+            version(Windows)
+            {
+                if (fHandle.isHandleValid) CloseHandle(fHandle);
+                fHandle = INVALID_HANDLE_VALUE;
+            }
+            version(Posix)
+            {
+                if (fHandle.isHandleValid) core.sys.posix.unistd.close(fHandle);
+                fHandle = -1;
+            }
+            fFilename = "";
         }
         /**
          * Exposes the filename.
@@ -606,12 +606,12 @@ public class izFileStream: izSystemStream
  */
 public class izMemoryStream: izStream, izStreamPersist, izFilePersist8
 {
-	private
-	{
+    private
+    {
         size_t fSize;
-		izPtr fMemory;
-		
-		size_t fPosition;
+        izPtr fMemory;
+        
+        size_t fPosition;
         string fFilename;
         
         struct Ubytes{size_t length; void* ptr;}
@@ -624,138 +624,138 @@ public class izMemoryStream: izStream, izStreamPersist, izFilePersist8
             if (GC.addrOf(ptr)) return;
             freeMem(ptr);
         }
-	}
-	public
-	{
+    }
+    public
+    {
         mixin(genReadWriteVar);
-		this()
-		{
-			fMemory = getMem(16);
-			if (!fMemory) throw new OutOfMemoryError();
-		}
-		
-		~this()
-		{
-			freeNonGc(fMemory);
-		}
-		
+        this()
+        {
+            fMemory = getMem(16);
+            if (!fMemory) throw new OutOfMemoryError();
+        }
+        
+        ~this()
+        {
+            freeNonGc(fMemory);
+        }
+        
 // read -----------------------------------------------------------------------+
 
-		size_t read(izPtr aBuffer, size_t aCount)
-		{
-			if (aCount + fPosition > fSize) aCount = fSize - fPosition;
-			moveMem(aBuffer, fMemory + fPosition, aCount);
-			fPosition += aCount;
-			return aCount;
-		}
-		
-		size_t readVariable(T)(T* aValue) if (isConstantSize!T)
-		{
-			if (fPosition + T.sizeof > fSize) return 0;
-			moveMem(aValue, fMemory + fPosition, T.sizeof);
-			fPosition += T.sizeof;
-			return T.sizeof;
-		}
-// ----		
+        size_t read(izPtr aBuffer, size_t aCount)
+        {
+            if (aCount + fPosition > fSize) aCount = fSize - fPosition;
+            moveMem(aBuffer, fMemory + fPosition, aCount);
+            fPosition += aCount;
+            return aCount;
+        }
+        
+        size_t readVariable(T)(T* aValue) if (isConstantSize!T)
+        {
+            if (fPosition + T.sizeof > fSize) return 0;
+            moveMem(aValue, fMemory + fPosition, T.sizeof);
+            fPosition += T.sizeof;
+            return T.sizeof;
+        }
+// ----     
 // write ----------------------------------------------------------------------+
 
-		size_t write(izPtr aBuffer, size_t aCount)
-		{
-			if (fPosition + aCount > fSize) size(fPosition + aCount);
-			moveMem(fMemory + fPosition, aBuffer, aCount);
-			fPosition += aCount;
-			return aCount;
-		}
-		
-		size_t writeVariable(T)(T* aValue) if (isConstantSize!T)
-		{
-			if (fPosition + T.sizeof > fSize) size(fPosition + T.sizeof);
-			moveMem(fMemory + fPosition, aValue, T.sizeof);
-			fPosition += T.sizeof;
-			return T.sizeof;
-		}
+        size_t write(izPtr aBuffer, size_t aCount)
+        {
+            if (fPosition + aCount > fSize) size(fPosition + aCount);
+            moveMem(fMemory + fPosition, aBuffer, aCount);
+            fPosition += aCount;
+            return aCount;
+        }
+        
+        size_t writeVariable(T)(T* aValue) if (isConstantSize!T)
+        {
+            if (fPosition + T.sizeof > fSize) size(fPosition + T.sizeof);
+            moveMem(fMemory + fPosition, aValue, T.sizeof);
+            fPosition += T.sizeof;
+            return T.sizeof;
+        }
 
-// ----		
+// ----     
 // seek -----------------------------------------------------------------------+
 
-		ulong seek(ulong anOffset, izSeekMode aMode)
-		{
-		    with(izSeekMode) final switch(aMode) 
-			{
-				case beg:
-					fPosition = cast(typeof(fPosition)) anOffset;
-					if (fPosition > fSize) fPosition = fSize;
-					return fPosition;		
-				case cur:
-					fPosition += anOffset;
-					if (fPosition > fSize) fPosition = fSize;
-					return fPosition;	
-				case end:
-					return fSize;
-			}
-		}
-		ulong seek(uint anOffset, izSeekMode aMode)
-		{
+        ulong seek(ulong anOffset, izSeekMode aMode)
+        {
+            with(izSeekMode) final switch(aMode) 
+            {
+                case beg:
+                    fPosition = cast(typeof(fPosition)) anOffset;
+                    if (fPosition > fSize) fPosition = fSize;
+                    return fPosition;       
+                case cur:
+                    fPosition += anOffset;
+                    if (fPosition > fSize) fPosition = fSize;
+                    return fPosition;   
+                case end:
+                    return fSize;
+            }
+        }
+        ulong seek(uint anOffset, izSeekMode aMode)
+        {
             ulong longOffs = anOffset;
             return seek(longOffs, aMode);
-		}
-// ----			
+        }
+// ----         
 // size -----------------------------------------------------------------------+
 
-		@property ulong size()
-		{
-			return fSize;
-		}
-		
-		@property void size(uint aValue)
-		{
-			if (fSize == aValue) return;
-			if (aValue == 0)
-			{
-				clear;
-				return;
-			}
-			fMemory = reallocMem(fMemory, aValue);
-			if (!fMemory) throw new OutOfMemoryError();
-			else fSize = aValue;			
-		}
-		
-		@property void size(ulong aValue)
-		{
-			static if (size_t.sizeof == 4)
-			{
-				if (aValue > 0xFFFFFFFF)
-					throw new Exception("cannot allocate more than 0xFFFFFFFF bytes");
-			}
-			size(cast(uint) aValue);		
-		}
-// ----		
+        @property ulong size()
+        {
+            return fSize;
+        }
+        
+        @property void size(uint aValue)
+        {
+            if (fSize == aValue) return;
+            if (aValue == 0)
+            {
+                clear;
+                return;
+            }
+            fMemory = reallocMem(fMemory, aValue);
+            if (!fMemory) throw new OutOfMemoryError();
+            else fSize = aValue;            
+        }
+        
+        @property void size(ulong aValue)
+        {
+            static if (size_t.sizeof == 4)
+            {
+                if (aValue > 0xFFFFFFFF)
+                    throw new Exception("cannot allocate more than 0xFFFFFFFF bytes");
+            }
+            size(cast(uint) aValue);        
+        }
+// ----     
 // position -------------------------------------------------------------------+
-		
-		@property ulong position()
-		{
-			return fPosition;
-		}
-		
-		@property void position(ulong aValue)
-		{
-			seek(aValue, izSeekMode.beg);
-		}
-		
-		@property void position(uint aValue)
-		{
-			seek(aValue, izSeekMode.beg);
-		}
-// ----		
+        
+        @property ulong position()
+        {
+            return fPosition;
+        }
+        
+        @property void position(ulong aValue)
+        {
+            seek(aValue, izSeekMode.beg);
+        }
+        
+        @property void position(uint aValue)
+        {
+            seek(aValue, izSeekMode.beg);
+        }
+// ----     
 // misc -----------------------------------------------------------------------+
 
-		void clear()
-		{
-			fMemory = reallocMem(fMemory, 16);
-			if (!fMemory) throw new OutOfMemoryError();
-			fSize = 0;
-			fPosition = 0;
-		}
+        void clear()
+        {
+            fMemory = reallocMem(fMemory, 16);
+            if (!fMemory) throw new OutOfMemoryError();
+            fSize = 0;
+            fPosition = 0;
+        }
 
         /**
          * Sets the stream memory to aPtr and assumes it represents a chunk
@@ -775,13 +775,13 @@ public class izMemoryStream: izStream, izStreamPersist, izFilePersist8
             return result;
         }
         
-		/**
-		 * Read-only access to the memory chunk.
-		 */
-		@property final const(izPtr) memory()
-		{
-			return fMemory;
-		}
+        /**
+         * Read-only access to the memory chunk.
+         */
+        @property final const(izPtr) memory()
+        {
+            return fMemory;
+        }
 
         /**
          * Returns the stream content as a read-only ubyte array.
@@ -792,115 +792,115 @@ public class izMemoryStream: izStream, izStreamPersist, izFilePersist8
             fBytes.ptr = fMemory;
             return * cast(ubyte[] *) &fBytes;
         }
-// ----		
+// ----     
 // izStreamPersist ------------------------------------------------------------+
-	
-		/// Refer to izStreamPersist.
-		void saveToStream(izStream aStream)
-		{
-			if (cast(izMemoryStream) aStream)
-			{
-				auto target = cast(izMemoryStream) aStream;
-				auto oldpos = target.position;
-				scope(exit) target.position = oldpos;
-				
-				position = 0;
-				aStream.size = size;
-				aStream.position = 0;
-				
-				size_t sz = cast(size_t) size;
-				size_t buffsz = 8192;
-				size_t blocks = sz / buffsz;
-				size_t tail = sz - blocks * buffsz;
-				
-				size_t pos;
-				for (auto i = 0; i < blocks; i++)
-				{
-					moveMem(target.fMemory + pos, fMemory + pos, buffsz);
-					pos += buffsz;
-				}
-				if (tail) moveMem(target.fMemory + pos, fMemory + pos, tail);	
-			}
-			else
-			{
-				this.copyStream(aStream);
-			}
-		}
-		
-		/// ditto
-		void loadFromStream(izStream aStream)
-		{
-			if (cast(izMemoryStream) aStream) 
-			{
-				izMemoryStream source = cast(izMemoryStream) aStream;
-				source.saveToStream(this);
-			}
-			else
-			{
-				copyStream(aStream, this);
-			}
-		}
-// ----	
+    
+        /// Refer to izStreamPersist.
+        void saveToStream(izStream aStream)
+        {
+            if (cast(izMemoryStream) aStream)
+            {
+                auto target = cast(izMemoryStream) aStream;
+                auto oldpos = target.position;
+                scope(exit) target.position = oldpos;
+                
+                position = 0;
+                aStream.size = size;
+                aStream.position = 0;
+                
+                size_t sz = cast(size_t) size;
+                size_t buffsz = 8192;
+                size_t blocks = sz / buffsz;
+                size_t tail = sz - blocks * buffsz;
+                
+                size_t pos;
+                for (auto i = 0; i < blocks; i++)
+                {
+                    moveMem(target.fMemory + pos, fMemory + pos, buffsz);
+                    pos += buffsz;
+                }
+                if (tail) moveMem(target.fMemory + pos, fMemory + pos, tail);   
+            }
+            else
+            {
+                this.copyStream(aStream);
+            }
+        }
+        
+        /// ditto
+        void loadFromStream(izStream aStream)
+        {
+            if (cast(izMemoryStream) aStream) 
+            {
+                izMemoryStream source = cast(izMemoryStream) aStream;
+                source.saveToStream(this);
+            }
+            else
+            {
+                copyStream(aStream, this);
+            }
+        }
+// ---- 
 // izFilePersist8 -------------------------------------------------------------+
-		
+        
         /// Refers to izFilePersist8.
-		void saveToFile(in char[] aFilename)
-		{
-			version(Windows)
-			{
-				auto hdl = CreateFileA( aFilename.toStringz, GENERIC_WRITE, 0,
-					(SECURITY_ATTRIBUTES*).init, CREATE_ALWAYS, FILE_ATTRIBUTE_NORMAL, HANDLE.init);
-				
-				if (hdl == INVALID_HANDLE_VALUE)
-					throw new Error(format("stream exception: cannot create or overwrite '%s'", aFilename));
-				
-				scope(exit) CloseHandle(hdl); 
-				uint numRead;
-				SetFilePointer(hdl, 0, null, FILE_BEGIN);
-				WriteFile(hdl, fMemory, cast(uint)fSize, &numRead, null);
-				
-				if (numRead != fSize)
-					throw new Error(format("stream exception: '%s' is corrupted", aFilename));
-			}
+        void saveToFile(in char[] aFilename)
+        {
+            version(Windows)
+            {
+                auto hdl = CreateFileA( aFilename.toStringz, GENERIC_WRITE, 0,
+                    (SECURITY_ATTRIBUTES*).init, CREATE_ALWAYS, FILE_ATTRIBUTE_NORMAL, HANDLE.init);
+                
+                if (hdl == INVALID_HANDLE_VALUE)
+                    throw new Error(format("stream exception: cannot create or overwrite '%s'", aFilename));
+                
+                scope(exit) CloseHandle(hdl); 
+                uint numRead;
+                SetFilePointer(hdl, 0, null, FILE_BEGIN);
+                WriteFile(hdl, fMemory, cast(uint)fSize, &numRead, null);
+                
+                if (numRead != fSize)
+                    throw new Error(format("stream exception: '%s' is corrupted", aFilename));
+            }
             version(Posix)
             {
                 auto hdl = open( aFilename.toStringz, O_CREAT | O_TRUNC | O_WRONLY, octal!666);
-				if (hdl <= -1)
-				    throw new Error(format("stream exception: cannot create or overwrite '%s'", aFilename));
+                if (hdl <= -1)
+                    throw new Error(format("stream exception: cannot create or overwrite '%s'", aFilename));
 
                 scope(exit) core.sys.posix.unistd.close(hdl);
                 auto numRead = core.sys.posix.unistd.write(hdl, fMemory, fSize);
-				ftruncate64(hdl, fSize);
+                ftruncate64(hdl, fSize);
 
                 if (numRead != fSize)
-					throw new Error(format("stream exception: '%s' is corrupted", aFilename));
+                    throw new Error(format("stream exception: '%s' is corrupted", aFilename));
             }
             fFilename = aFilename.idup;
-		}
-		
+        }
+        
         /// ditto
-		void loadFromFile(in char[] aFilename)		
-		{
-			version(Windows)
-			{
-				auto hdl = CreateFileA(aFilename.toStringz, GENERIC_READ, 0,
-					(SECURITY_ATTRIBUTES*).init, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, HANDLE.init);
-						
-				if (hdl == INVALID_HANDLE_VALUE)
-					throw new Error(format("stream exception: cannot open '%s'", aFilename));
-					
-				uint numRead;
-				scope(exit) CloseHandle(hdl);
-				size( SetFilePointer(hdl, 0, null, FILE_END));
-				SetFilePointer(hdl, 0, null, FILE_BEGIN);
-				ReadFile(hdl, fMemory, cast(uint)fSize, &numRead, null);
-				position = 0;
-				
-				if (numRead != fSize)
-					throw new Error(format("stream exception: '%s' is not correctly loaded", aFilename));
-			}
+        void loadFromFile(in char[] aFilename)      
+        {
+            version(Windows)
+            {
+                auto hdl = CreateFileA(aFilename.toStringz, GENERIC_READ, 0,
+                    (SECURITY_ATTRIBUTES*).init, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, HANDLE.init);
+                        
+                if (hdl == INVALID_HANDLE_VALUE)
+                    throw new Error(format("stream exception: cannot open '%s'", aFilename));
+                    
+                uint numRead;
+                scope(exit) CloseHandle(hdl);
+                size( SetFilePointer(hdl, 0, null, FILE_END));
+                SetFilePointer(hdl, 0, null, FILE_BEGIN);
+                ReadFile(hdl, fMemory, cast(uint)fSize, &numRead, null);
+                position = 0;
+                
+                if (numRead != fSize)
+                    throw new Error(format("stream exception: '%s' is not correctly loaded", aFilename));
+            }
             version(Posix)
-			{
+            {
                 auto hdl = open(aFilename.toStringz, O_CREAT | O_RDONLY, octal!666);
 
                 if (hdl <= -1)
@@ -908,23 +908,23 @@ public class izMemoryStream: izStream, izStreamPersist, izFilePersist8
 
                 scope(exit) core.sys.posix.unistd.close(hdl);
                 size(core.sys.posix.unistd.lseek64(hdl, 0, SEEK_END));
-				core.sys.posix.unistd.lseek64(hdl, 0, SEEK_SET);
-				auto numRead = core.sys.posix.unistd.read(hdl, fMemory, fSize);
-				position = 0;
+                core.sys.posix.unistd.lseek64(hdl, 0, SEEK_SET);
+                auto numRead = core.sys.posix.unistd.read(hdl, fMemory, fSize);
+                position = 0;
 
                 if (numRead != fSize)
-					throw new Error(format("stream exception: '%s' is not correctly loaded", aFilename));
+                    throw new Error(format("stream exception: '%s' is not correctly loaded", aFilename));
             }
             fFilename = aFilename.idup;
-		}	
+        }   
         
         /// ditto
         @property string filename()
         {
             return fFilename;
         }
-// ----	
-	}
+// ---- 
+    }
 }
 
 unittest
@@ -975,8 +975,8 @@ unittest
 
 version(unittest)
 {
-	class izMemoryStreamTest1 : commonStreamTester!izMemoryStream {}
-	class izFileStreamTest1: commonStreamTester!(izFileStream, "filestream1.txt"){}
+    class izMemoryStreamTest1 : commonStreamTester!izMemoryStream {}
+    class izFileStreamTest1: commonStreamTester!(izFileStream, "filestream1.txt"){}
 
     unittest
     {
@@ -992,96 +992,96 @@ version(unittest)
         assert(huge.size == sz);
     }
 
-	class commonStreamTester(T, A...)
-	{
-		unittest
-		{
-			uint len = 25_000;
-			auto str = construct!T(A);
-			scope (exit)  str.destruct;
-			for (int i = 0; i < len; i++)
-			{
-				str.write(&i, i.sizeof);
-				assert(str.position == (i + 1) * i.sizeof);
-			}
-			str.position = 0;
-			assert(str.size == len * 4);
-			while(str.position < str.size)
-			{
-				int g;
-				auto c = str.read(&g, g.sizeof);
-				assert(g == (str.position - 1) / g.sizeof );
-			}
-			str.clear;
-			assert(str.size == 0);
-			assert(str.position == 0);
-			for (int i = 0; i < len; i++)
-			{
-				str.write(&i, i.sizeof);
-				assert(str.position == (i + 1) * i.sizeof);
-			}	
-			str.position = 0;
+    class commonStreamTester(T, A...)
+    {
+        unittest
+        {
+            uint len = 25_000;
+            auto str = construct!T(A);
+            scope (exit)  str.destruct;
+            for (int i = 0; i < len; i++)
+            {
+                str.write(&i, i.sizeof);
+                assert(str.position == (i + 1) * i.sizeof);
+            }
+            str.position = 0;
+            assert(str.size == len * 4);
+            while(str.position < str.size)
+            {
+                int g;
+                auto c = str.read(&g, g.sizeof);
+                assert(g == (str.position - 1) / g.sizeof );
+            }
+            str.clear;
+            assert(str.size == 0);
+            assert(str.position == 0);
+            for (int i = 0; i < len; i++)
+            {
+                str.write(&i, i.sizeof);
+                assert(str.position == (i + 1) * i.sizeof);
+            }   
+            str.position = 0;
 
             static if (is(T == izFileStream))
             {
-			    auto strcpy = construct!T("filestream2.txt");
+                auto strcpy = construct!T("filestream2.txt");
             }
             else auto strcpy = construct!T(A);
-			scope (exit) strcpy.destruct;
-			strcpy.size = 100000;
-			assert(str.size == len * 4);
-			strcpy.loadFromStream(str);
-			assert(str.size == len * 4);
-			assert(strcpy.size == str.size);
-			strcpy.position = 0;
-			str.position = 0;
-			for (int i = 0; i < len; i++)
-			{
-				int r0,r1;
-				str.readint(&r0);
-				strcpy.readint(&r1);
-				assert(r0 == r1);
-			}
-			strcpy.position = 0;
-			str.position = 0;
-			assert(strcpy.size == len * 4);
-
-			str.write("truncate the data".dup.ptr, 17);
-			str.position = 0;
+            scope (exit) strcpy.destruct;
+            strcpy.size = 100000;
+            assert(str.size == len * 4);
+            strcpy.loadFromStream(str);
+            assert(str.size == len * 4);
+            assert(strcpy.size == str.size);
             strcpy.position = 0;
-			ubyte[] food0, food1;
-			food0.length = cast(size_t) str.size;
-			food1.length = cast(size_t) strcpy.size;
-			str.read(food0.ptr, food0.length);
-			strcpy.read(food1.ptr,food1.length);
-			ubyte[16] md5_0 = md5Of(food0);
-			ubyte[16] md5_1 = md5Of(food1);
-			assert(md5_0 != md5_1);
-			
-			static if (is(T == izMemoryStream))
-			{
-				str.saveToFile("memstream.txt");
-				str.clear;
-				str.loadFromFile("memstream.txt");
-				assert(str.size == strcpy.size);
-				std.stdio.remove("memstream.txt");
-			}
-			
-			str.position = 0;
-			strcpy.position = 0;
-			strcpy.saveToStream(str);
-			str.position = 0;
-			strcpy.position = 0;
-			food0.length = cast(size_t) str.size;
-			food1.length = cast(size_t) strcpy.size;
-			str.read(food0.ptr,food0.length);
-			strcpy.read(food1.ptr,food1.length);
-			md5_0 = md5Of(food0);
-			md5_1 = md5Of(food1);
-			assert(md5_0 == md5_1);
+            str.position = 0;
+            for (int i = 0; i < len; i++)
+            {
+                int r0,r1;
+                str.readint(&r0);
+                strcpy.readint(&r1);
+                assert(r0 == r1);
+            }
+            strcpy.position = 0;
+            str.position = 0;
+            assert(strcpy.size == len * 4);
+
+            str.write("truncate the data".dup.ptr, 17);
+            str.position = 0;
+            strcpy.position = 0;
+            ubyte[] food0, food1;
+            food0.length = cast(size_t) str.size;
+            food1.length = cast(size_t) strcpy.size;
+            str.read(food0.ptr, food0.length);
+            strcpy.read(food1.ptr,food1.length);
+            ubyte[16] md5_0 = md5Of(food0);
+            ubyte[16] md5_1 = md5Of(food1);
+            assert(md5_0 != md5_1);
+            
+            static if (is(T == izMemoryStream))
+            {
+                str.saveToFile("memstream.txt");
+                str.clear;
+                str.loadFromFile("memstream.txt");
+                assert(str.size == strcpy.size);
+                std.stdio.remove("memstream.txt");
+            }
+            
+            str.position = 0;
+            strcpy.position = 0;
+            strcpy.saveToStream(str);
+            str.position = 0;
+            strcpy.position = 0;
+            food0.length = cast(size_t) str.size;
+            food1.length = cast(size_t) strcpy.size;
+            str.read(food0.ptr,food0.length);
+            strcpy.read(food1.ptr,food1.length);
+            md5_0 = md5Of(food0);
+            md5_1 = md5Of(food1);
+            assert(md5_0 == md5_1);
 
             static if (is(T == izMemoryStream))
-			{
+            {
               str.clear;
               for(ubyte i = 0; i < 100; i++) str.write(&i, 1);
               for(ubyte i = 0; i < 100; i++) assert( str.ubytes[i] == i );
@@ -1096,6 +1096,6 @@ version(unittest)
             }
 
             writeln( T.stringof ~ " passed the tests");
-		}
-	}
+        }
+    }
 }

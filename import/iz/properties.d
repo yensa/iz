@@ -2,53 +2,53 @@ module iz.properties;
 
 import std.traits;
 import iz.types, iz.containers;
-		
+        
 /**
  * Describes the accessibility of a property.
  */
 public enum izPropAccess 
 {
     /// denotes an error.
-	none, 
+    none, 
     /// read-only.
-	ro,	  
+    ro,   
     /// write-only.
-	wo,	  
+    wo,   
     /// read & write.
-	rw	  
-}	
-	
+    rw    
+}   
+    
 /**
  * Describes the property of type T of an Object. Its members includes:
  * <li> a setter: either as an izPropSetter method or as pointer to the field.</li>
  * <li> a getter: either as an izPropGetter method or as pointer to the field.</li>
  * <li> a name: optionally used, according to the context.</li>
  * <li> a declarator: the Object declaring the props. the declarator is automatically set
- *		when the descriptor uses at least one accessor method.</li>
+ *      when the descriptor uses at least one accessor method.</li>
  */
 public struct izPropDescriptor(T)
 {
-	public
-	{
-		/// setter proptotype
-		alias izPropSetter = void delegate(T value);
-		/// getter prototype
-		alias izPropGetter = T delegate();		
-		/// alternative setter prototype.
-		alias izPropSetterConst = void delegate(const T value);
-	}
-	private
-	{
-		izPropSetter fSetter;
-		izPropGetter fGetter;
-		Object fDeclarator;
+    public
+    {
+        /// setter proptotype
+        alias izPropSetter = void delegate(T value);
+        /// getter prototype
+        alias izPropGetter = T delegate();      
+        /// alternative setter prototype.
+        alias izPropSetterConst = void delegate(const T value);
+    }
+    private
+    {
+        izPropSetter fSetter;
+        izPropGetter fGetter;
+        Object fDeclarator;
 
-		T* fSetPtr;
-		T* fGetPtr;
+        T* fSetPtr;
+        T* fGetPtr;
 
-		izPropAccess fAccess;
+        izPropAccess fAccess;
 
-		string fName;
+        string fName;
         
         void cleanup()
         {
@@ -61,256 +61,256 @@ public struct izPropDescriptor(T)
             fName = fName.init;
         }
 
-		void updateAccess()
-		{
-			if ((fSetter is null) && (fGetter !is null))
-				fAccess = izPropAccess.ro;
-			else if ((fSetter !is null) && (fGetter is null))
-				fAccess = izPropAccess.wo;
-			else if ((fSetter !is null) && (fGetter !is null))
-				fAccess = izPropAccess.rw;
-			else fAccess = izPropAccess.none;
-		}
-		
-		/// pseudo setter internally used when a T is directly written.
-		void internalSetter(T value)
-		{
-			T current = getter()();
-			if (value != current) *fSetPtr = value;
-		}
-		
-		/// pseudo getter internally used when a T is directly read
-		T internalGetter()
-		{
-			return *fGetPtr;
-		}
-	}
-	public
-	{
-		static immutable ubyte DescriptorFormat = 0;
-		
+        void updateAccess()
+        {
+            if ((fSetter is null) && (fGetter !is null))
+                fAccess = izPropAccess.ro;
+            else if ((fSetter !is null) && (fGetter is null))
+                fAccess = izPropAccess.wo;
+            else if ((fSetter !is null) && (fGetter !is null))
+                fAccess = izPropAccess.rw;
+            else fAccess = izPropAccess.none;
+        }
+        
+        /// pseudo setter internally used when a T is directly written.
+        void internalSetter(T value)
+        {
+            T current = getter()();
+            if (value != current) *fSetPtr = value;
+        }
+        
+        /// pseudo getter internally used when a T is directly read
+        T internalGetter()
+        {
+            return *fGetPtr;
+        }
+    }
+    public
+    {
+        static immutable ubyte DescriptorFormat = 0;
+        
 // constructors ---------------------------------------------------------------+
-		/**
-		 * Constructs a property descriptor from an izPropSetter and an izPropGetter method.
-		 */	 
-		this(izPropSetter aSetter, izPropGetter aGetter, string aName = "")
-		in
-		{
-			assert(aSetter);
-			assert(aGetter);
-		}
-		body
-		{
-			define(aSetter, aGetter, aName);
-		}
-		
-		/**
-		 * Constructs a property descriptor from an izPropSetterConst and an izPropGetter method.
-		 */	 
-		this(izPropSetterConst aSetter, izPropGetter aGetter, string aName = "")
-		in
-		{
-			assert(aSetter);
-			assert(aGetter);
-		}
-		body
-		{
-			define(cast(izPropSetter)aSetter, aGetter,aName);
-		}
-		
-		/**
-		 * Constructs a property descriptor from an izPropSetter method and a direct variable.
-		 */
-		this(izPropSetter aSetter, T* aSourceData, string aName = "")
-		in
-		{
-			assert(aSetter);
-			assert(aSourceData);
-		}
-		body
-		{
-			define(aSetter, aSourceData, aName);
-		}
-		
-		/**
-		 * Constructs a property descriptor from a single variable used as source/target
-		 */
-		this(T* aData, string aName = "")
-		in
-		{
-			assert(aData);
-		}
-		body
-		{
-			define(aData, aName);
-		}
-// ----	
+        /**
+         * Constructs a property descriptor from an izPropSetter and an izPropGetter method.
+         */  
+        this(izPropSetter aSetter, izPropGetter aGetter, string aName = "")
+        in
+        {
+            assert(aSetter);
+            assert(aGetter);
+        }
+        body
+        {
+            define(aSetter, aGetter, aName);
+        }
+        
+        /**
+         * Constructs a property descriptor from an izPropSetterConst and an izPropGetter method.
+         */  
+        this(izPropSetterConst aSetter, izPropGetter aGetter, string aName = "")
+        in
+        {
+            assert(aSetter);
+            assert(aGetter);
+        }
+        body
+        {
+            define(cast(izPropSetter)aSetter, aGetter,aName);
+        }
+        
+        /**
+         * Constructs a property descriptor from an izPropSetter method and a direct variable.
+         */
+        this(izPropSetter aSetter, T* aSourceData, string aName = "")
+        in
+        {
+            assert(aSetter);
+            assert(aSourceData);
+        }
+        body
+        {
+            define(aSetter, aSourceData, aName);
+        }
+        
+        /**
+         * Constructs a property descriptor from a single variable used as source/target
+         */
+        this(T* aData, string aName = "")
+        in
+        {
+            assert(aData);
+        }
+        body
+        {
+            define(aData, aName);
+        }
+// ---- 
 // define all the members -----------------------------------------------------+
-	
-		/**
-		 * Defines a property descriptor from an izPropSetter and an izPropGetter.
-		 */
-		void define(izPropSetter aSetter, izPropGetter aGetter, string aName = "")
-		{
+    
+        /**
+         * Defines a property descriptor from an izPropSetter and an izPropGetter.
+         */
+        void define(izPropSetter aSetter, izPropGetter aGetter, string aName = "")
+        {
             cleanup;
-			setter(aSetter);
-			getter(aGetter);
-			if (aName != "") {name(aName);}
-			fDeclarator = cast(Object) aSetter.ptr;
-		}
-		
-		/**
-		 * Defines a property descriptor from an izPropSetter method and a direct variable.
-		 */
-		void define(izPropSetter aSetter, T* aSourceData, string aName = "")
-		{
+            setter(aSetter);
+            getter(aGetter);
+            if (aName != "") {name(aName);}
+            fDeclarator = cast(Object) aSetter.ptr;
+        }
+        
+        /**
+         * Defines a property descriptor from an izPropSetter method and a direct variable.
+         */
+        void define(izPropSetter aSetter, T* aSourceData, string aName = "")
+        {
             cleanup;
-			setter(aSetter);
-			setDirectSource(aSourceData);
-			if (aName != "") {name(aName);}
-			fDeclarator = cast(Object) aSetter.ptr;
-		}		
-		/**
-		 * Defines a property descriptor from a single variable used as source/target
-		 */
-		void define(T* aData, string aName = "", Object aDeclarator = null)
-		{
+            setter(aSetter);
+            setDirectSource(aSourceData);
+            if (aName != "") {name(aName);}
+            fDeclarator = cast(Object) aSetter.ptr;
+        }       
+        /**
+         * Defines a property descriptor from a single variable used as source/target
+         */
+        void define(T* aData, string aName = "", Object aDeclarator = null)
+        {
             cleanup;
-			setDirectSource(aData);
-			setDirectTarget(aData);
-			if (aName != "") {name(aName);}
-			fDeclarator = aDeclarator;
-		}
+            setDirectSource(aData);
+            setDirectTarget(aData);
+            if (aName != "") {name(aName);}
+            fDeclarator = aDeclarator;
+        }
 // ----
 // setter ---------------------------------------------------------------------+
-		
-		/**
-		 * Sets the property setter using a standard method.
-		 */
-		@property void setter(izPropSetter aSetter)
-		{
-			fSetter = aSetter;
-			fDeclarator = cast(Object) aSetter.ptr;
-			updateAccess;
-		}
-		/// ditto
-		@property izPropSetter setter(){return fSetter;}	
-		/**
-		 * Sets the property setter using a pointer to a variable
-		 */
-		void setDirectTarget(T* aLoc)
-		{
-			fSetPtr = aLoc;
-			fSetter = &internalSetter;
-			updateAccess;
-		}
+        
+        /**
+         * Sets the property setter using a standard method.
+         */
+        @property void setter(izPropSetter aSetter)
+        {
+            fSetter = aSetter;
+            fDeclarator = cast(Object) aSetter.ptr;
+            updateAccess;
+        }
+        /// ditto
+        @property izPropSetter setter(){return fSetter;}    
+        /**
+         * Sets the property setter using a pointer to a variable
+         */
+        void setDirectTarget(T* aLoc)
+        {
+            fSetPtr = aLoc;
+            fSetter = &internalSetter;
+            updateAccess;
+        }
         /**
          * Sets the property value
          */
         void set(T aValue) {fSetter(aValue);}
 
-// ----	
+// ---- 
 // getter ---------------------------------------------------------------------+
-	
-		/** 
-		 * Sets the property getter using a standard method.
-		 */
-		@property void getter(izPropGetter aGetter)
-		{
-			fGetter = aGetter;
-			fDeclarator = cast(Object) aGetter.ptr;
-			updateAccess;
-		}
-		/// ditto
-		@property izPropGetter getter(){return fGetter;}	
-		/** 
-		 * Sets the property getter using a pointer to a variable
-		 */
-		void setDirectSource(T* aLoc)
-		{
-			fGetPtr = aLoc;
-			fGetter = &internalGetter;
-			updateAccess;
-		}
+    
+        /** 
+         * Sets the property getter using a standard method.
+         */
+        @property void getter(izPropGetter aGetter)
+        {
+            fGetter = aGetter;
+            fDeclarator = cast(Object) aGetter.ptr;
+            updateAccess;
+        }
+        /// ditto
+        @property izPropGetter getter(){return fGetter;}    
+        /** 
+         * Sets the property getter using a pointer to a variable
+         */
+        void setDirectSource(T* aLoc)
+        {
+            fGetPtr = aLoc;
+            fGetter = &internalGetter;
+            updateAccess;
+        }
         /**
          * Gets the property value
          */
         T get(){return fGetter();}
 
-// ----		
+// ----     
 // misc -----------------------------------------------------------------------+
-		
-		/** 
-		 * Information about the prop accessibility
-		 */
-		@property const(izPropAccess) access()
-		{
-			return fAccess;
-		}	
-		/** 
-		 * Defines a string used to identify the prop
-		 */
-		@property void name(string aName)
-		{
-			fName = aName;
-		}
-		/// ditto
-		@property string name()
-		{
-			return fName;
-		}
-		/**
-		 * Defines the object declaring the property.
-		 */
-		@property void declarator(Object aDeclarator)
-		{
-			fDeclarator = aDeclarator;
-		}
-		/// ditto
-		@property Object declarator(){return fDeclarator;}
+        
+        /** 
+         * Information about the prop accessibility
+         */
+        @property const(izPropAccess) access()
+        {
+            return fAccess;
+        }   
+        /** 
+         * Defines a string used to identify the prop
+         */
+        @property void name(string aName)
+        {
+            fName = aName;
+        }
+        /// ditto
+        @property string name()
+        {
+            return fName;
+        }
+        /**
+         * Defines the object declaring the property.
+         */
+        @property void declarator(Object aDeclarator)
+        {
+            fDeclarator = aDeclarator;
+        }
+        /// ditto
+        @property Object declarator(){return fDeclarator;}
 // ----        
-	
-    }	
+    
+    }   
 }
 
 version(unittest) 
 {
     import std.stdio;
-	class A
-	{
-		private int fi;
-		@property int i(){return fi;}
-		@property void i(in int aValue){fi = aValue;}
-	}
-	struct si{uint f,r,e;}
-	class B
-	{		
-		private si fi;
-		@property si i(){return fi;}
-		@property void i(const si aValue){fi = aValue;}
-	}
-	class propdescrtest
-	{
-		unittest
-		{	
-			auto a = construct!A;
-			auto descrAi = izPropDescriptor!int(&a.i,&a.i,"I");
-			descrAi.setter()(5);
-			assert(a.i == 5);
-			assert(a.i == descrAi.getter()());
-			assert(descrAi.declarator is a);
-			
-			auto refval = si(1,2,333);
-			auto b = construct!B;
-			auto descrBi = izPropDescriptor!si(&b.i,&b.i,"I");
-			descrBi.setter()(refval);
-			assert(b.i.e == 333);
-			assert(b.i.e == descrBi.getter()().e);
-		
+    class A
+    {
+        private int fi;
+        @property int i(){return fi;}
+        @property void i(in int aValue){fi = aValue;}
+    }
+    struct si{uint f,r,e;}
+    class B
+    {       
+        private si fi;
+        @property si i(){return fi;}
+        @property void i(const si aValue){fi = aValue;}
+    }
+    class propdescrtest
+    {
+        unittest
+        {   
+            auto a = construct!A;
+            auto descrAi = izPropDescriptor!int(&a.i,&a.i,"I");
+            descrAi.setter()(5);
+            assert(a.i == 5);
+            assert(a.i == descrAi.getter()());
+            assert(descrAi.declarator is a);
+            
+            auto refval = si(1,2,333);
+            auto b = construct!B;
+            auto descrBi = izPropDescriptor!si(&b.i,&b.i,"I");
+            descrBi.setter()(refval);
+            assert(b.i.e == 333);
+            assert(b.i.e == descrBi.getter()().e);
+        
             destruct(a,b);
-			writeln("izPropDescriptor(T) passed the tests");
-		}	
-	}
+            writeln("izPropDescriptor(T) passed the tests");
+        }   
+    }
 }
 
 /// designed to annotate a detectable property setter.
@@ -333,19 +333,19 @@ alias GetSet = SetGet;
 public string genPropFromField(T, string propName, string propField)()
 {
     return
-	"@Set @property void " ~ propName ~ "(" ~ T.stringof ~ " aValue)" ~
-	"{ " ~ propField ~ " = aValue;} " ~
-	"@Get @property " ~ T.stringof ~ " " ~ propName ~
-	"(){ return " ~ propField ~ ";}" ;
+    "@Set @property void " ~ propName ~ "(" ~ T.stringof ~ " aValue)" ~
+    "{ " ~ propField ~ " = aValue;} " ~
+    "@Get @property " ~ T.stringof ~ " " ~ propName ~
+    "(){ return " ~ propField ~ ";}" ;
 }
 
 private char[] genStandardPropDescriptors()
 {
-	char[] result;
-	foreach(T; izConstantSizeTypes)
-		result ~= ("public alias " ~ T.stringof ~ "prop = izPropDescriptor!(" ~ 
+    char[] result;
+    foreach(T; izConstantSizeTypes)
+        result ~= ("public alias " ~ T.stringof ~ "prop = izPropDescriptor!(" ~ 
             T.stringof ~ ")" ~ ";\r\n").dup;
-	return result;
+    return result;
 }
 
 /// Property descriptors for the types defined in the izConstantSizeTypes tuple.
@@ -609,315 +609,315 @@ unittest
  */
 public class izPropertyBinder(T)
 {
-	private
-	{
-		izDynamicList!(izPropDescriptor!T *) fToFree;
-		izDynamicList!(izPropDescriptor!T *) fItems;
-		izPropDescriptor!T *fSource;
-	}
-	public
-	{
-		this()
-		{
-			fItems = construct!(izDynamicList!(izPropDescriptor!T *));
-			fToFree = construct!(izDynamicList!(izPropDescriptor!T *));
-		}
-		~this()
-		{
-			for(auto i = 0; i < fToFree.count; i++)
-			{
-				auto descr = fToFree[i];
-				if (descr) destruct(descr);
-			}
-			fItems.destruct;
-			fToFree.destruct;
-		}
-		/**
-		 * Adds a property to the list.
-		 * If the binder is not local then aProp should neither be a local descriptor,
+    private
+    {
+        izDynamicList!(izPropDescriptor!T *) fToFree;
+        izDynamicList!(izPropDescriptor!T *) fItems;
+        izPropDescriptor!T *fSource;
+    }
+    public
+    {
+        this()
+        {
+            fItems = construct!(izDynamicList!(izPropDescriptor!T *));
+            fToFree = construct!(izDynamicList!(izPropDescriptor!T *));
+        }
+        ~this()
+        {
+            for(auto i = 0; i < fToFree.count; i++)
+            {
+                auto descr = fToFree[i];
+                if (descr) destruct(descr);
+            }
+            fItems.destruct;
+            fToFree.destruct;
+        }
+        /**
+         * Adds a property to the list.
+         * If the binder is not local then aProp should neither be a local descriptor,
          * otherwise the descritpor reference will become invalid.
          *
          * Params:
          * aProp = an izPropDescriptor of type T.
          * isSource = optional boolean indicating if the descriptor is used as the master property.  
-		 */
-		ptrdiff_t addBinding(ref izPropDescriptor!T aProp, bool isSource = false)
-		{
-			if (isSource) fSource = &aProp;
-			return fItems.add(&aProp);
-		}
+         */
+        ptrdiff_t addBinding(ref izPropDescriptor!T aProp, bool isSource = false)
+        {
+            if (isSource) fSource = &aProp;
+            return fItems.add(&aProp);
+        }
 
-		/**
-		 * Adds a new property to the list.
-		 * The life-time of the new descriptor is handled internally.
+        /**
+         * Adds a new property to the list.
+         * The life-time of the new descriptor is handled internally.
          *
          * Returns: 
          * an new izPropDescriptor of type T.
-		 */
-		izPropDescriptor!T * newBinding()
-		{
-			auto result = construct!(izPropDescriptor!T);
-			fItems.add(result);
-			fToFree.add(result);
-			return result;
-		}
+         */
+        izPropDescriptor!T * newBinding()
+        {
+            auto result = construct!(izPropDescriptor!T);
+            fItems.add(result);
+            fToFree.add(result);
+            return result;
+        }
 
-		/**
-		 * Removes the aIndex-nth property from the list.
+        /**
+         * Removes the aIndex-nth property from the list.
          * The item is freed if it has been allocated by _newBinding_.
          * _source_ might be invalidated if it matches the item.
          *
          * Params:
          * anIndex = the index of the descriptor to remove.
-		 */
-		void removeBinding(size_t anIndex)
-		{
-			auto itm = fItems.extract(anIndex);
+         */
+        void removeBinding(size_t anIndex)
+        {
+            auto itm = fItems.extract(anIndex);
             if (fSource && itm == fSource) fSource = null;
             if (fToFree.remove(itm)) destruct(itm);
-		}
-		
+        }
+        
         /**
-		 * Triggers the setter of each property.
-		 * This method is usually called at the end of a setter method 
+         * Triggers the setter of each property.
+         * This method is usually called at the end of a setter method 
          * (in the _master_/_source_ setter).
          *
          * Params:
          * aValue = a value of type T to send to each slave of the list.
-		 */	
+         */ 
         void change(T aValue)
-		{
-			foreach(item; fItems)
-			{
-				if (item.access == izPropAccess.none) continue;
-				if (item.access == izPropAccess.ro) continue;
-				item.setter()(aValue);
-			}
-		}
-		
+        {
+            foreach(item; fItems)
+            {
+                if (item.access == izPropAccess.none) continue;
+                if (item.access == izPropAccess.ro) continue;
+                item.setter()(aValue);
+            }
+        }
+        
         /**
-		 * Call _change()_ using the value of _source_.
-		 */
-		void updateFromSource()
-		{
-			if (!fSource) return;
-			change(fSource.getter()());
-		}
-		
+         * Call _change()_ using the value of _source_.
+         */
+        void updateFromSource()
+        {
+            if (!fSource) return;
+            change(fSource.getter()());
+        }
+        
         /**
-		 * Sets the property used as source in _updateFromSource().
+         * Sets the property used as source in _updateFromSource().
          * Params:
          * aSource = the property to be used as source.
-		 */
-		@property void source(ref izPropDescriptor!T aSource)
+         */
+        @property void source(ref izPropDescriptor!T aSource)
         {fSource = &aSource;}
         
         /**
-		 * Returns the property used as source in _updateFromSource().
-		 */        
+         * Returns the property used as source in _updateFromSource().
+         */        
         @property izPropDescriptor!T * source()
         {return fSource;}
         
-		/**
-		 * Provides an access to the property descriptors for additional _izList_ operations.
+        /**
+         * Provides an access to the property descriptors for additional _izList_ operations.
          * Note that the items whose life-time is managed should not be modified.
-		 */
-		@property izList!(izPropDescriptor!T *) items()
-		{return fItems;}	
-	}
-}	
+         */
+        @property izList!(izPropDescriptor!T *) items()
+        {return fItems;}    
+    }
+}   
 
 version(unittest)
 private class izPropertyBinderTester
 {
-	unittest
-	{
-		alias intprops = izPropertyBinder!int;
-		alias floatprops = izPropertyBinder!float;
+    unittest
+    {
+        alias intprops = izPropertyBinder!int;
+        alias floatprops = izPropertyBinder!float;
 
-		class Foo
-		{
-			private
-			{
-				int fA;
-				float fB;
-				intprops fASlaves;
-				floatprops fBSlaves;
-			}
-			public
-			{
-				this()
-				{
-					fASlaves = construct!intprops;
-					fBSlaves = construct!floatprops;
-				}
-				~this()
-				{
-				    fASlaves.destruct;
-				    fBSlaves.destruct;
-				}
-				void A(int value)
-				{
-					if (fA == value) return;
-					fA = value;
-					fASlaves.change(fA);
-				}
-				int A(){return fA;}
+        class Foo
+        {
+            private
+            {
+                int fA;
+                float fB;
+                intprops fASlaves;
+                floatprops fBSlaves;
+            }
+            public
+            {
+                this()
+                {
+                    fASlaves = construct!intprops;
+                    fBSlaves = construct!floatprops;
+                }
+                ~this()
+                {
+                    fASlaves.destruct;
+                    fBSlaves.destruct;
+                }
+                void A(int value)
+                {
+                    if (fA == value) return;
+                    fA = value;
+                    fASlaves.change(fA);
+                }
+                int A(){return fA;}
 
-				void B(float value)
-				{
-					if (fB == value) return;
-					fB = value;
-					fBSlaves.change(fB);
-				}
-				float B(){return fB;}
+                void B(float value)
+                {
+                    if (fB == value) return;
+                    fB = value;
+                    fBSlaves.change(fB);
+                }
+                float B(){return fB;}
 
-				void AddABinding(ref intprop aProp)
-				{
-					fASlaves.addBinding(aProp);
-				}
+                void AddABinding(ref intprop aProp)
+                {
+                    fASlaves.addBinding(aProp);
+                }
 
-				void AddBBinding(ref floatprop aProp)
-				{
-					fBSlaves.addBinding(aProp);
-				}
-			}
-		}
+                void AddBBinding(ref floatprop aProp)
+                {
+                    fBSlaves.addBinding(aProp);
+                }
+            }
+        }
 
-		class FooSync
-		{
-			private
-			{
-				int fA;
-				float fB;
-			}
-			public
-			{
-				void A(int value){fA = value;}
-				int A(){return fA;}
-				void B(float value){fB = value;}
-				float B(){return fB;}
-			}
-		}
+        class FooSync
+        {
+            private
+            {
+                int fA;
+                float fB;
+            }
+            public
+            {
+                void A(int value){fA = value;}
+                int A(){return fA;}
+                void B(float value){fB = value;}
+                float B(){return fB;}
+            }
+        }
 
-		class Bar
-		{
-			public int A;
-			public float B;
-		}
+        class Bar
+        {
+            public int A;
+            public float B;
+        }
 
-		// 1 master, 2 slaves
-		auto a0 = construct!Foo;
-		auto a1 = construct!FooSync;
-		auto a2 = construct!FooSync;
-		auto a3 = construct!Bar;
+        // 1 master, 2 slaves
+        auto a0 = construct!Foo;
+        auto a1 = construct!FooSync;
+        auto a2 = construct!FooSync;
+        auto a3 = construct!Bar;
 
-		auto prp1 = intprop(&a1.A,&a1.A);
-		a0.AddABinding(prp1);
+        auto prp1 = intprop(&a1.A,&a1.A);
+        a0.AddABinding(prp1);
 
-		auto prp2 = intprop(&a2.A,&a2.A);
-		a0.AddABinding(prp2);
+        auto prp2 = intprop(&a2.A,&a2.A);
+        a0.AddABinding(prp2);
 
-		intprop prp3 = intprop(&a3.A);
-		a0.AddABinding(prp3);
+        intprop prp3 = intprop(&a3.A);
+        a0.AddABinding(prp3);
 
-		auto prpf1 = floatprop(&a1.B,&a1.B);
-		auto prpf2 = floatprop(&a2.B,&a2.B);
-		auto prpf3 = floatprop(&a3.B);
-		a0.AddBBinding(prpf1);
-		a0.AddBBinding(prpf2);
-		a0.AddBBinding(prpf3);
+        auto prpf1 = floatprop(&a1.B,&a1.B);
+        auto prpf2 = floatprop(&a2.B,&a2.B);
+        auto prpf3 = floatprop(&a3.B);
+        a0.AddBBinding(prpf1);
+        a0.AddBBinding(prpf2);
+        a0.AddBBinding(prpf3);
 
-		a0.A = 2;
-		assert( a1.A == a0.A);
-		a1.A = 3;
-		assert( a1.A != a0.A);
-		a0.A = 4;
-		assert( a2.A == a0.A);
-		a0.A = 5;
-		assert( a3.A == a0.A);
+        a0.A = 2;
+        assert( a1.A == a0.A);
+        a1.A = 3;
+        assert( a1.A != a0.A);
+        a0.A = 4;
+        assert( a2.A == a0.A);
+        a0.A = 5;
+        assert( a3.A == a0.A);
 
-		a0.B = 2.5;
-		assert( a1.B == a0.B);
-		a1.B = 3.5;
-		assert( a1.B != a0.B);
-		a0.B = 4.5;
-		assert( a2.B == a0.B);
-		a0.B = 5.5;
-		assert( a3.B == a0.B);
+        a0.B = 2.5;
+        assert( a1.B == a0.B);
+        a1.B = 3.5;
+        assert( a1.B != a0.B);
+        a0.B = 4.5;
+        assert( a2.B == a0.B);
+        a0.B = 5.5;
+        assert( a3.B == a0.B);
 
-		// interdependent bindings
-		auto m0 = construct!Foo;
-		auto m1 = construct!Foo;
-		auto m2 = construct!Foo;
+        // interdependent bindings
+        auto m0 = construct!Foo;
+        auto m1 = construct!Foo;
+        auto m2 = construct!Foo;
 
-		intprop mprp0 = intprop(&m0.A, &m0.A);
-		intprop mprp1 = intprop(&m1.A, &m1.A);
-		intprop mprp2 = intprop(&m2.A, &m2.A);
+        intprop mprp0 = intprop(&m0.A, &m0.A);
+        intprop mprp1 = intprop(&m1.A, &m1.A);
+        intprop mprp2 = intprop(&m2.A, &m2.A);
 
-		m0.AddABinding(mprp1);
-		m0.AddABinding(mprp2);
+        m0.AddABinding(mprp1);
+        m0.AddABinding(mprp2);
 
-		m1.AddABinding(mprp0);
-		m1.AddABinding(mprp2);
+        m1.AddABinding(mprp0);
+        m1.AddABinding(mprp2);
 
-		m2.AddABinding(mprp0);
-		m2.AddABinding(mprp1);
+        m2.AddABinding(mprp0);
+        m2.AddABinding(mprp1);
 
-		m0.A = 2;
-		assert( m1.A == m0.A);
-		assert( m2.A == m0.A);
-		m1.A = 3;
-		assert( m0.A == m1.A);
-		assert( m2.A == m1.A);
-		m2.A = 4;
-		assert( m1.A == m2.A);
-		assert( m0.A == m2.A);
+        m0.A = 2;
+        assert( m1.A == m0.A);
+        assert( m2.A == m0.A);
+        m1.A = 3;
+        assert( m0.A == m1.A);
+        assert( m2.A == m1.A);
+        m2.A = 4;
+        assert( m1.A == m2.A);
+        assert( m0.A == m2.A);
 
-		a0.destruct;
-		a1.destruct;
-		a2.destruct;
-		a3.destruct;
-		m0.destruct;
-		m1.destruct;
-		m2.destruct;
+        a0.destruct;
+        a1.destruct;
+        a2.destruct;
+        a3.destruct;
+        m0.destruct;
+        m1.destruct;
+        m2.destruct;
 
-		writeln("izPropertyBinder(T) passed the tests");
-	}
+        writeln("izPropertyBinder(T) passed the tests");
+    }
 }
 
 unittest
 {
-	auto strSync = construct!(izPropertyBinder!int);
+    auto strSync = construct!(izPropertyBinder!int);
 
-	class A
-	{
-		private int fStr;
-		public @property str(int aValue){fStr = aValue;}
-		public @property int str(){return fStr;}
-	}
+    class A
+    {
+        private int fStr;
+        public @property str(int aValue){fStr = aValue;}
+        public @property int str(){return fStr;}
+    }
 
-	auto a0 = construct!A;
-	auto a1 = construct!A;
-	auto a2 = construct!A;
+    auto a0 = construct!A;
+    auto a1 = construct!A;
+    auto a2 = construct!A;
 
-	auto propa0str = strSync.newBinding;
-	propa0str.define(&a0.str,&a0.str);
-	auto propa1str = strSync.newBinding;
-	propa1str.define(&a1.str,&a1.str);
-	auto propa2str = strSync.newBinding;
-	propa2str.define(&a2.str,&a2.str);
+    auto propa0str = strSync.newBinding;
+    propa0str.define(&a0.str,&a0.str);
+    auto propa1str = strSync.newBinding;
+    propa1str.define(&a1.str,&a1.str);
+    auto propa2str = strSync.newBinding;
+    propa2str.define(&a2.str,&a2.str);
 
-	strSync.change(8);
+    strSync.change(8);
 
-	assert(a0.str == 8);
-	assert(a1.str == 8);
-	assert(a2.str == 8);
+    assert(a0.str == 8);
+    assert(a1.str == 8);
+    assert(a2.str == 8);
 
-	a0.destruct;
-	a1.destruct;
-	a2.destruct;
-	strSync.destruct;
+    a0.destruct;
+    a1.destruct;
+    a2.destruct;
+    strSync.destruct;
 
-	writeln("izPropertyBinder(T) passed the newBinding() test");
+    writeln("izPropertyBinder(T) passed the newBinding() test");
 }

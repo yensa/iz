@@ -31,7 +31,7 @@ public interface izSerializable
      * aSerializer = the serializer. The implementer calls aSerializer.addProperty()
      * to declare arbitrarily some izPropDescriptors (run-time decision).
      */
-	void declareProperties(izSerializer aSerializer);
+    void declareProperties(izSerializer aSerializer);
 }
 
 /**

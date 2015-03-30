@@ -10,17 +10,17 @@ alias izPtr = void*;
 /** 
  * izfixedLenTypes represents all the fixed-length types, directly representing a data.
  */
-alias izConstantSizeTypes = TypeTuple!(	
-	bool, byte, ubyte, short, ushort, int, uint, long, ulong, 
-	char, wchar, dchar, float, double);
+alias izConstantSizeTypes = TypeTuple!( 
+    bool, byte, ubyte, short, ushort, int, uint, long, ulong, 
+    char, wchar, dchar, float, double);
 
-	
+    
 /**
  * Returns true if T is a fixed-length data.
  */
 static bool isConstantSize(T)()
 {
-	return (
+    return (
         staticIndexOf!(T,izConstantSizeTypes) != -1) || 
         (is(T==struct) & (__traits(isPOD, T))
     );
@@ -235,7 +235,7 @@ unittest
     foos.destruct;
     assert(!foos);
 
-	writeln("construct/destruct passed the tests");
+    writeln("construct/destruct passed the tests");
 }
 
 unittest
