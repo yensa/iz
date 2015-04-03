@@ -492,7 +492,7 @@ public interface izList(T)
 
     /**
      * Allocates, adds to the back, and returns a new item of type T.
-     * Items allocated by this function need to be manually freed before the holder destruction.
+     * Items allocated by this function need to be manually freed before the list destruction.
      */
     static if(is (T == class))
     {
@@ -1898,6 +1898,17 @@ public interface izTreeItem
         }
         return result;
     }
+    
+    /**
+     * Returns the root.
+     */
+    @safe @property final typeof(this) root()
+    {
+        auto current = this;
+        while(current.parent)
+            current = current.parent;
+        return current;
+    }    
 
     /**
      * Returns the children count.
@@ -2373,6 +2384,9 @@ private class foo: izTreeItem
         assert(Root.children[1].childrenCount == 4);
         assert(Root.children[1].children[3].childrenCount == 3);
         assert(Root.children[1].children[3].children[0].level == 3);
+        
+        assert(Root.children[1].children[3].children[0].root is Root);
+        assert(Root.children[1].children[3].root is Root);
 
         auto str = construct!izMemoryStream;
         Root.saveToStream(str);
