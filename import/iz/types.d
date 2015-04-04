@@ -125,10 +125,20 @@ if (isPointer!(T*) && isBasicType!T)
 @trusted CT construct(CT, A...)(A a) 
 if (is(CT == class))
 {
-    import std.conv : emplace;
-    auto size = __traits(classInstanceSize, CT);
-    auto memory = getMem(size)[0 .. size];
-    return emplace!(CT, A)(memory, a);
+    version(none) {
+        // based on D wiki
+        import std.conv : emplace;
+        auto size = __traits(classInstanceSize, CT);
+        auto memory = getMem(size)[0 .. size];
+        return emplace!(CT, A)(memory, a);
+    } else {
+        // based on D-Runtime - lifetime.d 
+        auto memory = getMem(typeid(CT).init.length);
+        memory[0 .. typeid(CT).init.length] = typeid(CT).init[];
+        static if (__traits(hasMember, CT, "__ctor"))
+            (cast(CT) (memory)).__ctor(a);    
+        return cast(CT) memory;
+    }
 }
 
 /**  
@@ -140,10 +150,19 @@ if (is(CT == class))
 @trusted ST * construct(ST, A...)(A a)
 if(is(ST==struct))
 {
-    import std.conv : emplace;
-    auto size = ST.sizeof;
-    auto memory = getMem(size)[0 .. size];
-    return emplace!(ST, A)(memory, a);
+    version(all) {
+        import std.conv : emplace;
+        auto size = ST.sizeof;
+        auto memory = getMem(size)[0 .. size];
+        return emplace!(ST, A)(memory, a);
+    } else {
+        assert(0, "this does not work");
+        auto memory = getMem(ST.sizeof);
+        memory[0 .. ST.sizeof] = typeid(ST).init[];
+        static if (A.length &&  __traits(hasMember, ST, "__ctor"))
+            (cast(ST*) (memory)).__ctor(a);    
+        return cast(ST*) memory;
+    }
 }
        
 /** 
