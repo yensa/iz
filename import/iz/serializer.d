@@ -979,7 +979,8 @@ public class izSerializer
          * outputStream = the stream where te data are written.
          * format = the format of the serialized data.
          */
-        void objectToStream(izSerializable root, izStream outputStream, izSerFormat format)
+        void objectToStream(izSerializable root, izStream outputStream, 
+            izSerFormat format = izSerFormat.iztxt)
         {
             fFormat = format;
             fStream = outputStream;
@@ -1010,7 +1011,7 @@ public class izSerializer
          * outputStream = the stream where te data are written.
          * format = the format of the serialized data.
          */
-        void istToStream(izStream outputStream, izSerFormat format)
+        void istToStream(izStream outputStream, izSerFormat format = izSerFormat.iztxt)
         {
             fFormat = format;
             fStream = outputStream;
@@ -1046,7 +1047,7 @@ public class izSerializer
          * inputStream = a stream containing the serialized data.
          * format = the format of the serialized data.
          */
-        void streamToIst(izStream inputStream, izSerFormat format)
+        void streamToIst(izStream inputStream, izSerFormat format = izSerFormat.iztxt)
         {
             izIstNode[] unorderNodes;
             izIstNode oldParent;
@@ -1095,7 +1096,7 @@ public class izSerializer
          * root = the izSerializable from where the declarations and the restoration starts.
          * format = the format of the serialized data.
          */
-        void streamToObject(izStream inputStream, izSerializable root, izSerFormat format)
+        void streamToObject(izStream inputStream, izSerializable root, izSerFormat format = izSerFormat.iztxt)
         {
             fSerState = izSerState.restore;
             fRestoreMode = izRestoreMode.sequential;
@@ -1656,7 +1657,7 @@ version(unittest)
             private char[] _field;
             public this()(char[] param){_field = param;}
             public void opAssign(char[] param){_field = param;}
-            public string toString(){return _field.idup;}
+            public char[] toString(){return _field.dup;}
         }
         
         import iz.enumset;
@@ -1700,7 +1701,7 @@ version(unittest)
         ser.streamToObject(str, bar, format);
         assert( bar.set == SetofA(A.a1,A.a2), to!string(bar.set));
         //TODO-cinvestigation: struct as simple array fails on linux X86_64.
-        //assert( bar.str._field == "azertyuiop", bar.str._field );
+        assert( bar.str._field == "azertyuiop", bar.str._field );
         // ----
     
         writeln("izSerializer passed the ", to!string(format), " format test");
