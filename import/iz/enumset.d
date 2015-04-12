@@ -515,6 +515,26 @@ public struct izEnumSet(E, S) if (setConstraint!(E, S))
 
 }
 
+/**
+ * Returns a pointer to an EnumSet using the smallest container possible.
+ * The result must be manually deallocated with iz.types.destruct().
+ * Params:
+ * E = an enum
+ * a = the parameters passed to the set constructor.
+ */
+static auto enumSet(E, A...)(A a) @property @safe
+if (enumFitsInSet!(E, Set64))
+{    
+    import iz.types;
+    static if (enumFitsInSet!(E, Set8))    
+        return construct!(izEnumSet!(E, Set8))(a);
+    else static if (enumFitsInSet!(E, Set16))    
+        return construct!(izEnumSet!(E, Set16))(a); 
+    else static if (enumFitsInSet!(E, Set32))    
+        return construct!(izEnumSet!(E, Set32))(a);
+    else return construct!(izEnumSet!(E, Set64))(a);
+}
+
 
 /// returns true if T and E are suitable for constructing an izEnumProcs
 private static bool isCallableFromEnum(T, E)()
@@ -881,6 +901,16 @@ version(unittest)
         eSet2 -= E.e2;
         assert(eSet1 == eSet2);
     }
+    
+    /// enumSet
+    unittest
+    {
+        assert( is(typeof(enumSet!a4) == izEnumSet!(a4,Set8)*) );
+        assert( is(typeof(enumSet!a8) == izEnumSet!(a8,Set8)*) );
+        assert( is(typeof(enumSet!a9) == izEnumSet!(a9,Set16)*)) ;
+        assert( is(typeof(enumSet!a16) == izEnumSet!(a16,Set16)*) );
+        assert( is(typeof(enumSet!a17) == izEnumSet!(a17,Set32)*) );  
+    }    
 
     /// izEnumProcs
     unittest
