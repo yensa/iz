@@ -148,7 +148,7 @@ if (is(CT == class))
  * a = variadic parameters passed to the constructor.
  */
 @trusted ST * construct(ST, A...)(A a)
-if(is(ST==struct))
+if(is(ST==struct) || is(ST==union))
 {
     version(all) {
         import std.conv : emplace;
@@ -173,7 +173,8 @@ if(is(ST==struct))
  * instance = an instance of type *T*.
  */
 static void destruct(T)(ref T instance) 
-if (is(T == class) || (isPointer!T && is(PointerTarget!T == struct)))
+if (is(T == class) || (isPointer!T && is(PointerTarget!T == struct))
+    || (isPointer!T && is(PointerTarget!T == union)))
 {
     if (!instance) return;
     destroy(instance);
@@ -253,6 +254,17 @@ unittest
     assert(!foos);
     foos.destruct;
     assert(!foos);
+    
+    union Uni{bool b; ulong ul;}
+    Uni * uni0 = construct!Uni();
+    Uni * uni1 = new Uni();
+    assert( GC.addrOf(cast(void*)uni0) == null );
+    assert( GC.addrOf(cast(void*)uni1) != null );   
+    uni0.destruct;
+    uni1.destruct;   
+    assert(!uni0);
+    uni0.destruct;
+    assert(!uni0);    
 
     writeln("construct/destruct passed the tests");
 }
