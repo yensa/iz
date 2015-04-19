@@ -1661,7 +1661,8 @@ public interface izTreeItem
         aSibling.nextSibling = null;
         aSibling.parent = parent;
 
-        hasChanged(izContainerChangeKind.add,aSibling);
+        if (parent)
+            parent.hasChanged(izContainerChangeKind.add, aSibling);
 
         return 0;
     }
@@ -1925,12 +1926,19 @@ public interface izTreeItem
      */
     @safe final ptrdiff_t addChild(izTreeItem aChild)
     {
+        if (aChild.parent)
+        {
+            if (aChild.parent !is this)
+                aChild.parent.removeChild(aChild);
+            else
+                return aChild.siblingIndex;
+        }
         if (!firstChild)
         {
             firstChild = aChild;
             aChild.parent = this;
 
-            hasChanged(izContainerChangeKind.change,aChild);
+            hasChanged(izContainerChangeKind.add, aChild);
 
             return 0;
         }
