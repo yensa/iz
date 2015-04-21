@@ -176,7 +176,7 @@ public bool isSerializable(T)()
     static if (isSerSimpleType!T) return true;
     else static if (isSerStructType!T) return true;   
     else static if (isSerArrayType!T) return true; 
-    else static if (isSerArrayStructType!T) return true;  
+    //else static if (isSerArrayStructType!T) return true;  
     else static if (isSerObjectType!T) return true;
     else return false;
 }
@@ -397,9 +397,9 @@ void setNodeInfo(T)(izSerNodeInfo * nodeInfo, izPropDescriptor!T * descriptor)
     }
     
     // arrays types
-    else static if (isSerArrayType!T || isSerArrayStructType!T)
+    else static if (isSerArrayType!T /*|| isSerArrayStructType!T*/)
     {
-        static if (isSerArrayStructType!T)
+        /*static if (isSerArrayStructType!T)
         {
             foreach(TT;izSerTypeTuple)
                 static if (isAssignable!(T,TT[]))
@@ -411,7 +411,7 @@ void setNodeInfo(T)(izSerNodeInfo * nodeInfo, izPropDescriptor!T * descriptor)
                     break;
                 }          
         }
-        else
+        else*/
         { 
             nodeInfo.type = text2type[getElemStringOf!T];
             T value = descriptor.getter()();
@@ -1644,51 +1644,26 @@ version(unittest)
         ser.onWantDescriptor = null;
         // ----
         
-        // struct serialized as basicType or basicType[] ---+
-        
-        /*
-         to be serializable as an array, a struct must
-         - implement a copy constructor with T[] as param.
-         - implement opAssign with T[] as param.
-         - must be convertible by std.conv.to() to a T[].
-        */
-        struct SerStruct
-        {
-            private char[] _field;
-            public this()(char[] param){_field = param;}
-            public void opAssign(char[] param)
-            {
-                writeln("hello there...");
-                _field = param;
-            }
-            public char[] toString(){return _field.dup;}
-        }
+        // struct serialized as basicType or ---+
         
         import iz.enumset;
         enum A {a0,a1,a2}
         alias SetofA = izEnumSet!(A,Set8);
         
-        static assert(isSerArrayStructType!SerStruct);
-        
         class Bar: izSerializable
         {    
             private: 
                 SetofA set;
-                SerStruct str;
                 izPropDescriptor!SetofA setDescr;
-                izPropDescriptor!SerStruct strDescr;
             public:
                 this()
                 {
                     setDescr.define(&set,"set");
                     with(A) set = SetofA(a1,a2);
-                    strDescr.define(&str,"aStruct");
-                    str._field = "azertyuiop".dup;
                 }
                 void declareProperties(izSerializer aSerializer)
                 {
                     aSerializer.addProperty(&setDescr);
-                    aSerializer.addProperty(&strDescr);
                 }  
         }
         
@@ -1700,14 +1675,9 @@ version(unittest)
         
         ser.objectToStream(bar, str, format);
         bar.set = [];
-        bar.str._field = "".dup;
         str.position = 0;
         ser.streamToObject(str, bar, format);
         assert( bar.set == SetofA(A.a1,A.a2), to!string(bar.set));
-        //TODO-cinvestigation: struct as simple array fails on linux X86_64.
-        // SerStruct.opAssign() is not called in nodeInfo2Declarator.toDecl2
-        //assert( bar.str._field == "azertyuiop", bar.str._field );
-        // ----
     
         writeln("izSerializer passed the ", to!string(format), " format test");
     }
