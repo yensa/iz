@@ -183,7 +183,10 @@ public interface izStream
      * A typed reader is generated for each type in izConstantSizeTypes
      * and named readint, readchar, etc.
      */
-    size_t readVariable(T)(T* aValue);
+    final size_t readVariable(T)(T* aValue)
+    {
+        return read(&aValue, T.sizeof);
+    }     
     /**
      * Writes aCount bytes to aBuffer.
      * Returns the count of bytes effectively written.
@@ -196,7 +199,10 @@ public interface izStream
      * A typed writer is generated for each type in izConstantSizeTypes
      * and named writeint, writechar, etc.
      */
-    size_t writeVariable(T)(T* aValue);
+    final size_t writeVariable(T)(T* aValue)
+    {
+        return write(&aValue, T.sizeof);
+    }
     /**
      * Sets the position to anOffset if anOrigin = 0,
      * to Position + anOffset if anOrigin = 1 or
@@ -337,11 +343,6 @@ package class izSystemStream: izStream, izStreamPersist
             }
         }
 
-        size_t readVariable(T)(T* aValue)
-        {
-            return read(&aValue, T.sizeof);
-        }
-
         size_t write(izPtr aBuffer, size_t aCount)
         {
             if (!fHandle.isHandleValid) return 0;
@@ -357,11 +358,6 @@ package class izSystemStream: izStream, izStreamPersist
             {
                 return core.sys.posix.unistd.write(fHandle, aBuffer, aCount);
             }
-        }
-
-        size_t writeVariable(T)(T* aValue)
-        {
-            return write(&aValue, T.sizeof);
         }
 
         ulong seek(ulong anOffset, izSeekMode aMode)
@@ -649,13 +645,6 @@ public class izMemoryStream: izStream, izStreamPersist, izFilePersist8
             return aCount;
         }
         
-        size_t readVariable(T)(T* aValue) if (isConstantSize!T)
-        {
-            if (fPosition + T.sizeof > fSize) return 0;
-            moveMem(aValue, fMemory + fPosition, T.sizeof);
-            fPosition += T.sizeof;
-            return T.sizeof;
-        }
 // ----     
 // write ----------------------------------------------------------------------+
 
@@ -665,14 +654,6 @@ public class izMemoryStream: izStream, izStreamPersist, izFilePersist8
             moveMem(fMemory + fPosition, aBuffer, aCount);
             fPosition += aCount;
             return aCount;
-        }
-        
-        size_t writeVariable(T)(T* aValue) if (isConstantSize!T)
-        {
-            if (fPosition + T.sizeof > fSize) size(fPosition + T.sizeof);
-            moveMem(fMemory + fPosition, aValue, T.sizeof);
-            fPosition += T.sizeof;
-            return T.sizeof;
         }
 
 // ----     
