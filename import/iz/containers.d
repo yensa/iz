@@ -1491,21 +1491,27 @@ public interface izTreeItem
     /// ditto
     @safe @property izTreeItemSiblings children();
     /**
-     * hasChanged() notifies the implementer about the modification of the list.
+     * treeChanged() notifies the implementer about the modification of the list.
      * It's also injected by izTreeItemAccessors. This method is necessary because
      * most of the methods of the interface can't be overriden, for example to
      * call a particular updater when a node is added or removed.
      */
-    @safe void hasChanged(izContainerChangeKind aChangeKind, izTreeItem involvedItem);
+    @safe void treeChanged(izContainerChangeKind aChangeKind, izTreeItem involvedItem);
 
     /// Encapsulates the operators for accessing to the siblings/children.
     private struct izTreeItemSiblings
     {
         public:
+        
             izTreeItem item;
 
         public:
-            /// Operators
+        
+            /**
+             * Provides the array syntax.
+             * WHen all the items must be accessed in a loop 
+             * foreach() should be prefered since it's actually a linked list.
+             */
             @safe final izTreeItem opIndex(ptrdiff_t i)
             {
                 if (!item) return null;
@@ -1518,7 +1524,8 @@ public interface izTreeItem
                 }
                 return old;
             }
-            /// ditto
+            
+            /// Provides the array syntax.
             final void opIndexAssign(izTreeItem anItem, size_t i)
             {
                 if (!item) return;
@@ -1542,7 +1549,8 @@ public interface izTreeItem
                     }
                 }
             }
-            /// ditto
+            
+            /// Support for the foreach() operator.
             final int opApply(int delegate(ref izTreeItem) dg)
             {
                 int result = 0;
@@ -1556,7 +1564,8 @@ public interface izTreeItem
                 }
                 return result;
             }
-            /// ditto
+            
+            /// Support for the foreach_reverse() operator.
             final int opApplyReverse(int delegate(ref izTreeItem) dg)
             {
                 int result = 0;
@@ -1645,14 +1654,21 @@ public interface izTreeItem
 
     /**
      * Adds an item at the end of list.
-     * Returns 0 when the operation is successful otherwise -1.
      */
-    @safe final ptrdiff_t addSibling(izTreeItem aSibling)
+    @safe final void addSibling(izTreeItem aSibling)
+    in
     {
         assert(aSibling);
-
-        // duplicated items would break the chain.
-        if (findSibling(aSibling) > -1) return -1;
+    }
+    body
+    {  
+        if (aSibling.hasSibling)
+        {
+            if (aSibling.prevSibling !is null)
+                aSibling.prevSibling.removeSibling(aSibling);
+            else
+                aSibling.nextSibling.removeSibling(aSibling);
+        }
 
         auto oldlast = lastSibling;
         assert(oldlast);
@@ -1662,20 +1678,26 @@ public interface izTreeItem
         aSibling.parent = parent;
 
         if (parent)
-            parent.hasChanged(izContainerChangeKind.add, aSibling);
-
-        return 0;
+            parent.treeChanged(izContainerChangeKind.add, aSibling);
     }
 
     /**
      * Inserts an item at the beginning of the list.
-     * Returns 0 if the operation is successful otherwise -1.
      */
-    @safe final ptrdiff_t insertSibling(izTreeItem aSibling)
+    @safe final void insertSibling(izTreeItem aSibling)
+    in
     {
         assert(aSibling);
-
-        if (findSibling(aSibling) > -1) return -1;
+    }
+    body
+    {  
+        if (aSibling.hasSibling)
+        {
+            if (aSibling.prevSibling !is null)
+                aSibling.prevSibling.removeSibling(aSibling);
+            else
+                aSibling.nextSibling.removeSibling(aSibling);
+        }
 
         auto oldfirst = firstSibling;
         assert(oldfirst);
@@ -1688,35 +1710,31 @@ public interface izTreeItem
             parent.firstChild = aSibling;
         }
 
-        hasChanged(izContainerChangeKind.add,aSibling);
-
-        return 0;
+        treeChanged(izContainerChangeKind.add, aSibling);
     }
 
     /**
-     * Inserts aSibling before the one standing at aPosition.
+     * Inserts aSibling before aPosition.
      * If aPosition is greater than count than aSibling is added to the end of list.
-     * Returns the sibling position when the operation is successful otherwise -1.
      */
-    @safe final ptrdiff_t insertSibling(size_t aPosition, izTreeItem aSibling)
+    @safe final void insertSibling(size_t aPosition, izTreeItem aSibling)
+    in
     {
         assert(aSibling);
-
-        if (findSibling(aSibling) > -1) return -1;
+    }
+    body
+    {  
+        if (aSibling.hasSibling)
+        {
+            if (aSibling.prevSibling !is null)
+                aSibling.prevSibling.removeSibling(aSibling);
+            else
+                aSibling.nextSibling.removeSibling(aSibling);
+        }
 
         size_t cnt = siblingCount;
-        if (aPosition == 0)
-        {
-            insertSibling(aSibling);
-            return 0;
-        }
-        else if (aPosition >= cnt)
-        {
-            addSibling(aSibling);
-
-            assert( aSibling.siblingIndex == cnt);
-            return cnt;
-        }
+        if (aPosition == 0) insertSibling(aSibling);
+        else if (aPosition >= cnt) addSibling(aSibling);
         else
         {
             size_t result = 1;
@@ -1734,15 +1752,14 @@ public interface izTreeItem
                     aSibling.parent = parent;
                     assert( aSibling.siblingIndex == aPosition);
 
-                    hasChanged(izContainerChangeKind.add,aSibling);
+                    treeChanged(izContainerChangeKind.add,aSibling);
 
-                    return aPosition;
+                    return;
                 }
                 old = old.nextSibling;
                 result++;
             }
         }
-        return -1;
     }
 
     /**
@@ -1771,7 +1788,7 @@ public interface izTreeItem
                 aSibling1.firstChild = aSibling2;
         }
 
-        hasChanged(izContainerChangeKind.change,null);
+        treeChanged(izContainerChangeKind.change,null);
     }
 
     /**
@@ -1813,7 +1830,7 @@ public interface izTreeItem
             result.nextSibling = null;
             result.parent = null;
 
-            hasChanged(izContainerChangeKind.remove, result);
+            treeChanged(izContainerChangeKind.remove, result);
         }
         return result;
     }
@@ -1870,6 +1887,14 @@ public interface izTreeItem
             old.insertSibling(aPosition,this);
         }
     }
+    
+    /**
+     * Indicates if the item has any neighboor.
+     */
+    @safe @property final bool hasSibling()
+    {
+        return ((prevSibling !is null) | (nextSibling !is null));
+    }
 
 // -----------------------------------------------------------------------------    
 // children -------------------------------------------------------------------+
@@ -1922,65 +1947,65 @@ public interface izTreeItem
     }
 
     /**
-     * Tries to add aChild to the back and returns its position.
+     * Adds aChild to the back and returns its position.
      */
-    @safe final ptrdiff_t addChild(izTreeItem aChild)
+    @safe final void addChild(izTreeItem aChild)
     {
         if (aChild.parent)
         {
             if (aChild.parent !is this)
                 aChild.parent.removeChild(aChild);
             else
-                return aChild.siblingIndex;
+                return;
         }
         if (!firstChild)
         {
             firstChild = aChild;
             aChild.parent = this;
 
-            hasChanged(izContainerChangeKind.add, aChild);
+            treeChanged(izContainerChangeKind.add, aChild);
 
-            return 0;
+            return;
         }
-        else return firstChild.addSibling(aChild);
+        else firstChild.addSibling(aChild);
     }
 
     /**
      * Tries to insert aChild to the front and returns its position.
      */
-    @safe final ptrdiff_t insertChild(izTreeItem aChild)
+    @safe final void insertChild(izTreeItem aChild)
     {
         if (!firstChild)
         {
             firstChild = aChild;
             aChild.parent = this;
 
-            hasChanged(izContainerChangeKind.change,aChild);
+            treeChanged(izContainerChangeKind.change,  aChild);
 
-            return 0;
+            return;
         }
-        else return firstChild.insertSibling(aChild);
+        else firstChild.insertSibling(aChild);
     }
 
     /**
-     * Tries to insert aChild at aPosition and returns its position.
+     * Inserts aChild at aPosition and returns its position.
      */
-    @safe final ptrdiff_t insertChild(size_t aPosition, izTreeItem aChild)
+    @safe final void insertChild(size_t aPosition, izTreeItem aChild)
     {
         if (!firstChild)
         {
             firstChild = aChild;
             aChild.parent = this;
 
-            hasChanged(izContainerChangeKind.change,aChild);
+            treeChanged(izContainerChangeKind.change,aChild);
 
-            return 0;
+            return;
         }
-        else return firstChild.insertSibling(aPosition, aChild);
+        else firstChild.insertSibling(aPosition, aChild);
     }
 
     /**
-     * Tries to removes aChild from the list.
+     * Removes aChild from the list.
      */
     @safe final bool removeChild(izTreeItem aChild)
     {
@@ -1997,7 +2022,7 @@ public interface izTreeItem
     }
 
     /**
-     * Tries to extract the anIndex-nth child from this branch.
+     * Extracts the child located at anIndex from this branch.
      */
     @safe final izTreeItem removeChild(size_t anIndex)
     {
@@ -2011,7 +2036,7 @@ public interface izTreeItem
                 if (result.siblingCount == 1)
                 {
                     result.parent = null;
-                    hasChanged(izContainerChangeKind.remove, result);
+                    treeChanged(izContainerChangeKind.remove, result);
                 }
                 else result.nextSibling.removeSibling(anIndex);
             }
@@ -2038,11 +2063,11 @@ public interface izTreeItem
                 current.prevSibling = null;
                 current.nextSibling = null;
 
-                hasChanged(izContainerChangeKind.remove, current);
+                treeChanged(izContainerChangeKind.remove, current);
             }
             current = _next;
 
-            hasChanged(izContainerChangeKind.change, current);
+            treeChanged(izContainerChangeKind.change, current);
         }
         firstChild = null;
     }
@@ -2062,9 +2087,8 @@ public interface izTreeItem
             auto _next = current.nextSibling;
             current.parent = null;
             
-            delete current;
-            
             // TODO-cbugfix: to use destruct crash the test runners
+            delete current;
             //destruct(current);
 
             // o.k but outside ptr is dangling.
@@ -2072,7 +2096,7 @@ public interface izTreeItem
 
             current = _next;
 
-            hasChanged(izContainerChangeKind.change, null);
+            treeChanged(izContainerChangeKind.change, null);
         }
         firstChild = null;
     }
@@ -2188,7 +2212,7 @@ mixin template izTreeItemAccessors()
          * When aChangeKind == izContainerChangeKind.remove, data is a pointer to the old item.
          * When aChangeKind == izContainerChangeKind.change, data is null.
          */
-        @safe void hasChanged(izContainerChangeKind aChangeKind, izTreeItem involvedItem)
+        @safe void treeChanged(izContainerChangeKind aChangeKind, izTreeItem involvedItem)
         {
         }
 }
@@ -2222,14 +2246,14 @@ version(unittest)
     }
 }
 
-private class foo: izTreeItem
+private class Foo: izTreeItem
 {
     int member;
     mixin izTreeItemAccessors;
 
     bool changeMonitor,getMonitor;
 
-    @safe final void hasChanged(izContainerChangeKind aChangeKind, izTreeItem involvedItem)
+    @safe final void treeChanged(izContainerChangeKind aChangeKind, izTreeItem involvedItem)
     {
         changeMonitor = true;
     }
@@ -2242,67 +2266,67 @@ private class foo: izTreeItem
     unittest
     {
 
-        foo[20] Foos;
-        foo Driver;
+        Foo[20] foos;
+        Foo Driver;
 
-        Foos[0] = new foo;
-        Driver = Foos[0];
-        for (auto i =1; i < Foos.length; i++)
+        foos[0] = new Foo;
+        Driver = foos[0];
+        for (auto i =1; i < foos.length; i++)
         {
-            Foos[i] = new foo;
-            if (i>0) Driver.addSibling( Foos[i] );
-            assert( Foos[i].siblingIndex == i );
+            foos[i] = new Foo;
+            if (i>0) Driver.addSibling( foos[i] );
+            assert( foos[i].siblingIndex == i );
             assert( Driver.siblings[i].siblingIndex == i );
-            assert( Driver.siblings[i] == Foos[i] );
-            if (i>0) assert( Foos[i].prevSibling.siblingIndex == i-1 );
+            assert( Driver.siblings[i] == foos[i] );
+            if (i>0) assert( foos[i].prevSibling.siblingIndex == i-1 );
             assert(Driver.lastSibling.siblingIndex == i);
         }
-        assert(Driver.siblingCount == Foos.length);
+        assert(Driver.siblingCount == foos.length);
 
-        assert(Foos[1].nextSibling.siblingIndex == 2);
-        assert(Foos[1].prevSibling.siblingIndex == 0);
+        assert(foos[1].nextSibling.siblingIndex == 2);
+        assert(foos[1].prevSibling.siblingIndex == 0);
 
-        Driver.exchangeSibling(Foos[10],Foos[16]);
-        assert(Driver.siblingCount == Foos.length);
-        assert( Foos[10].siblingIndex == 16);
-        assert( Foos[16].siblingIndex == 10);
+        Driver.exchangeSibling(foos[10],foos[16]);
+        assert(Driver.siblingCount == foos.length);
+        assert( foos[10].siblingIndex == 16);
+        assert( foos[16].siblingIndex == 10);
 
-        Driver.exchangeSibling(Foos[10],Foos[16]);
-        assert(Driver.siblingCount == Foos.length);
-        assert( Foos[10].siblingIndex == 10);
-        assert( Foos[16].siblingIndex == 16);
-
-
-        Foos[8].siblingIndex = 4;
-        assert( Foos[8].siblingIndex == 4);
-        //assert( Foos[4].siblingIndex == 5); // when siblingIndex() calls remove/insert
-        //assert( Foos[4].siblingIndex == 8); // when siblingIndex() calls exchangeSibling.
-
-        assert( Driver.siblings[16] == Foos[16]);
-        assert( Driver.siblings[10] == Foos[10]);
-        Driver.siblings[16] = Foos[10]; // exchg
-        assert(Driver.siblingCount == Foos.length);
-        Driver.siblings[16] = Foos[16]; // exchg
-        assert(Driver.siblingCount == Foos.length);
-        assert( Foos[16].siblingIndex == 16);
-        assert( Foos[10].siblingIndex == 10);
+        Driver.exchangeSibling(foos[10],foos[16]);
+        assert(Driver.siblingCount == foos.length);
+        assert( foos[10].siblingIndex == 10);
+        assert( foos[16].siblingIndex == 16);
 
 
-        auto C = new foo;
+        foos[8].siblingIndex = 4;
+        assert( foos[8].siblingIndex == 4);
+        //assert( foos[4].siblingIndex == 5); // when siblingIndex() calls remove/insert
+        //assert( foos[4].siblingIndex == 8); // when siblingIndex() calls exchangeSibling.
+
+        assert( Driver.siblings[16] == foos[16]);
+        assert( Driver.siblings[10] == foos[10]);
+        Driver.siblings[16] = foos[10]; // exchg
+        assert(Driver.siblingCount == foos.length);
+        Driver.siblings[16] = foos[16]; // exchg
+        assert(Driver.siblingCount == foos.length);
+        assert( foos[16].siblingIndex == 16);
+        assert( foos[10].siblingIndex == 10);
+
+
+        auto C = new Foo;
         Driver.siblings[10] = C;
-        Driver.siblings[16] = Foos[10];
-        assert( Foos[16].siblingIndex == 0);
-        assert( Foos[10].siblingIndex == 16);
+        Driver.siblings[16] = foos[10];
+        assert( foos[16].siblingIndex == 0);
+        assert( foos[10].siblingIndex == 16);
         assert( C.siblingIndex == 10);
 
-        assert(Driver.findSibling(Foos[18]) > -1);
-        assert(Driver.findSibling(Foos[0]) > -1);
+        assert(Driver.findSibling(foos[18]) > -1);
+        assert(Driver.findSibling(foos[0]) > -1);
 
         // remember that "item" type is the interface not its implementer.
         foreach(izTreeItem item; Driver.siblings)
         {
             assert(Driver.findSibling(item) == item.siblingIndex);
-            assert( cast(foo) item);
+            assert( cast(Foo) item);
         }
         foreach_reverse(item; Driver.siblings)
         {
@@ -2310,34 +2334,34 @@ private class foo: izTreeItem
         }
 
         Driver.removeSibling(19);
-        assert(Driver.siblingCount == Foos.length -1);
+        assert(Driver.siblingCount == foos.length -1);
         Driver.removeSibling(18);
-        assert(Driver.siblingCount == Foos.length -2);
-        Driver.removeSibling(Foos[13]);
-        assert(Driver.siblingCount == Foos.length -3);
+        assert(Driver.siblingCount == foos.length -2);
+        Driver.removeSibling(foos[13]);
+        assert(Driver.siblingCount == foos.length -3);
         //Driver[0] = null; // exception because Driver[0] = Driver
-        assert(Driver.siblingCount == Foos.length -3);
+        assert(Driver.siblingCount == foos.length -3);
         Driver.siblings[1] = null;
-        assert(Driver.siblingCount == Foos.length -4);
+        assert(Driver.siblingCount == foos.length -4);
 
         assert(Driver.changeMonitor);
         assert(Driver.getMonitor);
 
         //
 
-        foo[20] Items1;
-        foo[4][20] Items2;
+        Foo[20] Items1;
+        Foo[4][20] Items2;
 
         assert( Items1[12] is null);
         assert( Items2[12][0] is null);
         assert( Items2[18][3] is null);
 
-        foo Root;
-        Root = new foo;
+        Foo Root;
+        Root = new Foo;
         assert(Root.level == 0);
         for (auto i=0; i < Items1.length; i++)
         {
-            Items1[i] = new foo;
+            Items1[i] = new Foo;
             Root.addChild(Items1[i]);
             assert(Root.childrenCount == 1 + i);
             assert(Items1[i].parent is Root);
@@ -2354,7 +2378,7 @@ private class foo: izTreeItem
         for( auto i = 0; i < Items2.length; i++)
             for( auto j = 0; j < Items2[i].length; j++)
             {
-                Items2[i][j] = new foo;
+                Items2[i][j] = new Foo;
                 Items1[i].addChild(Items2[i][j]);
                 assert(Items2[i][j].level == 2);
                 assert(Items1[i].childrenCount == 1 + j);
@@ -2374,18 +2398,18 @@ private class foo: izTreeItem
     */
 
         // the clean-way:
-        Root.addNewChildren!foo();
-            Root.children[0].addNewChildren!foo();
-            Root.children[0].addNewChildren!foo();
-            Root.children[0].addNewChildren!foo();
-        Root.addNewChildren!foo();
-            Root.children[1].addNewChildren!foo();
-            Root.children[1].addNewChildren!foo();
-            Root.children[1].addNewChildren!foo();
-            Root.children[1].addNewChildren!foo();
-                Root.children[1].children[3].addNewChildren!foo();
-                Root.children[1].children[3].addNewChildren!foo();
-                Root.children[1].children[3].addNewChildren!foo();
+        Root.addNewChildren!Foo();
+            Root.children[0].addNewChildren!Foo();
+            Root.children[0].addNewChildren!Foo();
+            Root.children[0].addNewChildren!Foo();
+        Root.addNewChildren!Foo();
+            Root.children[1].addNewChildren!Foo();
+            Root.children[1].addNewChildren!Foo();
+            Root.children[1].addNewChildren!Foo();
+            Root.children[1].addNewChildren!Foo();
+                Root.children[1].children[3].addNewChildren!Foo();
+                Root.children[1].children[3].addNewChildren!Foo();
+                Root.children[1].children[3].addNewChildren!Foo();
 
         assert(Root.childrenCount == 2);
         assert(Root.children[0].childrenCount == 3);
