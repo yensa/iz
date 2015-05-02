@@ -9,7 +9,7 @@ object _1: TCEProject
       outputOptions.boundsCheck = onAlways
       outputOptions.optimizations = True
       outputOptions.release = True
-      pathsOptions.outputFilename = 'lib\iz.lib'
+      pathsOptions.outputFilename = 'lib\iz'
     end  
     item
       name = 'debug'
@@ -19,7 +19,7 @@ object _1: TCEProject
       messagesOptions.additionalWarnings = True
       outputOptions.binaryKind = staticlib
       outputOptions.boundsCheck = onAlways
-      pathsOptions.outputFilename = 'lib\iz.lib'
+      pathsOptions.outputFilename = 'lib\iz'
     end  
     item
       name = 'unittest'
@@ -31,7 +31,7 @@ object _1: TCEProject
       outputOptions.versionIdentifiers.Strings = (
         'coeditmessages'
       )
-      pathsOptions.outputFilename = 'temp\iztests.exe'
+      pathsOptions.outputFilename = 'temp\iztests'
       runOptions.options = [poUsePipes, poStderrToOutPut]
       runOptions.showWindow = swoHIDE
     end  
@@ -44,7 +44,15 @@ object _1: TCEProject
       outputOptions.targetKind = os64bit
       outputOptions.binaryKind = staticlib
       outputOptions.boundsCheck = onAlways
-      pathsOptions.outputFilename = 'lib\iz.lib'
+      pathsOptions.outputFilename = 'lib\iz'
+    end  
+    item
+      name = 'quick'
+      messagesOptions.additionalWarnings = True
+      outputOptions.binaryKind = staticlib
+      outputOptions.boundsCheck = onAlways
+      outputOptions.release = True
+      pathsOptions.outputFilename = 'lib\iz'
     end>
   Sources.Strings = (
     'import\iz\types.d'
