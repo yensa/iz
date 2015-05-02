@@ -7,6 +7,8 @@ import iz.types, iz.properties, iz.containers, iz.streams, iz.referencable;
 
 //TODO-cfeature: izSerializableReference can be replaced with a struct serialized as string. 
 
+
+
 /**
  * Allows an implementer to be serialized by an izSerializer.
  */
@@ -33,6 +35,7 @@ public interface izSerializable
      */
     void declareProperties(izSerializer aSerializer);
 }
+
 
 /**
  * Makes a reference serializable.
@@ -84,13 +87,14 @@ public class izSerializableReference: izSerializable
 /**
  * Enumerates the types automatically handled by an izSerializer.
  */
-public enum izSerType
+enum izSerType
 {
     _invalid = 0,
     _byte = 0x01, _ubyte, _short, _ushort, _int, _uint, _long, _ulong,
     _float= 0x10, _double,
     _char = 0x20, _wchar, _dchar,
-    _izSerializable = 0x30, _Object
+    _izSerializable = 0x30, _Object,
+    _stream = 0x40,
 } 
 
 private struct InvalidSerType{}
@@ -100,7 +104,8 @@ private alias izSerTypeTuple = TypeTuple!(
     byte, ubyte, short, ushort, int, uint, long, ulong,
     float, double,
     char, wchar, dchar,
-    izSerializable, Object 
+    izSerializable, Object,
+    izStream 
 );
 
 private static string[izSerType] type2text;
@@ -120,6 +125,7 @@ static this()
 private static bool isSerObjectType(T)()
 {
     static if (is(T : izSerializable)) return true;
+    else static if (is(T : izStream)) return false;
     else static if (is(T == Object)) return true;
     else return false;
 }
@@ -134,6 +140,7 @@ private static bool isSerSimpleType(T)()
     static if (isArray!T) return false;
     else static if (isSerObjectType!T) return false;
     else static if (staticIndexOf!(T, izSerTypeTuple) == -1) return false;
+    else static if (is(T : izStream)) return false;
     else return true;
 }
 
@@ -177,7 +184,9 @@ public bool isSerializable(T)()
     else static if (isSerStructType!T) return true;   
     else static if (isSerArrayType!T) return true; 
     //else static if (isSerArrayStructType!T) return true;  
+    else static if (is(T : izStream)) return true;
     else static if (isSerObjectType!T) return true;
+    
     else return false;
 }
 
@@ -194,6 +203,7 @@ unittest
     static assert( !(isSerializable!S) );
     static assert( (isSerializable!V) );
     static assert( (isSerializable!VS) );
+    static assert( isSerializable!izMemoryStream);
 }
 
 private static string getElemStringOf(T)() if (isArray!T)
@@ -295,7 +305,15 @@ void nodeInfo2Declarator(const izSerNodeInfo * nodeInfo)
         case izSerType._double: toDecl!double; break;
         case izSerType._char: toDecl!char; break;   
         case izSerType._wchar: toDecl!wchar; break;   
-        case izSerType._dchar: toDecl!dchar; break;                                                                                                                                   
+        case izSerType._dchar: toDecl!dchar; break;  
+        case izSerType._stream:
+            izMemoryStream str = construct!izMemoryStream;
+            str.write(cast(ubyte*)nodeInfo.value.ptr, nodeInfo.value.length);
+            str.position = 0;
+            auto descr = cast(izPropDescriptor!izStream *) nodeInfo.descriptor;
+            descr.setter()(str);
+            destruct(str); 
+            break;                                                                                                                                  
     }
 }
 
@@ -323,6 +341,7 @@ char[] value2text(const izSerNodeInfo * nodeInfo)
         case izSerType._char: return v2t!char;
         case izSerType._wchar: return v2t!wchar;
         case izSerType._dchar: return v2t!dchar;
+        case izSerType._stream: return to!(char[])(nodeInfo.value[]);
     }
 }
 
@@ -363,6 +382,7 @@ ubyte[] text2value(char[] text, const izSerNodeInfo * nodeInfo)
         case izSerType._char: return t2v!char;
         case izSerType._wchar: return t2v_2!wchar;
         case izSerType._dchar: return t2v!dchar;
+        case izSerType._stream: return to!(ubyte[])(text);
     }
 }
 
@@ -445,7 +465,24 @@ void setNodeInfo(T)(izSerNodeInfo * nodeInfo, izPropDescriptor!T * descriptor)
         memmove(nodeInfo.value.ptr, cast(void*) value.ptr, nodeInfo.value.length);      
         //
         return;   
-    }    
+    }   
+    
+    // stream
+    else static if (is(T : izStream))
+    {
+        nodeInfo.type = text2type[T.stringof];
+        nodeInfo.isArray = false;
+        nodeInfo.descriptor = cast(izPtr) descriptor;
+        nodeInfo.name = descriptor.name.dup;
+        //
+        izStream value = descriptor.getter()();
+        value.position = 0;
+        nodeInfo.value.length = cast(uint) value.size;
+        value.read(nodeInfo.value.ptr, cast(uint) value.size); 
+        destroy(value);  
+        //
+        return;   
+    } 
 }
 
 /// IST node
