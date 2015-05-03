@@ -1009,22 +1009,22 @@ public class izDynamicList(T): izList!T
             return result;
         }  
         
-        T[] opSlice() @trusted
+        /*T[] opSlice() @trusted
         {
             T[] result;
             foreach(t; this)
                 result ~= t;
             return result;
-        }
+        }*/
                
-        T[] opSlice(size_t lo, size_t hi) @trusted
+        /*T[] opSlice(size_t lo, size_t hi) @trusted
         {
             T[] result;
             result.length = hi - lo;
             for(auto i = lo; i < hi; i++)
                 result ~= opIndex(i);
             return result;
-        }
+        }*/
         
         void opSliceAssign(T[] elems) @trusted @nogc
         {
@@ -1217,29 +1217,96 @@ public class izDynamicList(T): izList!T
             return fCount;
         }
         
+        Range opSlice()
+        {
+            return Range(fFirst, fLast);
+        }
+        
+        Range opSlice(size_t lo, size_t hi) @trusted
+        {
+            return Range(getPayloadFromIx(lo), getPayloadFromIx(hi));
+        }
+        
         alias length = count;
         
-        nothrow @safe @property bool empty()
-        {
-            if (fRangeFront == null)
-            {
-                fRangeFront = fFirst;
-                return true;
-            } 
-            else return false; 
-        }
-        
-        nothrow @safe void popFront()
-        {
-            fRangeFront = payload.getNext(fRangeFront);
-        }
-        
-        nothrow @property @safe T front()
-        {
-            return payload.getData(fRangeFront);   
-        }
-        
         alias put = add;
+        
+        struct Range
+        {
+            private void* _begin;
+            private void* _end;
+    
+            private this(void* b, void* e)
+            {
+                _begin = b;
+                _end = e;
+            }
+    
+            /**
+             * Returns $(D true) if the range is _empty
+             */
+            @property bool empty() const
+            {
+                return _begin is null;
+            }
+    
+            /**
+             * Returns the first element in the range
+             */
+            @property T front()
+            {
+                return payload.getData(_begin);
+            }
+    
+            /**
+             * Returns the last element in the range
+             */
+            @property T back()
+            {
+                return payload.getData(_end);
+            }
+    
+            /**
+             * pop the front element from the range
+             *
+             * complexity: amortized $(BIGOH 1)
+             */
+            void popFront()
+            {
+                _begin = payload.getNext(_begin);
+            }
+    
+            /**
+             * pop the back element from the range
+             *
+             * complexity: amortized $(BIGOH 1)
+             */
+            void popBack()
+            {
+                _end = payload.getPrev(_end);
+            }
+    
+            /**
+             * Trivial _save implementation, needed for $(D isForwardRange).
+             */
+            @property Range save()
+            {
+                return this;
+            }        
+            
+            
+            @property size_t length()
+            {
+                size_t result;
+                auto cur = _begin;
+                while(cur)
+                {
+                    cur = payload.getNext(cur);
+                    ++result;
+                } 
+                return result;
+            }
+        }
     }
 }
 
