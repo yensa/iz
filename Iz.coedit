@@ -1,4 +1,4 @@
-object _1: TCEProject
+object _1: TCENativeProject
   RootFolder = '..'
   OptionsCollection = <  
     item
@@ -64,6 +64,7 @@ object _1: TCEProject
     'import\iz\serializer.d'
     'import\iz\classes.d'
     'import\iz\enumset.d'
+    'import\iz\logicver.d'
   )
   ConfigurationIndex = 0
 end
