@@ -563,7 +563,7 @@ version(unittest){
             info ~= "Bar";
         }
         @Get size_t field(){
-            info = "less derivated";
+            info = "less derived";
             return _field;
         }
     }
@@ -574,7 +574,7 @@ version(unittest){
             info ~= "Baz";
         }
         @Get override size_t field(){
-            info = "most derivated";
+            info = "most derived";
             return _field;
         }
     }  
@@ -592,7 +592,7 @@ unittest
     assert(baz.info == "BarBaz");
     assert(baz.descriptorCount == 1);
     auto a = prop.get;
-    assert(baz.info == "most derivated");
+    assert(baz.info == "most derived");
     baz.destruct;
     
     writeln("izPropertiesAnalyzer passed the tests");
