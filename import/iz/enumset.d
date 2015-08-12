@@ -59,7 +59,8 @@ public struct izEnumRankInfo(E) if (is(E==enum))
 
         nothrow @safe static this()
         {
-            foreach(member; EnumMembers!E)
+            if (__ctfe){}
+            else foreach(member; EnumMembers!E)
             {
                 fRankLUT[member] = fCount;
                 fMembLUT[fCount] = member;
@@ -88,13 +89,35 @@ public struct izEnumRankInfo(E) if (is(E==enum))
         /// returns the rank of aMember.
         nothrow @safe static size_t opIndex(E aMember)
         {
-            return fRankLUT[aMember];
+            if (__ctfe)
+            {
+                size_t result;
+                foreach(member; EnumMembers!E)
+                {
+                    if (member == aMember) 
+                        return result;
+                    ++result;
+                }
+                assert(0); 
+            }
+            else return fRankLUT[aMember];
         }
 
         /// returns the member at aRank.
         nothrow @safe static E opIndex(size_t aRank)
         {
-            return fMembLUT[aRank];
+            if (__ctfe)
+            {
+                size_t rank;
+                foreach(member; EnumMembers!E)
+                {
+                    if (rank == aRank) 
+                        return member;
+                    ++rank;
+                }
+                assert(0);  
+            }
+            else return fMembLUT[aRank];
         }
 }
 
@@ -772,6 +795,12 @@ version(unittest)
         static assert( enumFitsInSet!(a16, Set16));
         static assert( !enumFitsInSet!(a17, Set16));
     }
+    
+    /// CTFE
+    unittest
+    {
+        static assert(izEnumSet!(a8, Set8)(a8.a0,a8.a1) == 0b00000011);
+    }    
 
     /// izEnumSet
     unittest
