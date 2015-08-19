@@ -108,9 +108,9 @@ private alias izSerTypeTuple = TypeTuple!(
     izStream 
 );
 
-private static string[izSerType] type2text;
-private static izSerType[string] text2type;
-private static size_t[izSerType] type2size;
+private static immutable string[izSerType] type2text;
+private static immutable izSerType[string] text2type;
+private static immutable size_t[izSerType] type2size;
 
 static this()
 {

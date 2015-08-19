@@ -50,7 +50,7 @@ static class izReferenceMan
 {
     private
     {
-        static refStore fStore;
+        static __gshared refStore fStore;
     }
     public
     {
