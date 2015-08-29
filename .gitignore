@@ -4,6 +4,7 @@ lib
 doc
 temp
 ser.txt
+.directory
 *.obj
 *.exe
 *.bak
