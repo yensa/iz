@@ -278,7 +278,7 @@ if (is(ST : izStream))
 } 
  
 /** 
- * Input and forward range for an izStream.
+ * Input, forward and bidirectional range for an izStream.
  * Params:
  * ST = the izStream descendant for which the range will be created.
  * T = the range element type.
@@ -288,7 +288,7 @@ if (is(ST : izStream))
 {
     private:
     
-        ulong _pos;
+        ulong _fpos, _bpos;
         ST _str;
     
     public:
@@ -296,31 +296,48 @@ if (is(ST : izStream))
         this(ST str)
         {
             _str = str;
+            // or str.position - T.sizeof; ?
+            _bpos = str.size - T.sizeof;
         }
         
         @property T front()
         {
             T result;
-            _str.position = _pos;
+            _str.position = _fpos;
             _str.read(&result, T.sizeof);
-            _str.position = _pos;
+            _str.position = _fpos;
             return result;
+        }
+        
+        @property T back()
+        {
+            T result;
+            _str.position = _bpos;
+            _str.read(&result, T.sizeof);
+            _str.position = _bpos;
+            return result;        
         }
         
         @safe void popFront()
         {
-            _pos += T.sizeof;
+            _fpos += T.sizeof;
+        }
+        
+        @safe void popBack()
+        {
+            _bpos -= T.sizeof; 
         }
         
         @property bool empty()
         {
-            return (_pos == _str.size) || (_pos + T.sizeof > _str.size); 
+            return (_fpos == _str.size) || (_fpos + T.sizeof > _str.size)
+                    || (_bpos == 0) || (_bpos - T.sizeof < 0); 
         }
         
         typeof(this) save()
         {
             typeof(this) result = typeof(this)(_str);
-            result._pos = _pos; 
+            result._fpos = _fpos; 
             return result; 
         }
 } 
@@ -336,15 +353,22 @@ unittest
     auto rng1 = construct!(izStreamRange!(izMemoryStream,ushort))(str);
     scope(exit) destruct(rng1);
     
-    // BUG ?
-    // foreach reset rng1._pos to 0 ?!
+    // foreach processes a copy of rng.
+    // http://forum.dlang.org/thread/jp16ni$fug$1@digitalmars.com
     foreach(ushort v; *rng1)
     {
         assert(v == src1[i]);
         ++i;
     }
-    // should pass with 20
-    assert(rng1._pos == 0);
+    assert(rng1._fpos == 0);
+    
+    // bidir
+    foreach_reverse(ushort v; *rng1)
+    {
+        --i;
+        assert(v == src1[i]);        
+    }
+    assert(rng1._fpos == 0);    
     
     i = 0;
     while(!rng1.empty)
@@ -374,7 +398,7 @@ unittest
     auto rng3 = newStreamRange!long(str);
     scope(exit) destruct(rng3);
     while(!rng3.empty) rng3.popFront;
-    str.position = rng3._pos;
+    str.position = rng3._fpos;
     tail = 0;
     str.read(&tail,1);
     assert(tail == 98);
