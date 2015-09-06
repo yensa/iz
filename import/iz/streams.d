@@ -34,22 +34,26 @@ version (Windows)
        LPSECURITY_ATTRIBUTES lpSecurityAttributes
     );
 
-    public alias StreamHandle = HANDLE;
+    alias StreamHandle = HANDLE;
 
-    // Stream seek modes, used as platform-specific constants in SeekMode.
-    immutable int skBeg = FILE_BEGIN;
-    immutable int skCur = FILE_CURRENT;
-    immutable int skEnd = FILE_END;
+    private immutable int skBeg = FILE_BEGIN;
+    private immutable int skCur = FILE_CURRENT;
+    private immutable int skEnd = FILE_END;
 
-    /// share modes.
+    /// defines the FileStream share modes.
     immutable int shNone = 0;
+    /// ditto
     immutable int shRead = FILE_SHARE_READ;
+    /// ditto
     immutable int shWrite= FILE_SHARE_WRITE;
+    /// ditto
     immutable int shAll  = shWrite | shRead;
 
-    /// access modes.
+    /// defines the FileStream access modes.
     immutable uint acRead = GENERIC_READ;
+    /// ditto
     immutable uint acWrite= GENERIC_WRITE;
+    /// ditto
     immutable uint acAll  = acRead | acWrite;
 
     /// returns true if aHandle is valid.
@@ -78,9 +82,9 @@ version (Posix)
     public alias StreamHandle = int;
 
     // Stream seek modes, used as platform-specific constants in SeekMode.
-    immutable int skBeg = SEEK_SET;
-    immutable int skCur = SEEK_CUR;
-    immutable int skEnd = SEEK_END;
+    private immutable int skBeg = SEEK_SET;
+    private immutable int skCur = SEEK_CUR;
+    private immutable int skEnd = SEEK_END;
 
     /// share modes. (does not allow execution)
     immutable int shNone = octal!600;
@@ -237,7 +241,7 @@ interface Stream
         static if(op == "~")
         {
             Stream lhs = this;
-            auto stored = rhs.position;
+            auto immutable stored = rhs.position;
 
             lhs.seek(0, SeekMode.end);
             rhs.seek(0, SeekMode.beg);
@@ -292,13 +296,15 @@ if (is(ST : Stream))
     
     public:
         
-        this(ST str)
+        /// initialized a StreamRange with a Stream instance.
+        this(ST stream)
         {
-            _str = str;
+            _str = stream;
             // or str.position - T.sizeof; ?
-            _bpos = str.size - T.sizeof;
+            _bpos = stream.size - T.sizeof;
         }
         
+        /// InputRange primitive.
         @property T front()
         {
             T result;
@@ -308,6 +314,7 @@ if (is(ST : Stream))
             return result;
         }
         
+        /// Bidirectional primitive.
         @property T back()
         {
             T result;
@@ -317,22 +324,26 @@ if (is(ST : Stream))
             return result;        
         }
         
+        /// InputRange primitive.
         @safe void popFront()
         {
             _fpos += T.sizeof;
         }
         
+        /// Bidirectional primitive.
         @safe void popBack()
         {
             _bpos -= T.sizeof; 
         }
         
+        /// InputRange & BidirectionalRange primitive.
         @property bool empty()
         {
             return (_fpos == _str.size) || (_fpos + T.sizeof > _str.size)
                     || (_bpos == 0) || (_bpos - T.sizeof < 0); 
         }
         
+        /// ForwardRange primitive.
         typeof(this) save()
         {
             typeof(this) result = typeof(this)(_str);
@@ -409,34 +420,34 @@ unittest
  
 
 /**
- * Copies the content of an _Stream_ to another one.
+ * Copies the content of a _Stream_ to another one.
  * The position in the source is preserved.
  *
  * Params:
- * aSource = the _Stream_ instance whose content will be copied.
- * aTarger = the _Stream_ instance whose content will be replaced.
+ * source = the _Stream_ instance whose content will be copied.
+ * target = the _Stream_ instance whose content will be replaced.
  */
-void copyStream(Stream aSource, Stream aTarget)
+void copyStream(Stream source, Stream target)
 {
-    auto oldpos = aSource.position; 
+    auto immutable oldpos = source.position; 
     auto buffsz = 4096;
     auto buff = getMem(buffsz);
     if (!buff) throw new OutOfMemoryError();
     
     scope(exit)
     {
-        aSource.position = oldpos;
+        source.position = oldpos;
         freeMem(buff);
     }
     
-    aSource.position = 0;
-    aTarget.size = aSource.size;
-    aTarget.position = 0;
+    source.position = 0;
+    target.size = source.size;
+    target.position = 0;
     
-    while(aSource.position != aSource.size)
+    while(source.position != source.size)
     {
-        auto cnt = aSource.read(buff, buffsz);
-        aTarget.write(buff, cnt);
+        auto cnt = source.read(buff, buffsz);
+        target.write(buff, cnt);
     }
 }
 
@@ -473,6 +484,8 @@ class SystemStream: Stream, StreamPersist
     public
     {
         mixin(genReadWriteVar);
+        
+        /// see the Stream interface.
         size_t read(Ptr aBuffer, size_t aCount)
         {
             if (!fHandle.isHandleValid) return 0;
@@ -490,6 +503,7 @@ class SystemStream: Stream, StreamPersist
             }
         }
 
+        /// see the Stream interface.
         size_t write(Ptr aBuffer, size_t aCount)
         {
             if (!fHandle.isHandleValid) return 0;
@@ -507,6 +521,7 @@ class SystemStream: Stream, StreamPersist
             }
         }
 
+        /// see the Stream interface.
         ulong seek(ulong anOffset, SeekMode aMode)
         {
             if (!fHandle.isHandleValid) return 0;
@@ -523,11 +538,13 @@ class SystemStream: Stream, StreamPersist
             }
         }
 
+        /// ditto
         ulong seek(uint anOffset, SeekMode aMode)
         {
             return seek(cast(ulong)anOffset, aMode);
         }
 
+        /// see the Stream interface.
         @property ulong size()
         {
             if (!fHandle.isHandleValid) return 0;
@@ -540,6 +557,7 @@ class SystemStream: Stream, StreamPersist
             return lRes;
         }
 
+        /// ditto
         @property void size(ulong aValue)
         {
             if (!fHandle.isHandleValid) return;
@@ -558,6 +576,7 @@ class SystemStream: Stream, StreamPersist
             }
         }
 
+        /// ditto
         @property void size(uint aValue)
         {
             if (!fHandle.isHandleValid) return;
@@ -572,11 +591,13 @@ class SystemStream: Stream, StreamPersist
             }
         }
 
+        /// see the Stream interface.
         @property ulong position()
         {
             return seek(0, SeekMode.cur);
         }
 
+        /// ditto
         @property void position(ulong aValue)
         {
             ulong lSize = size;
@@ -584,6 +605,7 @@ class SystemStream: Stream, StreamPersist
             seek(aValue, SeekMode.beg);
         }
 
+        /// ditto
         @property void position(uint aValue)
         {
             seek(aValue, SeekMode.beg);
@@ -594,17 +616,20 @@ class SystemStream: Stream, StreamPersist
          */
         @property const(StreamHandle) handle(){return fHandle;}
 
+        /// see the Stream interface.
         void clear()
         {
             size(0);
             position(0);
         }
 
+        /// see the Stream interface.
         void saveToStream(Stream aStream)
         {
             copyStream(this, aStream);
         }
 
+        /// see the Stream interface.
         void loadFromStream(Stream aStream)
         {
             copyStream(aStream, this);
@@ -625,7 +650,7 @@ class FileStream: SystemStream
     public
     {
         /**
-         * Constructs the stream and call openPermissive.
+         * Constructs the stream and call openPermissive().
          */
         this(in char[] aFilename, int creationMode = cmAlways)
         {
@@ -633,7 +658,7 @@ class FileStream: SystemStream
         }
 
         /**
-         * Constructs the stream and call open.
+         * Constructs the stream and call open().
          */
         this(in char[] aFilename, int access, int share, int creationMode)
         {
@@ -733,6 +758,7 @@ class FileStream: SystemStream
             }
             _filename = "";
         }
+        
         /**
          * Exposes the filename.
          */
@@ -744,7 +770,11 @@ class FileStream: SystemStream
  * Implements a stream of contiguous, GC-free, heap-memory.
  * Its maximal theoretical size is 2^32 bytes (x86) or 2^64 bytes (x86_64).
  * Its practical size limit is damped by the amount of remaining DRAM.
- * This limit is itself reduced by the memory fragmentation. 
+ * This limit is itself reduced by the memory fragmentation.
+ *
+ * MemoryStream is also enhanced by implementing the interfaces StreamPersist
+ * and FilePersist8. This allows to save the content either to another stream or
+ * to a file and to load the content either from another Stream or from a file.
  */
 class MemoryStream: Stream, StreamPersist, FilePersist8
 {
@@ -770,6 +800,7 @@ class MemoryStream: Stream, StreamPersist, FilePersist8
     public
     {
         mixin(genReadWriteVar);
+        
         this()
         {
             _memory = getMem(16);
@@ -783,6 +814,7 @@ class MemoryStream: Stream, StreamPersist, FilePersist8
         
 // read -----------------------------------------------------------------------+
 
+        /// see the Stream interface.
         size_t read(Ptr aBuffer, size_t aCount)
         {
             if (aCount + _position > _size) aCount = _size - _position;
@@ -794,6 +826,7 @@ class MemoryStream: Stream, StreamPersist, FilePersist8
 // ----     
 // write ----------------------------------------------------------------------+
 
+        /// see the Stream interface.
         size_t write(Ptr aBuffer, size_t aCount)
         {
             if (_position + aCount > _size) size(_position + aCount);
@@ -805,6 +838,7 @@ class MemoryStream: Stream, StreamPersist, FilePersist8
 // ----     
 // seek -----------------------------------------------------------------------+
 
+        /// see the Stream interface.
         ulong seek(ulong anOffset, SeekMode aMode)
         {
             with(SeekMode) final switch(aMode) 
@@ -821,6 +855,8 @@ class MemoryStream: Stream, StreamPersist, FilePersist8
                     return _size;
             }
         }
+        
+        /// ditto
         ulong seek(uint anOffset, SeekMode aMode)
         {
             ulong longOffs = anOffset;
@@ -829,11 +865,13 @@ class MemoryStream: Stream, StreamPersist, FilePersist8
 // ----         
 // size -----------------------------------------------------------------------+
 
+        /// see the Stream interface.
         @property ulong size()
         {
             return _size;
         }
         
+        /// ditto
         @property void size(uint aValue)
         {
             if (_size == aValue) return;
@@ -847,6 +885,7 @@ class MemoryStream: Stream, StreamPersist, FilePersist8
             else _size = aValue;            
         }
         
+        /// ditto
         @property void size(ulong aValue)
         {
             static if (size_t.sizeof == 4)
@@ -859,16 +898,19 @@ class MemoryStream: Stream, StreamPersist, FilePersist8
 // ----     
 // position -------------------------------------------------------------------+
         
+        /// see the Stream interface.
         @property ulong position()
         {
             return _position;
         }
         
+        /// ditto
         @property void position(ulong aValue)
         {
             seek(aValue, SeekMode.beg);
         }
         
+        /// ditto
         @property void position(uint aValue)
         {
             seek(aValue, SeekMode.beg);
@@ -876,6 +918,7 @@ class MemoryStream: Stream, StreamPersist, FilePersist8
 // ----     
 // misc -----------------------------------------------------------------------+
 
+        /// see the Stream interface.
         void clear()
         {
             _memory = reallocMem(_memory, 16);
@@ -928,7 +971,7 @@ class MemoryStream: Stream, StreamPersist, FilePersist8
             if (cast(MemoryStream) aStream)
             {
                 auto target = cast(MemoryStream) aStream;
-                auto oldpos = target.position;
+                auto immutable oldpos = target.position;
                 scope(exit) target.position = oldpos;
                 
                 position = 0;
@@ -937,7 +980,7 @@ class MemoryStream: Stream, StreamPersist, FilePersist8
                 
                 size_t sz = cast(size_t) size;
                 size_t buffsz = 8192;
-                size_t blocks = sz / buffsz;
+                immutable size_t blocks = sz / buffsz;
                 size_t tail = sz - blocks * buffsz;
                 
                 size_t pos;
@@ -996,7 +1039,7 @@ class MemoryStream: Stream, StreamPersist, FilePersist8
                     throw new Error(format("stream exception: cannot create or overwrite '%s'", aFilename));
 
                 scope(exit) core.sys.posix.unistd.close(hdl);
-                auto numRead = core.sys.posix.unistd.write(hdl, _memory, _size);
+                auto immutable numRead = core.sys.posix.unistd.write(hdl, _memory, _size);
                 ftruncate64(hdl, _size);
 
                 if (numRead != _size)
@@ -1102,8 +1145,8 @@ unittest
 
 version(unittest)
 {
-    class MemoryStreamTest1 : commonStreamTester!MemoryStream {}
-    class FileStreamTest1: commonStreamTester!(FileStream, "filestream1.txt"){}
+    class MemoryStreamTest1 : CommonStreamTester!MemoryStream {}
+    class FileStreamTest1: CommonStreamTester!(FileStream, "filestream1.txt"){}
 
     unittest
     {
@@ -1119,7 +1162,7 @@ version(unittest)
         assert(huge.size == sz);
     }
 
-    class commonStreamTester(T, A...)
+    class CommonStreamTester(T, A...)
     {
         unittest
         {
@@ -1155,7 +1198,7 @@ version(unittest)
             }
             else auto strcpy = construct!T(A);
             scope (exit) strcpy.destruct;
-            strcpy.size = 100000;
+            strcpy.size = 100_000;
             assert(str.size == len * 4);
             strcpy.loadFromStream(str);
             assert(str.size == len * 4);

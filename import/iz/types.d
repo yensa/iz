@@ -19,7 +19,7 @@ alias FixedSizeTypes = AliasSeq!(
 /**
  * Returns true if T is a fixed-length data.
  */
-static bool isFixedSize(T)()
+bool isFixedSize(T)()
 {
     return (
         staticIndexOf!(T,FixedSizeTypes) != -1) || 
