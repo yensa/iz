@@ -261,6 +261,129 @@ public interface izStream
     }
 }
 
+
+ 
+/**
+ * Helper designed to construct a new heap-allocated izStreamRange.
+ * The result is a pointer and to be used it must be derferenced.
+ * The result must be manually freed with destruct().
+ * Params:
+ * ST = the izStream descendant for which the range will be created, likely to be inferred.
+ * T = the range element type.
+ */
+auto newStreamRange(T, ST)(ST st)
+if (is(ST : izStream))
+{
+    return construct!(izStreamRange!(ST,T))(st);
+} 
+ 
+/** 
+ * Input and forward range for an izStream.
+ * Params:
+ * ST = the izStream descendant for which the range will be created.
+ * T = the range element type.
+ */
+struct izStreamRange(ST, T)
+if (is(ST : izStream))
+{
+    private:
+    
+        ulong _pos;
+        ST _str;
+    
+    public:
+        
+        this(ST str)
+        {
+            _str = str;
+        }
+        
+        @property T front()
+        {
+            T result;
+            _str.position = _pos;
+            _str.read(&result, T.sizeof);
+            _str.position = _pos;
+            return result;
+        }
+        
+        @safe void popFront()
+        {
+            _pos += T.sizeof;
+        }
+        
+        @property bool empty()
+        {
+            return (_pos == _str.size) || (_pos + T.sizeof > _str.size); 
+        }
+        
+        typeof(this) save()
+        {
+            typeof(this) result = typeof(this)(_str);
+            result._pos = _pos; 
+            return result; 
+        }
+} 
+
+unittest
+{
+    uint i;
+    izMemoryStream str = construct!izMemoryStream;
+    scope(exit) destruct(str);
+    
+    ushort[] src1 = [0,1,2,3,4,5,6,7,8,9];
+    str.write(src1.ptr, src1.length * ushort.sizeof); 
+    auto rng1 = construct!(izStreamRange!(izMemoryStream,ushort))(str);
+    scope(exit) destruct(rng1);
+    
+    // BUG ?
+    // foreach reset rng1._pos to 0 ?!
+    foreach(ushort v; *rng1)
+    {
+        assert(v == src1[i]);
+        ++i;
+    }
+    // should pass with 20
+    assert(rng1._pos == 0);
+    
+    i = 0;
+    while(!rng1.empty)
+    {
+        assert(rng1.front == src1[i]);
+        ++i;
+        rng1.popFront;
+    }
+    assert(rng1.empty);
+     
+    // other type + newStreamRange type inference
+    str.clear;
+    long[] src2 = [10,11,12,13,14,15,16,17,18,19];
+    str.write(src2.ptr, src2.length * long.sizeof);
+    auto rng2 = newStreamRange!long(str);
+    scope(exit) destruct(rng2);
+    foreach(long v; *rng2)
+    {
+        assert(v == src2[i - 10]);
+        ++i;
+    }
+    
+    // test empty with a non full element at the tail
+    ubyte tail = 98;
+    str.position = str.size;
+    str.write(&tail,1);
+    auto rng3 = newStreamRange!long(str);
+    scope(exit) destruct(rng3);
+    while(!rng3.empty) rng3.popFront;
+    str.position = rng3._pos;
+    tail = 0;
+    str.read(&tail,1);
+    assert(tail == 98);
+    
+    
+    writeln("izStreamRange passed the tests (InputRange)");   
+}
+ 
+
 /**
  * Copies the content of an _izStream_ to another one.
  * The position in the source is preserved.
