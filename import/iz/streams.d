@@ -338,6 +338,7 @@ if (is(ST : izStream))
         {
             typeof(this) result = typeof(this)(_str);
             result._fpos = _fpos; 
+            result._bpos = _bpos; 
             return result; 
         }
 } 
