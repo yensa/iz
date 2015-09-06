@@ -133,18 +133,18 @@ enum SeekMode
 }
 
 /**
- * An implementer can save or load from an Stream. 
+ * An implementer can save or load from a Stream. 
  */
 interface StreamPersist
 {
     /// Saves something in aStream
-    void saveToStream(Stream aStream);
+    void saveToStream(Stream stream);
     /// Loads something from aStream. aStream initial position is preserved.
-    void loadFromStream(Stream aStream);
+    void loadFromStream(Stream stream);
 }
 
 /**
- * An implementer can save to or load from a file with a given UTF8 file name.
+ * An implementer can save to or load from a file with a UTF8 file name.
  */
 interface FilePersist8
 {
@@ -171,15 +171,15 @@ string genReadWriteVar()
 }
 
 /**
- * Defines the members of stream implementation.
+ * Defines the members of a stream.
  */
 interface Stream
 {
     /**
-     * Reads aCount bytes from aBuffer.
+     * Reads count bytes in aBuffer.
      * Returns the count of bytes effectively read.
      */
-    size_t read(Ptr aBuffer, size_t aCount);
+    size_t read(Ptr buffer, size_t count);
     /**
      * Read T.sizeof bytes in aValue.
      * Returns the count of bytes effectively read (either T.sizeof or 0).
@@ -187,15 +187,15 @@ interface Stream
      * A typed reader is generated for each type in FixedSizeTypes
      * and named readint, readchar, etc.
      */
-    final size_t readVariable(T)(T* aValue)
+    final size_t readVariable(T)(T* value)
     {
-        return read(&aValue, T.sizeof);
+        return read(&value, T.sizeof);
     }     
     /**
      * Writes aCount bytes to aBuffer.
      * Returns the count of bytes effectively written.
      */
-    size_t write(Ptr aBuffer, size_t aCount);
+    size_t write(Ptr buffer, size_t count);
     /**
      * Writes T.sizeof bytes to the pointer aValue.
      * Returns the count of bytes effectively written (either T.sizeof or 0).
@@ -203,34 +203,34 @@ interface Stream
      * A typed writer is generated for each type in FixedSizeTypes
      * and named writeint, writechar, etc.
      */
-    final size_t writeVariable(T)(T* aValue)
+    final size_t writeVariable(T)(T* value)
     {
-        return write(&aValue, T.sizeof);
+        return write(&value, T.sizeof);
     }
     /**
      * Sets the position to anOffset if anOrigin = 0,
      * to Position + anOffset if anOrigin = 1 or
      * to Size + anOffset if anOrigin = 2.
      */
-    ulong seek(ulong anOffset, SeekMode aMode);
+    ulong seek(ulong offset, SeekMode mode);
     /// ditto
-    ulong seek(uint anOffset, SeekMode aMode);
+    ulong seek(uint offset, SeekMode mode);
     /**
      * Sets or gets the stream size.
      */
     @property ulong size();
     /// ditto
-    @property void size(ulong aValue);
+    @property void size(ulong value);
     /// ditto
-    @property void size(uint aValue);
+    @property void size(uint value);
     /**
      * Sets or gets the position in the stream.
      */
     @property ulong position();
     /// ditto
-    @property void position(ulong aValue);
+    @property void position(ulong value);
     /// ditto
-    @property void position(uint aValue);
+    @property void position(uint value);
     /**
      * Resets the stream size to 0.
      */
@@ -262,7 +262,7 @@ interface Stream
                 lhs.write(buff, read);
             }
         }
-        else static assert(0, "Stream.opOpAssign not implemented for " ~op);
+        else static assert(0, "Stream.opOpAssign not implemented for " ~ op);
     }
 }
 
@@ -300,7 +300,6 @@ if (is(ST : Stream))
         this(ST stream)
         {
             _str = stream;
-            // or str.position - T.sizeof; ?
             _bpos = stream.size - T.sizeof;
         }
         
@@ -472,82 +471,82 @@ unittest
 
 /**
  * Unspecialized stream class. Descendants are all some
- * system stream (based on a file handle).
+ * system stream (based on a OS-specific handle).
  * This class is not directly usable.
  */
 class SystemStream: Stream, StreamPersist
 {
     private
     {
-        StreamHandle fHandle;
+        StreamHandle _handle;
     }
     public
     {
         mixin(genReadWriteVar);
         
         /// see the Stream interface.
-        size_t read(Ptr aBuffer, size_t aCount)
+        size_t read(Ptr buffer, size_t count)
         {
-            if (!fHandle.isHandleValid) return 0;
+            if (!_handle.isHandleValid) return 0;
             version(Windows)
             {
-                uint lCount = cast(uint) aCount;
+                uint cnt = cast(uint) count;
                 LARGE_INTEGER Li;
-                Li.QuadPart = aCount;
-                ReadFile(fHandle, aBuffer, Li.LowPart, &lCount, null);
-                return lCount;
+                Li.QuadPart = count;
+                ReadFile(_handle, buffer, Li.LowPart, &cnt, null);
+                return cnt;
             }
             version(Posix)
             {
-                return core.sys.posix.unistd.read(fHandle, aBuffer, aCount);
+                return core.sys.posix.unistd.read(_handle, buffer, count);
             }
         }
 
         /// see the Stream interface.
-        size_t write(Ptr aBuffer, size_t aCount)
+        size_t write(Ptr buffer, size_t count)
         {
-            if (!fHandle.isHandleValid) return 0;
+            if (!_handle.isHandleValid) return 0;
             version(Windows)
             {
-                uint lCount = cast(uint) aCount;
+                uint cnt = cast(uint) count;
                 LARGE_INTEGER Li;
-                Li.QuadPart = aCount;
-                WriteFile(fHandle, aBuffer, Li.LowPart, &lCount, null);
-                return lCount;
+                Li.QuadPart = count;
+                WriteFile(_handle, buffer, Li.LowPart, &cnt, null);
+                return cnt;
             }
             version(Posix)
             {
-                return core.sys.posix.unistd.write(fHandle, aBuffer, aCount);
+                return core.sys.posix.unistd.write(_handle, buffer, count);
             }
         }
 
         /// see the Stream interface.
-        ulong seek(ulong anOffset, SeekMode aMode)
+        ulong seek(ulong offset, SeekMode mode)
         {
-            if (!fHandle.isHandleValid) return 0;
+            if (!_handle.isHandleValid) return 0;
             version(Windows)
             {
                 LARGE_INTEGER Li;
-                Li.QuadPart = anOffset;
-                Li.LowPart = SetFilePointer(fHandle, Li.LowPart, &Li.HighPart, aMode);
+                Li.QuadPart = offset;
+                Li.LowPart = SetFilePointer(_handle, Li.LowPart, &Li.HighPart, mode);
                 return Li.QuadPart;
             }
             version(Posix)
             {
-                return core.sys.posix.unistd.lseek64(fHandle, anOffset, aMode);
+                return core.sys.posix.unistd.lseek64(_handle, offset, mode);
             }
         }
 
         /// ditto
-        ulong seek(uint anOffset, SeekMode aMode)
+        ulong seek(uint offset, SeekMode mode)
         {
-            return seek(cast(ulong)anOffset, aMode);
+            return seek(cast(ulong)offset, mode);
         }
 
         /// see the Stream interface.
         @property ulong size()
         {
-            if (!fHandle.isHandleValid) return 0;
+            if (!_handle.isHandleValid) return 0;
             ulong lRes, lSaved;
 
             lSaved = seek(0, SeekMode.cur);
@@ -558,36 +557,36 @@ class SystemStream: Stream, StreamPersist
         }
 
         /// ditto
-        @property void size(ulong aValue)
+        @property void size(ulong value)
         {
-            if (!fHandle.isHandleValid) return;
-            if (size == aValue) return;
+            if (!_handle.isHandleValid) return;
+            if (size == value) return;
 
             version(Windows)
             {
                 LARGE_INTEGER Li;
-                Li.QuadPart = aValue;
-                SetFilePointer(fHandle, Li.LowPart, &Li.HighPart, FILE_BEGIN);
-                SetEndOfFile(fHandle);
+                Li.QuadPart = value;
+                SetFilePointer(_handle, Li.LowPart, &Li.HighPart, FILE_BEGIN);
+                SetEndOfFile(_handle);
             }
             version(Posix)
             {
-                ftruncate(fHandle, aValue);
+                ftruncate(_handle, value);
             }
         }
 
         /// ditto
-        @property void size(uint aValue)
+        @property void size(uint value)
         {
-            if (!fHandle.isHandleValid) return;
+            if (!_handle.isHandleValid) return;
             version(Windows)
             {
-                SetFilePointer(fHandle, aValue, null, FILE_BEGIN);
-                SetEndOfFile(fHandle);
+                SetFilePointer(_handle, value, null, FILE_BEGIN);
+                SetEndOfFile(_handle);
             }
             version(Posix)
             {
-                ftruncate(fHandle, aValue);
+                ftruncate(_handle, value);
             }
         }
 
@@ -598,23 +597,23 @@ class SystemStream: Stream, StreamPersist
         }
 
         /// ditto
-        @property void position(ulong aValue)
+        @property void position(ulong value)
         {
-            ulong lSize = size;
-            if (aValue >  lSize) aValue = lSize;
-            seek(aValue, SeekMode.beg);
+            ulong sz = size;
+            if (value >  sz) value = sz;
+            seek(value, SeekMode.beg);
         }
 
         /// ditto
-        @property void position(uint aValue)
+        @property void position(uint value)
         {
-            seek(aValue, SeekMode.beg);
+            seek(value, SeekMode.beg);
         }
 
         /**
          * Exposes the handle for additional system stream operations.
          */
-        @property const(StreamHandle) handle(){return fHandle;}
+        @property const(StreamHandle) handle(){return _handle;}
 
         /// see the Stream interface.
         void clear()
@@ -624,15 +623,15 @@ class SystemStream: Stream, StreamPersist
         }
 
         /// see the Stream interface.
-        void saveToStream(Stream aStream)
+        void saveToStream(Stream stream)
         {
-            copyStream(this, aStream);
+            copyStream(this, stream);
         }
 
         /// see the Stream interface.
-        void loadFromStream(Stream aStream)
+        void loadFromStream(Stream stream)
         {
-            copyStream(aStream, this);
+            copyStream(stream, this);
         }
     }
 }
@@ -677,22 +676,22 @@ class FileStream: SystemStream
         {
             version(Windows)
             {
-                fHandle = CreateFileA(aFilename.toStringz, READ_WRITE, shNone,
+                _handle = CreateFileA(aFilename.toStringz, READ_WRITE, shNone,
                     (SECURITY_ATTRIBUTES*).init, cmToSystem(creationMode),
                     FILE_ATTRIBUTE_NORMAL, HANDLE.init);
             }
             version(Posix)
             {
-                fHandle = core.sys.posix.fcntl.open(aFilename.toStringz,
+                _handle = core.sys.posix.fcntl.open(aFilename.toStringz,
                     O_RDWR | cmToSystem(creationMode), shNone);
             }
 
-            if (!fHandle.isHandleValid)
+            if (!_handle.isHandleValid)
             {
-                throw new Error(format("stream exception: cannot create or open '%s'", aFilename));
+                throw new Exception(format("stream exception: cannot create or open '%s'", aFilename));
             }
             _filename = aFilename.dup;
-            return fHandle.isHandleValid;
+            return _handle.isHandleValid;
         }
 
         /**
@@ -702,21 +701,21 @@ class FileStream: SystemStream
         {
             version(Windows)
             {
-                fHandle = CreateFileA(aFilename.toStringz, READ_WRITE, shAll,
+                _handle = CreateFileA(aFilename.toStringz, READ_WRITE, shAll,
                     (SECURITY_ATTRIBUTES*).init, cmToSystem(creationMode), FILE_ATTRIBUTE_NORMAL, HANDLE.init);
             }
             version(Posix)
             {
-                fHandle = core.sys.posix.fcntl.open(aFilename.toStringz,
+                _handle = core.sys.posix.fcntl.open(aFilename.toStringz,
                     O_RDWR | cmToSystem(creationMode), shAll);
             }
 
-            if (!fHandle.isHandleValid)
+            if (!_handle.isHandleValid)
             {
-                throw new Error(format("stream exception: cannot create or open '%s'", aFilename));
+                throw new Exception(format("stream exception: cannot create or open '%s'", aFilename));
             }
             _filename = aFilename.dup;
-            return fHandle.isHandleValid;
+            return _handle.isHandleValid;
         }
 
         /**
@@ -727,17 +726,17 @@ class FileStream: SystemStream
         {
             version(Windows)
             {
-                fHandle = CreateFileA(aFilename.toStringz, access, share,
+                _handle = CreateFileA(aFilename.toStringz, access, share,
                     (SECURITY_ATTRIBUTES*).init, cmToSystem(creationMode),
                     FILE_ATTRIBUTE_NORMAL, HANDLE.init);
             }
             version(Posix)
             {
-                fHandle = core.sys.posix.fcntl.open(aFilename.toStringz,
+                _handle = core.sys.posix.fcntl.open(aFilename.toStringz,
                     access | cmToSystem(creationMode), share);
             }
             _filename = aFilename.dup;
-            return fHandle.isHandleValid;
+            return _handle.isHandleValid;
         }
 
         /**
@@ -748,13 +747,13 @@ class FileStream: SystemStream
         {
             version(Windows)
             {
-                if (fHandle.isHandleValid) CloseHandle(fHandle);
-                fHandle = INVALID_HANDLE_VALUE;
+                if (_handle.isHandleValid) CloseHandle(_handle);
+                _handle = INVALID_HANDLE_VALUE;
             }
             version(Posix)
             {
-                if (fHandle.isHandleValid) core.sys.posix.unistd.close(fHandle);
-                fHandle = -1;
+                if (_handle.isHandleValid) core.sys.posix.unistd.close(_handle);
+                _handle = -1;
             }
             _filename = "";
         }
@@ -812,43 +811,40 @@ class MemoryStream: Stream, StreamPersist, FilePersist8
             freeNonGc(_memory);
         }
         
-// read -----------------------------------------------------------------------+
+// read & write ---------------------------------------------------------------+
 
         /// see the Stream interface.
-        size_t read(Ptr aBuffer, size_t aCount)
+        size_t read(Ptr buffer, size_t count)
         {
-            if (aCount + _position > _size) aCount = _size - _position;
-            moveMem(aBuffer, _memory + _position, aCount);
-            _position += aCount;
-            return aCount;
+            if (count + _position > _size) count = _size - _position;
+            moveMem(buffer, _memory + _position, count);
+            _position += count;
+            return count;
         }
-        
-// ----     
-// write ----------------------------------------------------------------------+
 
         /// see the Stream interface.
-        size_t write(Ptr aBuffer, size_t aCount)
+        size_t write(Ptr buffer, size_t count)
         {
-            if (_position + aCount > _size) size(_position + aCount);
-            moveMem(_memory + _position, aBuffer, aCount);
-            _position += aCount;
-            return aCount;
+            if (_position + count > _size) size(_position + count);
+            moveMem(_memory + _position, buffer, count);
+            _position += count;
+            return count;
         }
 
-// ----     
+// -----------------------------------------------------------------------------     
 // seek -----------------------------------------------------------------------+
 
         /// see the Stream interface.
-        ulong seek(ulong anOffset, SeekMode aMode)
+        ulong seek(ulong offset, SeekMode mode)
         {
-            with(SeekMode) final switch(aMode) 
+            with(SeekMode) final switch(mode) 
             {
                 case beg:
-                    _position = cast(typeof(_position)) anOffset;
+                    _position = cast(typeof(_position)) offset;
                     if (_position > _size) _position = _size;
                     return _position;       
                 case cur:
-                    _position += anOffset;
+                    _position += offset;
                     if (_position > _size) _position = _size;
                     return _position;   
                 case end:
@@ -857,12 +853,13 @@ class MemoryStream: Stream, StreamPersist, FilePersist8
         }
         
         /// ditto
-        ulong seek(uint anOffset, SeekMode aMode)
+        ulong seek(uint offset, SeekMode mode)
         {
-            ulong longOffs = anOffset;
-            return seek(longOffs, aMode);
+            ulong longOffs = offset;
+            return seek(longOffs, mode);
         }
-// ----         
+        
+// -----------------------------------------------------------------------------        
 // size -----------------------------------------------------------------------+
 
         /// see the Stream interface.
@@ -872,30 +869,31 @@ class MemoryStream: Stream, StreamPersist, FilePersist8
         }
         
         /// ditto
-        @property void size(uint aValue)
+        @property void size(uint value)
         {
-            if (_size == aValue) return;
-            if (aValue == 0)
+            if (_size == value) return;
+            if (value == 0)
             {
                 clear;
                 return;
             }
-            _memory = reallocMem(_memory, aValue);
+            _memory = reallocMem(_memory, value);
             if (!_memory) throw new OutOfMemoryError();
-            else _size = aValue;            
+            else _size = value;            
         }
         
         /// ditto
-        @property void size(ulong aValue)
+        @property void size(ulong value)
         {
             static if (size_t.sizeof == 4)
             {
-                if (aValue > 0xFFFFFFFF)
+                if (value > 0xFFFFFFFF)
                     throw new Exception("cannot allocate more than 0xFFFFFFFF bytes");
             }
-            size(cast(uint) aValue);        
+            size(cast(uint) value);        
         }
-// ----     
+        
+// -----------------------------------------------------------------------------  
 // position -------------------------------------------------------------------+
         
         /// see the Stream interface.
@@ -905,17 +903,18 @@ class MemoryStream: Stream, StreamPersist, FilePersist8
         }
         
         /// ditto
-        @property void position(ulong aValue)
+        @property void position(ulong value)
         {
-            seek(aValue, SeekMode.beg);
+            seek(value, SeekMode.beg);
         }
         
         /// ditto
-        @property void position(uint aValue)
+        @property void position(uint value)
         {
-            seek(aValue, SeekMode.beg);
+            seek(value, SeekMode.beg);
         }
-// ----     
+        
+// -----------------------------------------------------------------------------    
 // misc -----------------------------------------------------------------------+
 
         /// see the Stream interface.
@@ -962,21 +961,22 @@ class MemoryStream: Stream, StreamPersist, FilePersist8
             fBytes.ptr = _memory;
             return * cast(ubyte[] *) &fBytes;
         }
-// ----     
-// StreamPersist ------------------------------------------------------------+
+        
+// -----------------------------------------------------------------------------     
+// StreamPersist --------------------------------------------------------------+
     
-        /// Refer to StreamPersist.
-        void saveToStream(Stream aStream)
+        /// see the StreamPersist interface.
+        void saveToStream(Stream stream)
         {
-            if (cast(MemoryStream) aStream)
+            if (cast(MemoryStream) stream)
             {
-                auto target = cast(MemoryStream) aStream;
+                auto target = cast(MemoryStream) stream;
                 auto immutable oldpos = target.position;
                 scope(exit) target.position = oldpos;
                 
                 position = 0;
-                aStream.size = size;
-                aStream.position = 0;
+                stream.size = size;
+                stream.position = 0;
                 
                 size_t sz = cast(size_t) size;
                 size_t buffsz = 8192;
@@ -993,27 +993,23 @@ class MemoryStream: Stream, StreamPersist, FilePersist8
             }
             else
             {
-                this.copyStream(aStream);
+                this.copyStream(stream);
             }
         }
         
         /// ditto
-        void loadFromStream(Stream aStream)
+        void loadFromStream(Stream stream)
         {
-            if (cast(MemoryStream) aStream) 
-            {
-                MemoryStream source = cast(MemoryStream) aStream;
+            if (auto source = cast(MemoryStream) stream) 
                 source.saveToStream(this);
-            }
             else
-            {
-                copyStream(aStream, this);
-            }
+                copyStream(stream, this);
         }
-// ---- 
+        
+// -----------------------------------------------------------------------------
 // izFilePersist8 -------------------------------------------------------------+
         
-        /// Refers to izFilePersist8.
+        /// see the izFilePersist8 interface.
         void saveToFile(in char[] aFilename)
         {
             version(Windows)
@@ -1022,7 +1018,7 @@ class MemoryStream: Stream, StreamPersist, FilePersist8
                     (SECURITY_ATTRIBUTES*).init, CREATE_ALWAYS, FILE_ATTRIBUTE_NORMAL, HANDLE.init);
                 
                 if (hdl == INVALID_HANDLE_VALUE)
-                    throw new Error(format("stream exception: cannot create or overwrite '%s'", aFilename));
+                    throw new Exception(format("stream exception: cannot create or overwrite '%s'", aFilename));
                 
                 scope(exit) CloseHandle(hdl); 
                 uint numRead;
@@ -1030,20 +1026,20 @@ class MemoryStream: Stream, StreamPersist, FilePersist8
                 WriteFile(hdl, _memory, cast(uint)_size, &numRead, null);
                 
                 if (numRead != _size)
-                    throw new Error(format("stream exception: '%s' is corrupted", aFilename));
+                    throw new Exception(format("stream exception: '%s' is corrupted", aFilename));
             }
             version(Posix)
             {
                 auto hdl = open( aFilename.toStringz, O_CREAT | O_TRUNC | O_WRONLY, octal!666);
                 if (hdl <= -1)
-                    throw new Error(format("stream exception: cannot create or overwrite '%s'", aFilename));
+                    throw new Exception(format("stream exception: cannot create or overwrite '%s'", aFilename));
 
                 scope(exit) core.sys.posix.unistd.close(hdl);
                 auto immutable numRead = core.sys.posix.unistd.write(hdl, _memory, _size);
                 ftruncate64(hdl, _size);
 
                 if (numRead != _size)
-                    throw new Error(format("stream exception: '%s' is corrupted", aFilename));
+                    throw new Exception(format("stream exception: '%s' is corrupted", aFilename));
             }
             _filename = aFilename.idup;
         }
@@ -1057,7 +1053,7 @@ class MemoryStream: Stream, StreamPersist, FilePersist8
                     (SECURITY_ATTRIBUTES*).init, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, HANDLE.init);
                         
                 if (hdl == INVALID_HANDLE_VALUE)
-                    throw new Error(format("stream exception: cannot open '%s'", aFilename));
+                    throw new Exception(format("stream exception: cannot open '%s'", aFilename));
                     
                 uint numRead;
                 scope(exit) CloseHandle(hdl);
@@ -1067,14 +1063,14 @@ class MemoryStream: Stream, StreamPersist, FilePersist8
                 position = 0;
                 
                 if (numRead != _size)
-                    throw new Error(format("stream exception: '%s' is not correctly loaded", aFilename));
+                    throw new Exception(format("stream exception: '%s' is not correctly loaded", aFilename));
             }
             version(Posix)
             {
                 auto hdl = open(aFilename.toStringz, O_CREAT | O_RDONLY, octal!666);
 
                 if (hdl <= -1)
-                    throw new Error(format("stream exception: cannot open '%s'", aFilename));
+                    throw new Exception(format("stream exception: cannot open '%s'", aFilename));
 
                 scope(exit) core.sys.posix.unistd.close(hdl);
                 size(core.sys.posix.unistd.lseek64(hdl, 0, SEEK_END));
@@ -1083,7 +1079,7 @@ class MemoryStream: Stream, StreamPersist, FilePersist8
                 position = 0;
 
                 if (numRead != _size)
-                    throw new Error(format("stream exception: '%s' is not correctly loaded", aFilename));
+                    throw new Exception(format("stream exception: '%s' is not correctly loaded", aFilename));
             }
             _filename = aFilename.idup;
         }   

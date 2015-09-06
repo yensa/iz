@@ -472,7 +472,7 @@ private class ArrayTester
 enum ContainerChangeKind {add, change, remove}
 
 /**
- * Iz list interface.
+ * List interface.
  * It uses the Pascal semantic (add(), remove(), etc)
  * but are usable as range by std.algorithm using opSlice.
  */
@@ -599,7 +599,7 @@ interface List(T)
 
 /**
  * An List implementation, fast to be iterated, slow to be reorganized.
- * Encapsulates an Array!T and interfaces it as an List.
+ * Encapsulates an Array!T and interfaces it as a List.
  */
 class StaticList(T): List!T
 {
@@ -915,7 +915,7 @@ private template dlistPayload(T)
 }
 
 /**
- * An List implementation, slow to be iterated, fast to be reorganized.
+ * A List implementation, slow to be iterated, fast to be reorganized.
  * This is a standard doubly linked list, with GC-free heap allocations.
  * 
  * While using the array syntax for looping should be avoided, foreach() 

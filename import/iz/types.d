@@ -8,7 +8,7 @@ alias Ptr = void*;
 
 
 /** 
- * izfixedLenTypes represents all the fixed-length types, directly representing a data.
+ * FixedSizeTypes represents all the value types.
  */
 alias FixedSizeTypes = AliasSeq!( 
     bool, byte, ubyte, short, ushort, int, uint, long, ulong, 

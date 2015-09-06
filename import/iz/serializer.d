@@ -30,10 +30,10 @@ interface Serializable
      * Called by an Serializer during the de/serialization phase.
      * In the implementation, the Serializable declares its properties to the serializer.
      * Params:
-     * aSerializer = the serializer. The implementer calls aSerializer.addProperty()
+     * serializer = the serializer. The implementer calls serializer.addProperty()
      * to declare arbitrarily some PropDescriptors (run-time decision).
      */
-    void declareProperties(Serializer aSerializer);
+    void declareProperties(Serializer serializer);
 }
 
 
@@ -76,10 +76,10 @@ class SerializableReference: Serializable
 
         mixin(genPropFromField!(char[], "type", "_tp"));
         mixin(genPropFromField!(ulong,  "id",   "_id"));
-        void declareProperties(Serializer aSerializer)
+        void declareProperties(Serializer serializer)
         {
-            aSerializer.addProperty(getDescriptor!(char[])("type"));
-            aSerializer.addProperty(getDescriptor!(ulong)("id"));
+            serializer.addProperty(getDescriptor!(char[])("type"));
+            serializer.addProperty(getDescriptor!(ulong)("id"));
         }
     }
 }
@@ -1444,14 +1444,14 @@ version(unittest)
         
         ~this() {destruct(fSerRef);}
         
-        void declareProperties(Serializer aSerializer)
+        void declareProperties(Serializer serializer)
         {
-            if (aSerializer.state == SerializationState.store)
+            if (serializer.state == SerializationState.store)
                 fSerRef.storeReference!Referenced1(fRef);
                 
-            aSerializer.addProperty(&fRefDescr);
+            serializer.addProperty(&fRefDescr);
             
-            if (aSerializer.state == SerializationState.restore)
+            if (serializer.state == SerializationState.restore)
                 fRef = fSerRef.restoreReference!Referenced1;
         }
     }
@@ -1476,10 +1476,10 @@ version(unittest)
                 _aB1.reset;
                 _aB2.reset;
             }
-            override void declareProperties(Serializer aSerializer) {
-                super.declareProperties(aSerializer);
-                aSerializer.addProperty(&aB1descr);
-                aSerializer.addProperty(&aB2descr);
+            override void declareProperties(Serializer serializer) {
+                super.declareProperties(serializer);
+                serializer.addProperty(&aB1descr);
+                serializer.addProperty(&aB2descr);
             }
     }
     
@@ -1507,10 +1507,10 @@ version(unittest)
             mixin(genPropFromField!(typeof(_aFloat), "aFloat", "_aFloat"));
             mixin(genPropFromField!(typeof(_someChars), "someChars", "_someChars")); 
             
-            void declareProperties(Serializer aSerializer) {
-                aSerializer.addProperty(getDescriptor!(typeof(_anIntArray))("anIntArray"));
-                aSerializer.addProperty(getDescriptor!(typeof(_aFloat))("aFloat"));
-                aSerializer.addProperty(getDescriptor!(typeof(_someChars))("someChars"));
+            void declareProperties(Serializer serializer) {
+                serializer.addProperty(getDescriptor!(typeof(_anIntArray))("anIntArray"));
+                serializer.addProperty(getDescriptor!(typeof(_aFloat))("aFloat"));
+                serializer.addProperty(getDescriptor!(typeof(_someChars))("someChars"));
             }
     }
     
@@ -1697,9 +1697,9 @@ version(unittest)
                     setDescr.define(&set,"set");
                     with(A) set = SetofA(a1,a2);
                 }
-                void declareProperties(Serializer aSerializer)
+                void declareProperties(Serializer serializer)
                 {
-                    aSerializer.addProperty(&setDescr);
+                    serializer.addProperty(&setDescr);
                 }  
         }
         

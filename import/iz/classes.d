@@ -8,8 +8,9 @@ import iz.types, iz.memory, iz.containers, iz.streams, iz.properties, iz.seriali
 
 /**
  * The SerializableList is a serializable object list.
- * The life-time of the objects is automatically handled
- * by the internal container.
+ *
+ * The life-time of the objects is automatically handled by the internal container.
+ *
  * The serialization is only possible in sequential mode (objectToStream/streamToObject) 
  * because internally the items are described using a single property descriptor.
  */
@@ -18,62 +19,62 @@ if(isImplicitlyConvertible!(ItemClass, Serializable))
 {
     private
     {
-        PropDescriptor!Object fItmDescr;
-        PropDescriptor!uint fCntDescr;
-        DynamicList!ItemClass fItems;
+        PropDescriptor!Object _itmDescr;
+        PropDescriptor!uint _countDescr;
+        DynamicList!ItemClass _items;
 
         final uint getCount()
         {
-            return cast(uint) fItems.count;
+            return cast(uint) _items.count;
         }
         final void setCount(uint aValue)
         {
-            if (fItems.count > aValue)
-                while (fItems.count != aValue) fItems.remove(fItems.last);
+            if (_items.count > aValue)
+                while (_items.count != aValue) _items.remove(_items.last);
             else
-                while (fItems.count != aValue) addItem;                 
+                while (_items.count != aValue) addItem;                 
         }
     }  
     protected
     {
         /**
-         * serialization handling.
+         * Serialization handling.
          */
-        void declareProperties(Serializer aSerializer)
+        void declareProperties(Serializer serializer)
         {
-            if (aSerializer.state == SerializationState.store && aSerializer.storeMode == StoreMode.bulk)
+            if (serializer.state == SerializationState.store && serializer.storeMode == StoreMode.bulk)
             {
                 assert(0, "SerializableList cant be stored in bulk mode");
             }
-            else if (aSerializer.state == SerializationState.restore && aSerializer.restoreMode == RestoreMode.random)
+            else if (serializer.state == SerializationState.restore && serializer.restoreMode == RestoreMode.random)
             {
                 assert(0, "SerializableList cant be restored in random mode");
             }
             // in a first time, always re/stores the count.
-            aSerializer.addProperty(&fCntDescr);
+            serializer.addProperty(&_countDescr);
             // items
-            for(auto i= 0; i < fItems.count; i++)
+            for(auto i= 0; i < _items.count; i++)
             {
-                auto itm = cast(Object)fItems[i];
-                fItmDescr.define(&itm, format("item<%d>",i));
-                aSerializer.addProperty(&fItmDescr);
+                auto itm = cast(Object)_items[i];
+                _itmDescr.define(&itm, format("item<%d>",i));
+                serializer.addProperty(&_itmDescr);
             }
         }
     }
 
     public
     {
-        /// constructs a new instance
+        /// Constructs a new instance
         this()
         {
-            fItems = construct!(DynamicList!ItemClass);
-            fCntDescr.define(&setCount, &getCount, "Count");
+            _items = construct!(DynamicList!ItemClass);
+            _countDescr.define(&setCount, &getCount, "Count");
         }
 
         ~this()
         {
             clear;
-            fItems.destruct;
+            _items.destruct;
         }
 
         /**
@@ -83,7 +84,7 @@ if(isImplicitlyConvertible!(ItemClass, Serializable))
          */
         ItemClass addItem(A...)(A a)
         {
-            return fItems.addNewItem(a);
+            return _items.addNewItem(a);
         }
         
         /**
@@ -96,38 +97,38 @@ if(isImplicitlyConvertible!(ItemClass, Serializable))
         {
             static if(is(T == ItemClass))
             {
-                auto i = fItems.find(item);
+                auto immutable i = _items.find(item);
                 if (i == -1) return;
-                fItems.remove(item);
+                _items.remove(item);
                 destruct(item);
             }   
             else
             {
-                if (fItems.count == 0 || item > fItems.count-1 || item < 0) 
+                if (_items.count == 0 || item > _items.count-1 || item < 0) 
                     return;
-                auto itm = fItems[item];
-                fItems.remove(itm);
+                auto itm = _items[item];
+                _items.remove(itm);
                 destruct(itm);
             }
         }      
         
         /**
          * Provides an access to the internal container.
-         * The access is mostly granted to reorganize or read the items.
+         * The access is mostly provided to reorganize or read the items.
          */
-        DynamicList!ItemClass items(){return fItems;}
+        DynamicList!ItemClass items(){return _items;}
         
         /**
          * Clears the internal container and destroys the items.
          */
         void clear()
         {
-            foreach_reverse(i; 0 .. fItems.count)
+            foreach_reverse(i; 0 .. _items.count)
             {
-                auto itm = fItems[i];
+                auto itm = _items[i];
                 if(itm) destruct(itm);
             }
-            fItems.clear;
+            _items.clear;
         }
     }
 }
@@ -149,11 +150,11 @@ version(unittest)
                 descr2.define(&field2, "prop2");
                 descr3.define(&field3, "prop3");
             }
-            override void declareProperties(Serializer aSerializer)
+            override void declareProperties(Serializer serializer)
             {
-                aSerializer.addProperty!int(&descr1);
-                aSerializer.addProperty!int(&descr2);
-                aSerializer.addProperty!int(&descr3);
+                serializer.addProperty!int(&descr1);
+                serializer.addProperty!int(&descr2);
+                serializer.addProperty!int(&descr3);
             }
             void setProps(uint f1, uint f2, uint f3)
             {
