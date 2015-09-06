@@ -4,7 +4,7 @@
 module iz.classes;
 
 import std.traits;
-import iz.types, iz.containers, iz.streams, iz.properties, iz.serializer;
+import iz.types, iz.memory, iz.containers, iz.streams, iz.properties, iz.serializer;
 
 /**
  * The SerializableList is a serializable object list.
@@ -13,14 +13,14 @@ import iz.types, iz.containers, iz.streams, iz.properties, iz.serializer;
  * The serialization is only possible in sequential mode (objectToStream/streamToObject) 
  * because internally the items are described using a single property descriptor.
  */
-class izSerializableList(ItemClass): izSerializable 
-if(isImplicitlyConvertible!(ItemClass, izSerializable))
+class SerializableList(ItemClass): Serializable 
+if(isImplicitlyConvertible!(ItemClass, Serializable))
 {
     private
     {
-        izPropDescriptor!Object fItmDescr;
-        izDynamicList!ItemClass fItems;
-        izPropDescriptor!uint fCntDescr;
+        PropDescriptor!Object fItmDescr;
+        PropDescriptor!uint fCntDescr;
+        DynamicList!ItemClass fItems;
 
         final uint getCount()
         {
@@ -39,13 +39,13 @@ if(isImplicitlyConvertible!(ItemClass, izSerializable))
         /**
          * serialization handling.
          */
-        void declareProperties(izSerializer aSerializer)
+        void declareProperties(Serializer aSerializer)
         {
-            if (aSerializer.state == izSerState.store && aSerializer.storeMode == izStoreMode.bulk)
+            if (aSerializer.state == SerializationState.store && aSerializer.storeMode == StoreMode.bulk)
             {
                 assert(0, "SerializableList cant be stored in bulk mode");
             }
-            else if (aSerializer.state == izSerState.restore && aSerializer.restoreMode == izRestoreMode.random)
+            else if (aSerializer.state == SerializationState.restore && aSerializer.restoreMode == RestoreMode.random)
             {
                 assert(0, "SerializableList cant be restored in random mode");
             }
@@ -66,7 +66,7 @@ if(isImplicitlyConvertible!(ItemClass, izSerializable))
         /// constructs a new instance
         this()
         {
-            fItems = construct!(izDynamicList!ItemClass);
+            fItems = construct!(DynamicList!ItemClass);
             fCntDescr.define(&setCount, &getCount, "Count");
         }
 
@@ -115,7 +115,7 @@ if(isImplicitlyConvertible!(ItemClass, izSerializable))
          * Provides an access to the internal container.
          * The access is mostly granted to reorganize or read the items.
          */
-        izDynamicList!ItemClass items(){return fItems;}
+        DynamicList!ItemClass items(){return fItems;}
         
         /**
          * Clears the internal container and destroys the items.
@@ -134,12 +134,12 @@ if(isImplicitlyConvertible!(ItemClass, izSerializable))
 
 version(unittest)
 {
-    private class ItmTest: izSerializable
+    private class ItmTest: Serializable
     {
         private
         {
             int field1, field2, field3;
-            izPropDescriptor!int descr1, descr2, descr3;
+            PropDescriptor!int descr1, descr2, descr3;
         }
         public
         {
@@ -149,7 +149,7 @@ version(unittest)
                 descr2.define(&field2, "prop2");
                 descr3.define(&field3, "prop3");
             }
-            override void declareProperties(izSerializer aSerializer)
+            override void declareProperties(Serializer aSerializer)
             {
                 aSerializer.addProperty!int(&descr1);
                 aSerializer.addProperty!int(&descr2);
@@ -165,9 +165,9 @@ version(unittest)
     }
     unittest
     {    
-        auto col = construct!(izSerializableList!ItmTest);
-        auto str = construct!izMemoryStream;
-        auto ser = construct!izSerializer;
+        auto col = construct!(SerializableList!ItmTest);
+        auto str = construct!MemoryStream;
+        auto ser = construct!Serializer;
         scope(exit) destruct(col, ser, str);
 
         ItmTest itm = col.addItem();
@@ -177,12 +177,12 @@ version(unittest)
         itm = col.addItem;
         itm.setProps(6u,7u,8u);
 
-        ser.objectToStream(col, str, izSerFormat.iztxt);
+        ser.objectToStream(col, str, SerializationFormat.iztxt);
         str.position = 0;
         col.clear;
         assert(col.items.count == 0);
 
-        ser.streamToObject(str, col, izSerFormat.iztxt);
+        ser.streamToObject(str, col, SerializationFormat.iztxt);
         assert(col.items.count == 3);
         assert(col.items[1].field3 == 5u);
         assert(col.items[2].field3 == 8u);
@@ -193,6 +193,7 @@ version(unittest)
         col.deleteItem(1);
         assert(col.items.count == 1);  
         
-        std.stdio.writeln("izSerializableList passed the tests");
+        std.stdio.writeln("SerializableList passed the tests");
     }
 }
+

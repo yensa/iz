@@ -65,6 +65,8 @@ object _1: TCENativeProject
     'import\iz\classes.d'
     'import\iz\enumset.d'
     'import\iz\logicver.d'
+    'import\iz\memory.d'
+    'import\iz\sugar.d'
   )
   ConfigurationIndex = 0
 end

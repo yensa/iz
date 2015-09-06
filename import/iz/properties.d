@@ -1,12 +1,12 @@
 module iz.properties;
 
 import std.traits;
-import iz.types, iz.containers;
+import iz.memory, iz.types, iz.containers;
         
 /**
  * Describes the accessibility of a property.
  */
-public enum izPropAccess 
+enum PropAccess 
 {
     /// denotes an error.
     none, 
@@ -20,33 +20,33 @@ public enum izPropAccess
     
 /**
  * Describes the property of type T of an Object. Its members includes:
- * <li> a setter: either as an izPropSetter method or as pointer to the field.</li>
- * <li> a getter: either as an izPropGetter method or as pointer to the field.</li>
+ * <li> a setter: either as an PropSetter method or as pointer to the field.</li>
+ * <li> a getter: either as an PropGetter method or as pointer to the field.</li>
  * <li> a name: optionally used, according to the context.</li>
  * <li> a declarator: the Object declaring the props. the declarator is automatically set
  *      when the descriptor uses at least one accessor method.</li>
  */
-public struct izPropDescriptor(T)
+struct PropDescriptor(T)
 {
     public
     {
         /// setter proptotype
-        alias izPropSetter = void delegate(T value);
+        alias PropSetter = void delegate(T value);
         /// getter prototype
-        alias izPropGetter = T delegate();      
+        alias PropGetter = T delegate();      
         /// alternative setter prototype.
-        alias izPropSetterConst = void delegate(const T value);
+        alias PropSetterConst = void delegate(const T value);
     }
     private
     {
-        izPropSetter fSetter;
-        izPropGetter fGetter;
+        PropSetter fSetter;
+        PropGetter fGetter;
         Object fDeclarator;
 
         T* fSetPtr;
         T* fGetPtr;
 
-        izPropAccess fAccess;
+        PropAccess fAccess;
 
         string fName;
         
@@ -57,19 +57,19 @@ public struct izPropDescriptor(T)
             fSetter = null;
             fGetter = null;
             fDeclarator = null;
-            fAccess = izPropAccess.none;
+            fAccess = PropAccess.none;
             fName = fName.init;
         }
 
         void updateAccess()
         {
             if ((fSetter is null) && (fGetter !is null))
-                fAccess = izPropAccess.ro;
+                fAccess = PropAccess.ro;
             else if ((fSetter !is null) && (fGetter is null))
-                fAccess = izPropAccess.wo;
+                fAccess = PropAccess.wo;
             else if ((fSetter !is null) && (fGetter !is null))
-                fAccess = izPropAccess.rw;
-            else fAccess = izPropAccess.none;
+                fAccess = PropAccess.rw;
+            else fAccess = PropAccess.none;
         }
         
         /// pseudo setter internally used when a T is directly written.
@@ -91,9 +91,9 @@ public struct izPropDescriptor(T)
         
 // constructors ---------------------------------------------------------------+
         /**
-         * Constructs a property descriptor from an izPropSetter and an izPropGetter method.
+         * Constructs a property descriptor from an PropSetter and an PropGetter method.
          */  
-        this(izPropSetter aSetter, izPropGetter aGetter, string aName = "")
+        this(PropSetter aSetter, PropGetter aGetter, string aName = "")
         in
         {
             assert(aSetter);
@@ -105,9 +105,9 @@ public struct izPropDescriptor(T)
         }
         
         /**
-         * Constructs a property descriptor from an izPropSetterConst and an izPropGetter method.
+         * Constructs a property descriptor from an PropSetterConst and an PropGetter method.
          */  
-        this(izPropSetterConst aSetter, izPropGetter aGetter, string aName = "")
+        this(PropSetterConst aSetter, PropGetter aGetter, string aName = "")
         in
         {
             assert(aSetter);
@@ -115,13 +115,13 @@ public struct izPropDescriptor(T)
         }
         body
         {
-            define(cast(izPropSetter)aSetter, aGetter,aName);
+            define(cast(PropSetter)aSetter, aGetter,aName);
         }
         
         /**
-         * Constructs a property descriptor from an izPropSetter method and a direct variable.
+         * Constructs a property descriptor from an PropSetter method and a direct variable.
          */
-        this(izPropSetter aSetter, T* aSourceData, string aName = "")
+        this(PropSetter aSetter, T* aSourceData, string aName = "")
         in
         {
             assert(aSetter);
@@ -148,9 +148,9 @@ public struct izPropDescriptor(T)
 // define all the members -----------------------------------------------------+
     
         /**
-         * Defines a property descriptor from an izPropSetter and an izPropGetter.
+         * Defines a property descriptor from an PropSetter and an PropGetter.
          */
-        void define(izPropSetter aSetter, izPropGetter aGetter, string aName = "")
+        void define(PropSetter aSetter, PropGetter aGetter, string aName = "")
         {
             cleanup;
             setter(aSetter);
@@ -160,9 +160,9 @@ public struct izPropDescriptor(T)
         }
         
         /**
-         * Defines a property descriptor from an izPropSetter method and a direct variable.
+         * Defines a property descriptor from an PropSetter method and a direct variable.
          */
-        void define(izPropSetter aSetter, T* aSourceData, string aName = "")
+        void define(PropSetter aSetter, T* aSourceData, string aName = "")
         {
             cleanup;
             setter(aSetter);
@@ -187,14 +187,14 @@ public struct izPropDescriptor(T)
         /**
          * Sets the property setter using a standard method.
          */
-        @property void setter(izPropSetter aSetter)
+        @property void setter(PropSetter aSetter)
         {
             fSetter = aSetter;
             fDeclarator = cast(Object) aSetter.ptr;
             updateAccess;
         }
         /// ditto
-        @property izPropSetter setter(){return fSetter;}    
+        @property PropSetter setter(){return fSetter;}    
         /**
          * Sets the property setter using a pointer to a variable
          */
@@ -215,14 +215,14 @@ public struct izPropDescriptor(T)
         /** 
          * Sets the property getter using a standard method.
          */
-        @property void getter(izPropGetter aGetter)
+        @property void getter(PropGetter aGetter)
         {
             fGetter = aGetter;
             fDeclarator = cast(Object) aGetter.ptr;
             updateAccess;
         }
         /// ditto
-        @property izPropGetter getter(){return fGetter;}    
+        @property PropGetter getter(){return fGetter;}    
         /** 
          * Sets the property getter using a pointer to a variable
          */
@@ -243,7 +243,7 @@ public struct izPropDescriptor(T)
         /** 
          * Information about the prop accessibility
          */
-        @property const(izPropAccess) access()
+        @property const(PropAccess) access()
         {
             return fAccess;
         }   
@@ -294,7 +294,7 @@ version(unittest)
         unittest
         {   
             auto a = construct!A;
-            auto descrAi = izPropDescriptor!int(&a.i,&a.i,"I");
+            auto descrAi = PropDescriptor!int(&a.i,&a.i,"I");
             descrAi.setter()(5);
             assert(a.i == 5);
             assert(a.i == descrAi.getter()());
@@ -302,13 +302,13 @@ version(unittest)
             
             auto refval = si(1,2,333);
             auto b = construct!B;
-            auto descrBi = izPropDescriptor!si(&b.i,&b.i,"I");
+            auto descrBi = PropDescriptor!si(&b.i,&b.i,"I");
             descrBi.setter()(refval);
             assert(b.i.e == 333);
             assert(b.i.e == descrBi.getter()().e);
         
             destruct(a,b);
-            writeln("izPropDescriptor(T) passed the tests");
+            writeln("PropDescriptor(T) passed the tests");
         }   
     }
 }
@@ -324,13 +324,13 @@ alias GetSet = SetGet;
 
 /**
  * When mixed in an agregate this generates a property. 
- * This property is detectable by an izPropertiesAnalyzer.
+ * This property is detectable by an PropertiesAnalyzer.
  * Params:
  * T = the type of the property.
  * propName = the name of the property.
  * propField = the identifier of the existing field of type T.
  */
-public string genPropFromField(T, string propName, string propField)()
+string genPropFromField(T, string propName, string propField)()
 {
     return
     "@Set @property void " ~ propName ~ "(" ~ T.stringof ~ " aValue)" ~
@@ -342,8 +342,8 @@ public string genPropFromField(T, string propName, string propField)()
 private char[] genStandardPropDescriptors()
 {
     char[] result;
-    foreach(T; izConstantSizeTypes)
-        result ~= ("public alias " ~ T.stringof ~ "prop = izPropDescriptor!(" ~ 
+    foreach(T; FixedSizeTypes)
+        result ~= ("public alias " ~ T.stringof ~ "prop = PropDescriptor!(" ~ 
             T.stringof ~ ")" ~ ";\r\n").dup;
     return result;
 }
@@ -359,7 +359,7 @@ mixin(genStandardPropDescriptors);
  *
  * The analyzers are callable in every non-static method, usually *this()*. 
  */
-mixin template izPropertiesAnalyzer(){
+mixin template PropertiesAnalyzer(){
 
     /**
      * Contains the list of izPropDesrcriptors created by the analyzers.
@@ -378,22 +378,22 @@ mixin template izPropertiesAnalyzer(){
      * name = the identifier used for the setter and the getter.
      * createIfMissing = when set to true, the result is never null.
      * Returns:
-     * null if the operation fails otherwise a pointer to an izPropDescriptor!T.
+     * null if the operation fails otherwise a pointer to an PropDescriptor!T.
      */
-    protected final izPropDescriptor!T * getDescriptor(T)(string name, bool createIfMissing = false)
+    protected final PropDescriptor!T * getDescriptor(T)(string name, bool createIfMissing = false)
     {
-        izPropDescriptor!T * descr;
+        PropDescriptor!T * descr;
         
         for(auto i = 0; i < descriptors.length; i++)
         {
-            auto maybe = cast(izPropDescriptor!T *) descriptors[i];
+            auto maybe = cast(PropDescriptor!T *) descriptors[i];
             if (maybe.name != name) continue;
             descr = maybe; break; 
         }
         
         if (createIfMissing && !descr) 
         {   
-            descr = new izPropDescriptor!T;
+            descr = new PropDescriptor!T;
             descr.name = name;
             descriptors ~= descr;
         }
@@ -463,7 +463,7 @@ mixin template izPropertiesAnalyzer(){
             static if (is(attribute == Get) && isCallable!overload && 
                 __traits(isVirtualMethod, overload))
             {
-                alias DescriptorType = izPropDescriptor!(ReturnType!overload);
+                alias DescriptorType = PropDescriptor!(ReturnType!overload);
                 auto descriptor = getDescriptor!(ReturnType!overload)(member, true);
                 auto virtualIndex = __traits(getVirtualIndex, overload);
                 assert(virtualIndex > -1);
@@ -471,14 +471,14 @@ mixin template izPropertiesAnalyzer(){
                 Delegate dg;
                 dg.ptr = cast(void*)this;
                 dg.funcptr = virtualTable[virtualIndex];
-                descriptor.getter = *cast(DescriptorType.izPropGetter *) &dg;
+                descriptor.getter = *cast(DescriptorType.PropGetter *) &dg;
                 //
                 version(none) writeln(attribute.stringof, " < ", member);
             }
             else static if (is(attribute == Set) && isCallable!overload && 
                 __traits(isVirtualMethod, overload))
             {
-                alias DescriptorType = izPropDescriptor!(ParameterTypeTuple!overload);
+                alias DescriptorType = PropDescriptor!(ParameterTypeTuple!overload);
                 auto descriptor = getDescriptor!(ParameterTypeTuple!overload)(member, true);
                 auto virtualIndex = __traits(getVirtualIndex, overload);
                 assert(virtualIndex > -1);                        
@@ -486,7 +486,7 @@ mixin template izPropertiesAnalyzer(){
                 Delegate dg;
                 dg.ptr = cast(void*)this;
                 dg.funcptr = virtualTable[virtualIndex];
-                descriptor.setter = *cast(DescriptorType.izPropSetter *) &dg;     
+                descriptor.setter = *cast(DescriptorType.PropSetter *) &dg;     
                 //    
                 version(none) writeln(attribute.stringof, " > ", member);
             }                
@@ -497,7 +497,7 @@ mixin template izPropertiesAnalyzer(){
 version(unittest){
     class Foo
     {
-        mixin izPropertiesAnalyzer;
+        mixin PropertiesAnalyzer;
         this(A...)(A a){
             analyzeVirtualSetGet;
             analyzeFields;
@@ -554,7 +554,7 @@ version(unittest){
     {
         size_t _field;
         string info;
-        mixin izPropertiesAnalyzer;
+        mixin PropertiesAnalyzer;
         this()
         {
             analyzeVirtualSetGet;
@@ -595,32 +595,32 @@ unittest
     assert(baz.info == "most derived");
     baz.destruct;
     
-    writeln("izPropertiesAnalyzer passed the tests");
+    writeln("PropertiesAnalyzer passed the tests");
 }
 
 /**
  * This container maintains a list of property synchronized between themselves.
  *
- * The reference to the properties are stored using the izPropDescriptor format. 
- * The izPropDescriptor *name* can be omitted.
+ * The reference to the properties are stored using the PropDescriptor format. 
+ * The PropDescriptor *name* can be omitted.
  *
  * Params:
  * T = the common type of the properties.
  */
-public class izPropertyBinder(T)
+class PropertyBinder(T)
 {
     private
     {
-        izDynamicList!(izPropDescriptor!T *) fToFree;
-        izDynamicList!(izPropDescriptor!T *) fItems;
-        izPropDescriptor!T *fSource;
+        DynamicList!(PropDescriptor!T *) fToFree;
+        DynamicList!(PropDescriptor!T *) fItems;
+        PropDescriptor!T *fSource;
     }
     public
     {
         this()
         {
-            fItems = construct!(izDynamicList!(izPropDescriptor!T *));
-            fToFree = construct!(izDynamicList!(izPropDescriptor!T *));
+            fItems = construct!(DynamicList!(PropDescriptor!T *));
+            fToFree = construct!(DynamicList!(PropDescriptor!T *));
         }
         ~this()
         {
@@ -638,10 +638,10 @@ public class izPropertyBinder(T)
          * otherwise the descritpor reference will become invalid.
          *
          * Params:
-         * aProp = an izPropDescriptor of type T.
+         * aProp = an PropDescriptor of type T.
          * isSource = optional boolean indicating if the descriptor is used as the master property.  
          */
-        ptrdiff_t addBinding(ref izPropDescriptor!T aProp, bool isSource = false)
+        ptrdiff_t addBinding(ref PropDescriptor!T aProp, bool isSource = false)
         {
             if (isSource) fSource = &aProp;
             return fItems.add(&aProp);
@@ -652,11 +652,11 @@ public class izPropertyBinder(T)
          * The life-time of the new descriptor is handled internally.
          *
          * Returns: 
-         * an new izPropDescriptor of type T.
+         * an new PropDescriptor of type T.
          */
-        izPropDescriptor!T * newBinding()
+        PropDescriptor!T * newBinding()
         {
-            auto result = construct!(izPropDescriptor!T);
+            auto result = construct!(PropDescriptor!T);
             fItems.add(result);
             fToFree.add(result);
             return result;
@@ -689,8 +689,8 @@ public class izPropertyBinder(T)
         {
             foreach(item; fItems)
             {
-                if (item.access == izPropAccess.none) continue;
-                if (item.access == izPropAccess.ro) continue;
+                if (item.access == PropAccess.none) continue;
+                if (item.access == PropAccess.ro) continue;
                 item.setter()(aValue);
             }
         }
@@ -709,20 +709,20 @@ public class izPropertyBinder(T)
          * Params:
          * aSource = the property to be used as source.
          */
-        @property void source(ref izPropDescriptor!T aSource)
+        @property void source(ref PropDescriptor!T aSource)
         {fSource = &aSource;}
         
         /**
          * Returns the property used as source in _updateFromSource().
          */        
-        @property izPropDescriptor!T * source()
+        @property PropDescriptor!T * source()
         {return fSource;}
         
         /**
          * Provides an access to the property descriptors for additional _izList_ operations.
          * Note that the items whose life-time is managed should not be modified.
          */
-        @property izList!(izPropDescriptor!T *) items()
+        @property List!(PropDescriptor!T *) items()
         {return fItems;}    
     }
 }   
@@ -732,8 +732,8 @@ private class izPropertyBinderTester
 {
     unittest
     {
-        alias intprops = izPropertyBinder!int;
-        alias floatprops = izPropertyBinder!float;
+        alias intprops = PropertyBinder!int;
+        alias floatprops = PropertyBinder!float;
 
         class Foo
         {
@@ -882,13 +882,13 @@ private class izPropertyBinderTester
         m1.destruct;
         m2.destruct;
 
-        writeln("izPropertyBinder(T) passed the tests");
+        writeln("PropertyBinder(T) passed the tests");
     }
 }
 
 unittest
 {
-    auto strSync = construct!(izPropertyBinder!int);
+    auto strSync = construct!(PropertyBinder!int);
 
     class A
     {
@@ -919,5 +919,6 @@ unittest
     a2.destruct;
     strSync.destruct;
 
-    writeln("izPropertyBinder(T) passed the newBinding() test");
+    writeln("PropertyBinder(T) passed the newBinding() test");
 }
+

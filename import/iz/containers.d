@@ -5,7 +5,7 @@ import std.stdio;
 import core.stdc.string: memcpy, memmove;
 import std.string: format, strip;
 import std.traits, std.conv: to;
-import iz.types, iz.streams;
+import iz.memory, iz.types, iz.streams;
 
 
 version(X86_64) 
@@ -14,7 +14,7 @@ version(X86_64)
 /**
  * Parameterized, GC-free array.
  *
- * izArray(T) implements a single-dimension array of uncollected memory.
+ * Array(T) implements a single-dimension array of uncollected memory.
  * It internally preallocates the memory to minimize the reallocation fingerprints.
  *
  * Its layout differs from built-in D's dynamic arrays and they cannot be cast as T[]
@@ -24,12 +24,12 @@ version(X86_64)
  * - concatenation.
  * - assign from built-in arrays slices.
  */
-public struct izArray(T)
+struct Array(T)
 {
     private
     {
         size_t fLength;
-        izPtr fElems;
+        Ptr fElems;
         uint fGranularity;
         size_t fBlockCount;
         bool initDone;
@@ -51,7 +51,7 @@ public struct izArray(T)
             if (fBlockCount != newBlockCount)
             {
                 fBlockCount = newBlockCount;
-                fElems = cast(T*) reallocMem(cast(izPtr) fElems, fGranularity * fBlockCount);
+                fElems = cast(T*) reallocMem(fElems, fGranularity * fBlockCount);
             }
             fLength = aLength;
         }
@@ -202,7 +202,7 @@ public struct izArray(T)
          * Pointer to the first element.
          * As it's always assigned It cannot be used to determine if the array is empty.
          */
-        @property @nogc izPtr ptr()
+        @property @nogc Ptr ptr()
         {
             return fElems;
         }
@@ -222,9 +222,9 @@ public struct izArray(T)
         /**
          *  Returns a mutable copy of the array.
          */
-        @property @nogc izArray!T dup()
+        @property @nogc Array!T dup()
         {
-            izArray!T result;
+            Array!T result;
             result.length = fLength;
             moveMem(result.fElems, fElems, fLength * T.sizeof);
             return result;
@@ -232,7 +232,7 @@ public struct izArray(T)
         /**
          * Class operators
          */
-        @nogc bool opEquals(AT)(auto ref AT anArray) if ( (is(AT == izArray!T)) | (is(AT == T[])) )
+        @nogc bool opEquals(AT)(auto ref AT anArray) if ( (is(AT == Array!T)) | (is(AT == T[])) )
         {
             if (fLength != anArray.length) return false;
             if (fLength == 0 && anArray.length == 0) return true;
@@ -313,17 +313,17 @@ public struct izArray(T)
             else assert(0, "operator not implemented");
         }      
         /// ditto
-        @nogc izArray!T opSlice()
+        @nogc Array!T opSlice()
         {
-            izArray!T result;
+            Array!T result;
             result.length = length;
             moveMem( result.ptr, fElems, T.sizeof * fLength);
             return result;
         }
         /// ditto
-        @nogc izArray!T opSlice(size_t aFrom, size_t aTo)
+        @nogc Array!T opSlice(size_t aFrom, size_t aTo)
         {
-            izArray!T result;
+            Array!T result;
             size_t resLen = 1 + (aTo-aFrom);
             result.length = resLen;
             moveMem( result.ptr, fElems + aFrom * T.sizeof, T.sizeof * resLen);
@@ -350,23 +350,23 @@ public struct izArray(T)
     }
 }
 
-private class izArrayTester
+private class ArrayTester
 {
     unittest
     {
         // init-index
-        izArray!size_t a;
+        Array!size_t a;
         a.length = 2;
         a[0] = 8;
         a[1] = 9;
         assert( a[0] == 8);
         assert( a[1] == 9);
 
-        auto b = izArray!int(0,1,2,3,4,5,6);
+        auto b = Array!int(0,1,2,3,4,5,6);
         assert( b.length == 7);
         assert( b[$-1] == 6);
 
-        auto floatarr = izArray!float ([0.0f, 0.1f, 0.2f, 0.3f, 0.4f]);
+        auto floatarr = Array!float ([0.0f, 0.1f, 0.2f, 0.3f, 0.4f]);
         assert( floatarr.length == 5);
         assert( floatarr[0] == 0.0f);
         assert( floatarr[1] == 0.1f);
@@ -375,16 +375,16 @@ private class izArrayTester
         assert( floatarr[4] == 0.4f);
 
         // copy-cons
-        a = izArray!size_t("[]");
+        a = Array!size_t("[]");
         assert(a.length == 0);
-        assertThrown(a = izArray!size_t("["));
-        assertThrown(a = izArray!size_t("]"));
-        assertThrown(a = izArray!size_t("[,]"));
-        assertThrown(a = izArray!size_t("[,"));
-        assertThrown(a = izArray!size_t("[0,1,]"));
-        assertThrown(a = izArray!size_t("[,0,1]"));
-        assertThrown(a = izArray!size_t("[0,1.874f]"));
-        a = izArray!size_t("[10,11,12,13]");
+        assertThrown(a = Array!size_t("["));
+        assertThrown(a = Array!size_t("]"));
+        assertThrown(a = Array!size_t("[,]"));
+        assertThrown(a = Array!size_t("[,"));
+        assertThrown(a = Array!size_t("[0,1,]"));
+        assertThrown(a = Array!size_t("[,0,1]"));
+        assertThrown(a = Array!size_t("[0,1.874f]"));
+        a = Array!size_t("[10,11,12,13]");
         assert(a.length == 4);
         assert(a.toString == "[10, 11, 12, 13]");
 
@@ -405,8 +405,8 @@ private class izArrayTester
 
         // opEquals
         auto nativeArr = [111u, 222u, 333u, 444u, 555u];
-        auto arrcpy1 = izArray!uint(111u, 222u, 333u, 444u, 555u);
-        auto arrcpy2 = izArray!uint(111u, 222u, 333u, 444u, 555u);
+        auto arrcpy1 = Array!uint(111u, 222u, 333u, 444u, 555u);
+        auto arrcpy2 = Array!uint(111u, 222u, 333u, 444u, 555u);
         assert( arrcpy1 == nativeArr );
         assert( arrcpy2 == nativeArr );
         assert( arrcpy1 == arrcpy2 );
@@ -419,10 +419,10 @@ private class izArrayTester
         assert( arrcpy1 == arrcpy2 );
 
         // opSlice
-        izArray!float g0 = floatarr[1..4];
+        Array!float g0 = floatarr[1..4];
         assert( g0[0] ==  floatarr[1]);
         assert( g0[3] ==  floatarr[4]);
-        izArray!float g1 = floatarr[];
+        Array!float g1 = floatarr[];
         assert( g1[0] ==  floatarr[0]);
         assert( g1[4] ==  floatarr[4]);
 
@@ -441,7 +441,7 @@ private class izArrayTester
         float[] g1 = floatarr[1..4];
         assert( g1[0] ==  floatarr[1]);
         assert( g1[3] ==  floatarr[4]);
-        izArray!float g2 = floatarr[]; // auto g2: conflict between op.overloads
+        Array!float g2 = floatarr[]; // auto g2: conflict between op.overloads
         assert( g2[0] ==  floatarr[0]);
         assert( g2[4] ==  floatarr[4]);
         float[] g3 = floatarr[];
@@ -461,22 +461,22 @@ private class izArrayTester
         a[$-1] = a.length-1;
         assert(a[$-1] == a.length-1);
 
-        writeln("izArray(T) passed the tests");
+        writeln("Array(T) passed the tests");
     }
 }
 
 /**
- * izContainerChangeKind represents the message kinds a container
+ * ContainerChangeKind represents the message kinds a container
  * can emit (either by assignable event or by over-ridable method).
  */
-public enum izContainerChangeKind {add, change, remove}
+enum ContainerChangeKind {add, change, remove}
 
 /**
  * Iz list interface.
  * It uses the Pascal semantic (add(), remove(), etc)
  * but are usable as range by std.algorithm using opSlice.
  */
-public interface izList(T)
+interface List(T)
 {
     /// support for the array syntax
     T opIndex(ptrdiff_t i);
@@ -598,27 +598,27 @@ public interface izList(T)
 }
 
 /**
- * An izList implementation, fast to be iterated, slow to be reorganized.
- * Encapsulates an izArray!T and interfaces it as an izList.
+ * An List implementation, fast to be iterated, slow to be reorganized.
+ * Encapsulates an Array!T and interfaces it as an List.
  */
-public class izStaticList(T): izList!T
+class StaticList(T): List!T
 {
     private
     {
-        izArray!T fItems;
+        Array!T fItems;
     }
     protected
     {
         final Exception listException()
         {
-            return new Exception("izList exception");
+            return new Exception("List exception");
         }
     }
     public
     {
         this(A...)(A someElements)
         {
-            fItems = izArray!T(someElements);
+            fItems = Array!T(someElements);
         }
         ~this()
         {
@@ -683,7 +683,7 @@ public class izStaticList(T): izList!T
 
         /**
          * Adds an item at the end of the list.
-         * To be preferred in this izList implementation.
+         * To be preferred in this List implementation.
          */
         ptrdiff_t add(T anItem)
         {
@@ -700,7 +700,7 @@ public class izStaticList(T): izList!T
 
         /**
          * Inserts an item at the beginning of the list.
-         * To be avoided in this izList implementation.
+         * To be avoided in this List implementation.
          */
         ptrdiff_t insert(T anItem)
         {
@@ -713,7 +713,7 @@ public class izStaticList(T): izList!T
 
         /**
          * Inserts an item at the beginning of the list.
-         * To be avoided in this izList implementation.
+         * To be avoided in this List implementation.
          */
         ptrdiff_t insert(size_t aPosition, T anItem)
         {
@@ -779,7 +779,7 @@ public class izStaticList(T): izList!T
             }
             else
             {
-                izPtr fromPtr = fItems.ptr + T.sizeof * anIndex;
+                Ptr fromPtr = fItems.ptr + T.sizeof * anIndex;
                 scope(failure) throw listException;
                 memmove(fromPtr, fromPtr + T.sizeof, (fItems.length - anIndex) * T.sizeof);
                 fItems.shrink;
@@ -915,13 +915,13 @@ private template dlistPayload(T)
 }
 
 /**
- * An izList implementation, slow to be iterated, fast to be reorganized.
+ * An List implementation, slow to be iterated, fast to be reorganized.
  * This is a standard doubly linked list, with GC-free heap allocations.
  * 
  * While using the array syntax for looping should be avoided, foreach() 
  * processes with some acceptable performances.
  */
-public class izDynamicList(T): izList!T
+class DynamicList(T): List!T
 {
     private
     {
@@ -1320,7 +1320,7 @@ version(unittest)
         unittest
         {
             // struct as ptr
-            alias sList = izStaticList!(s*);
+            alias sList = StaticList!(s*);
 
             s[200] someS;
             sList SList = construct!sList;
@@ -1363,7 +1363,7 @@ version(unittest)
             }
 
             // class as ref
-            alias cList = izStaticList!c;
+            alias cList = StaticList!c;
 
             c[200] someC;
             cList CList = construct!cList;
@@ -1417,13 +1417,13 @@ version(unittest)
             }
             assert(CList.count == 0);
 
-            writeln("izStaticList(T) passed the tests");
+            writeln("StaticList(T) passed the tests");
         }
 
         unittest
         {
             // struct as ptr
-            alias sList = izDynamicList!(s*);
+            alias sList = DynamicList!(s*);
 
             s[200] someS;
             sList SList = construct!sList;
@@ -1465,7 +1465,7 @@ version(unittest)
             }
 
             // class as ref
-            alias cList = izStaticList!c;
+            alias cList = StaticList!c;
 
             c[200] someC;
             cList CList = construct!cList;
@@ -1519,58 +1519,58 @@ version(unittest)
             }
             assert(CList.count == 0);
 
-            writeln("izDynamicList(T) passed the tests");
+            writeln("DynamicList(T) passed the tests");
         }
     }
 }
 
 /**
- * izTreeItem interface turn its implementer into a tree item.
+ * TreeItem interface turn its implementer into a tree item.
  * Most of the methods are pre-implemented so that an interfacer just needs
  * to override the payload accessors.
  */
-public interface izTreeItem
+interface TreeItem
 {
     /**
-     * The following methods must be implemented in an izTreeItem interfacer.
+     * The following methods must be implemented in an TreeItem interfacer.
      * They provide the links between the tree items.
      *
-     * Note that the mixin template izTreeItemAccessors provides a standard
+     * Note that the mixin template TreeItemAccessors provides a standard
      * way to achieve the task.
      */
-    @safe @property izTreeItem prevSibling();
+    @safe @property TreeItem prevSibling();
     /// ditto
-    @safe @property izTreeItem nextSibling();
+    @safe @property TreeItem nextSibling();
     /// ditto
-    @safe @property izTreeItem parent();
+    @safe @property TreeItem parent();
     /// ditto
-    @safe @property izTreeItem firstChild();
+    @safe @property TreeItem firstChild();
     /// ditto
-    @safe @property void prevSibling(izTreeItem anItem);
+    @safe @property void prevSibling(TreeItem anItem);
     /// ditto
-    @safe @property void nextSibling(izTreeItem anItem);
+    @safe @property void nextSibling(TreeItem anItem);
     /// ditto
-    @safe @property void parent(izTreeItem anItem);
+    @safe @property void parent(TreeItem anItem);
     /// ditto
-    @safe @property void firstChild(izTreeItem anItem);
+    @safe @property void firstChild(TreeItem anItem);
     /// ditto
     @safe @property izTreeItemSiblings siblings();
     /// ditto
     @safe @property izTreeItemSiblings children();
     /**
      * treeChanged() notifies the implementer about the modification of the list.
-     * It's also injected by izTreeItemAccessors. This method is necessary because
+     * It's also injected by TreeItemAccessors. This method is necessary because
      * most of the methods of the interface can't be overriden, for example to
      * call a particular updater when a node is added or removed.
      */
-    @safe void treeChanged(izContainerChangeKind aChangeKind, izTreeItem involvedItem);
+    @safe void treeChanged(ContainerChangeKind aChangeKind, TreeItem involvedItem);
 
     /// Encapsulates the operators for accessing to the siblings/children.
     private struct izTreeItemSiblings
     {
         public:
         
-            izTreeItem item;
+            TreeItem item;
 
         public:
         
@@ -1579,7 +1579,7 @@ public interface izTreeItem
              * WHen all the items must be accessed in a loop 
              * foreach() should be prefered since it's actually a linked list.
              */
-            @safe final izTreeItem opIndex(ptrdiff_t i)
+            @safe final TreeItem opIndex(ptrdiff_t i)
             {
                 if (!item) return null;
                 auto old = item.firstSibling;
@@ -1593,7 +1593,7 @@ public interface izTreeItem
             }
             
             /// Provides the array syntax.
-            final void opIndexAssign(izTreeItem anItem, size_t i)
+            final void opIndexAssign(TreeItem anItem, size_t i)
             {
                 if (!item) return;
                 if (anItem is null)
@@ -1618,7 +1618,7 @@ public interface izTreeItem
             }
             
             /// Support for the foreach() operator.
-            final int opApply(int delegate(ref izTreeItem) dg)
+            final int opApply(int delegate(ref TreeItem) dg)
             {
                 int result = 0;
                 if (!item) return result;
@@ -1633,7 +1633,7 @@ public interface izTreeItem
             }
             
             /// Support for the foreach_reverse() operator.
-            final int opApplyReverse(int delegate(ref izTreeItem) dg)
+            final int opApplyReverse(int delegate(ref TreeItem) dg)
             {
                 int result = 0;
                 if (!item) return result;
@@ -1654,7 +1654,7 @@ public interface izTreeItem
      * Allocates, adds to the back, and returns a new sibling of type IT.
      * This method should be preferred over addSibling/insertSibling if deleteChildren() is used.
      */
-    final IT addNewSibling(IT, A...)(A a) if (is(IT : izTreeItem))
+    final IT addNewSibling(IT, A...)(A a) if (is(IT : TreeItem))
     {
         auto result = construct!IT(a);
         addSibling(result);
@@ -1665,9 +1665,9 @@ public interface izTreeItem
      * Returns the last item.
      * The value returned is never null.
      */
-    @safe final izTreeItem lastSibling()
+    @safe final TreeItem lastSibling()
     {
-        izTreeItem result;
+        TreeItem result;
         result = this;
         while(result.nextSibling)
         {
@@ -1680,9 +1680,9 @@ public interface izTreeItem
      * Returns the first item.
      * The value returned is never null.
      */
-    @safe final izTreeItem firstSibling()
+    @safe final TreeItem firstSibling()
     {
-        izTreeItem result;
+        TreeItem result;
         result = this;
         while(result.prevSibling)
         {
@@ -1694,7 +1694,7 @@ public interface izTreeItem
     /**
      * Returns the index of aSibling if it's found otherwise -1.
      */
-    @safe final ptrdiff_t findSibling(izTreeItem aSibling)
+    @safe final ptrdiff_t findSibling(TreeItem aSibling)
     {
         assert(aSibling);
 
@@ -1722,7 +1722,7 @@ public interface izTreeItem
     /**
      * Adds an item at the end of list.
      */
-    @safe final void addSibling(izTreeItem aSibling)
+    @safe final void addSibling(TreeItem aSibling)
     in
     {
         assert(aSibling);
@@ -1745,13 +1745,13 @@ public interface izTreeItem
         aSibling.parent = parent;
 
         if (parent)
-            parent.treeChanged(izContainerChangeKind.add, aSibling);
+            parent.treeChanged(ContainerChangeKind.add, aSibling);
     }
 
     /**
      * Inserts an item at the beginning of the list.
      */
-    @safe final void insertSibling(izTreeItem aSibling)
+    @safe final void insertSibling(TreeItem aSibling)
     in
     {
         assert(aSibling);
@@ -1777,14 +1777,14 @@ public interface izTreeItem
             parent.firstChild = aSibling;
         }
 
-        treeChanged(izContainerChangeKind.add, aSibling);
+        treeChanged(ContainerChangeKind.add, aSibling);
     }
 
     /**
      * Inserts aSibling before aPosition.
      * If aPosition is greater than count than aSibling is added to the end of list.
      */
-    @safe final void insertSibling(size_t aPosition, izTreeItem aSibling)
+    @safe final void insertSibling(size_t aPosition, TreeItem aSibling)
     in
     {
         assert(aSibling);
@@ -1819,7 +1819,7 @@ public interface izTreeItem
                     aSibling.parent = parent;
                     assert( aSibling.siblingIndex == aPosition);
 
-                    treeChanged(izContainerChangeKind.add,aSibling);
+                    treeChanged(ContainerChangeKind.add,aSibling);
 
                     return;
                 }
@@ -1832,7 +1832,7 @@ public interface izTreeItem
     /**
      * Permutes aSibling1 and aSibling2 positions in the list.
      */
-    @safe final void exchangeSibling(izTreeItem aSibling1, izTreeItem aSibling2)
+    @safe final void exchangeSibling(TreeItem aSibling1, TreeItem aSibling2)
     {
         assert(aSibling1);
         assert(aSibling2);
@@ -1855,13 +1855,13 @@ public interface izTreeItem
                 aSibling1.firstChild = aSibling2;
         }
 
-        treeChanged(izContainerChangeKind.change,null);
+        treeChanged(ContainerChangeKind.change,null);
     }
 
     /**
      * Tries to removes aSibling from the list.
      */
-    @safe final bool removeSibling(izTreeItem aSibling)
+    @safe final bool removeSibling(TreeItem aSibling)
     {
         assert(aSibling);
 
@@ -1878,7 +1878,7 @@ public interface izTreeItem
     /**
      * Tries to extract the anIndex-nth sibling from this branch.
      */
-    @safe final izTreeItem removeSibling(size_t anIndex)
+    @safe final TreeItem removeSibling(size_t anIndex)
     {
         auto result = siblings[anIndex];
         if (result)
@@ -1897,7 +1897,7 @@ public interface izTreeItem
             result.nextSibling = null;
             result.parent = null;
 
-            treeChanged(izContainerChangeKind.remove, result);
+            treeChanged(ContainerChangeKind.remove, result);
         }
         return result;
     }
@@ -1970,7 +1970,7 @@ public interface izTreeItem
      * Allocates, adds to the back and returns a new children of type IT.
      * This method should be preferred over addChildren/insertChildren if deleteChildren() is used.
      */
-    final IT addNewChildren(IT,A...)(A a) if (is(IT : izTreeItem))
+    final IT addNewChildren(IT,A...)(A a) if (is(IT : TreeItem))
     {
         auto result = construct!IT(a);
         addChild(result);
@@ -2016,7 +2016,7 @@ public interface izTreeItem
     /**
      * Adds aChild to the back and returns its position.
      */
-    @safe final void addChild(izTreeItem aChild)
+    @safe final void addChild(TreeItem aChild)
     {
         if (aChild.parent)
         {
@@ -2030,7 +2030,7 @@ public interface izTreeItem
             firstChild = aChild;
             aChild.parent = this;
 
-            treeChanged(izContainerChangeKind.add, aChild);
+            treeChanged(ContainerChangeKind.add, aChild);
 
             return;
         }
@@ -2040,14 +2040,14 @@ public interface izTreeItem
     /**
      * Tries to insert aChild to the front and returns its position.
      */
-    @safe final void insertChild(izTreeItem aChild)
+    @safe final void insertChild(TreeItem aChild)
     {
         if (!firstChild)
         {
             firstChild = aChild;
             aChild.parent = this;
 
-            treeChanged(izContainerChangeKind.change,  aChild);
+            treeChanged(ContainerChangeKind.change,  aChild);
 
             return;
         }
@@ -2057,14 +2057,14 @@ public interface izTreeItem
     /**
      * Inserts aChild at aPosition and returns its position.
      */
-    @safe final void insertChild(size_t aPosition, izTreeItem aChild)
+    @safe final void insertChild(size_t aPosition, TreeItem aChild)
     {
         if (!firstChild)
         {
             firstChild = aChild;
             aChild.parent = this;
 
-            treeChanged(izContainerChangeKind.change,aChild);
+            treeChanged(ContainerChangeKind.change,aChild);
 
             return;
         }
@@ -2074,7 +2074,7 @@ public interface izTreeItem
     /**
      * Removes aChild from the list.
      */
-    @safe final bool removeChild(izTreeItem aChild)
+    @safe final bool removeChild(TreeItem aChild)
     {
         assert(aChild);
 
@@ -2091,7 +2091,7 @@ public interface izTreeItem
     /**
      * Extracts the child located at anIndex from this branch.
      */
-    @safe final izTreeItem removeChild(size_t anIndex)
+    @safe final TreeItem removeChild(size_t anIndex)
     {
         auto result = children[anIndex];
         if (result)
@@ -2103,7 +2103,7 @@ public interface izTreeItem
                 if (result.siblingCount == 1)
                 {
                     result.parent = null;
-                    treeChanged(izContainerChangeKind.remove, result);
+                    treeChanged(ContainerChangeKind.remove, result);
                 }
                 else result.nextSibling.removeSibling(anIndex);
             }
@@ -2130,11 +2130,11 @@ public interface izTreeItem
                 current.prevSibling = null;
                 current.nextSibling = null;
 
-                treeChanged(izContainerChangeKind.remove, current);
+                treeChanged(ContainerChangeKind.remove, current);
             }
             current = _next;
 
-            treeChanged(izContainerChangeKind.change, current);
+            treeChanged(ContainerChangeKind.change, current);
         }
         firstChild = null;
     }
@@ -2163,7 +2163,7 @@ public interface izTreeItem
 
             current = _next;
 
-            treeChanged(izContainerChangeKind.change, null);
+            treeChanged(ContainerChangeKind.change, null);
         }
         firstChild = null;
     }
@@ -2178,7 +2178,7 @@ public interface izTreeItem
         return result;
     }
 
-    final void saveToStream(izStream aStream)
+    final void saveToStream(Stream aStream)
     {
         auto rn = "\r\n".dup;
         auto txt = nodeToTextNative;
@@ -2192,69 +2192,69 @@ public interface izTreeItem
 }
 
 /**
- * Default implementation for the izTreeItem accessors.
+ * Default implementation for the TreeItem accessors.
  */
-mixin template izTreeItemAccessors()
+mixin template TreeItemAccessors()
 {
     private:
-        izTreeItem fPrevSibling, fNextSibling, fFirstChild, fParent;
+        TreeItem fPrevSibling, fNextSibling, fFirstChild, fParent;
         izTreeItemSiblings fSiblings, fChild;
     
     public:
         /**
-         * Called by an izTreeItem to set the link to the previous izTreeItem.
+         * Called by an TreeItem to set the link to the previous TreeItem.
          */
-        @safe @property void prevSibling(izTreeItem aSibling)
+        @safe @property void prevSibling(TreeItem aSibling)
         {
             fPrevSibling = aSibling;
         }
         /**
-         * Called by an izTreeItem to set the link to the next izTreeItem.
+         * Called by an TreeItem to set the link to the next TreeItem.
          */
-        @safe @property void nextSibling(izTreeItem aSibling)
+        @safe @property void nextSibling(TreeItem aSibling)
         {
             fNextSibling = aSibling;
         }
         /**
-         * Called by an izTreeItem to set the link to the its parent.
+         * Called by an TreeItem to set the link to the its parent.
          */
-        @safe @property void parent(izTreeItem aParent)
+        @safe @property void parent(TreeItem aParent)
         {
             fParent = aParent;
         }
         /**
-         * Called by an izTreeItem to set the link to the its first child.
+         * Called by an TreeItem to set the link to the its first child.
          */
-        @safe @property void firstChild(izTreeItem aChild)
+        @safe @property void firstChild(TreeItem aChild)
         {
             fFirstChild = aChild;
             fChild.item = aChild;
         }
         /**
-         * Called by an izTreeItem to get the link to the previous izTreeItem.
+         * Called by an TreeItem to get the link to the previous TreeItem.
          */
-        @safe @property izTreeItem prevSibling()
+        @safe @property TreeItem prevSibling()
         {
             return fPrevSibling;
         }
         /**
-         * Called by an izTreeItem to get the link to the next izTreeItem.
+         * Called by an TreeItem to get the link to the next TreeItem.
          */
-        @safe @property izTreeItem nextSibling()
+        @safe @property TreeItem nextSibling()
         {
             return fNextSibling;
         }
         /**
-         * Called by an izTreeItem to get the link to the its parent.
+         * Called by an TreeItem to get the link to the its parent.
          */
-        @safe @property izTreeItem parent()
+        @safe @property TreeItem parent()
         {
             return fParent;
         }
         /**
-         * Called by an izTreeItem to set the link to the its first child.
+         * Called by an TreeItem to set the link to the its first child.
          */
-        @safe @property izTreeItem firstChild()
+        @safe @property TreeItem firstChild()
         {
             return fFirstChild;
         }
@@ -2274,57 +2274,57 @@ mixin template izTreeItemAccessors()
             return fChild;
         }
         /**
-         * Called by an izTreeItem to notify about the changes.
-         * When aChangeKind == izContainerChangeKind.add, data is a pointer to the new item.
-         * When aChangeKind == izContainerChangeKind.remove, data is a pointer to the old item.
-         * When aChangeKind == izContainerChangeKind.change, data is null.
+         * Called by an TreeItem to notify about the changes.
+         * When aChangeKind == ContainerChangeKind.add, data is a pointer to the new item.
+         * When aChangeKind == ContainerChangeKind.remove, data is a pointer to the old item.
+         * When aChangeKind == ContainerChangeKind.change, data is null.
          */
-        @safe void treeChanged(izContainerChangeKind aChangeKind, izTreeItem involvedItem)
+        @safe void treeChanged(ContainerChangeKind aChangeKind, TreeItem involvedItem)
         {
         }
 }
 
 /**
- * Helper template designed to make a C sub class of C heriting of izTreeItem.
+ * Helper template designed to make a C sub class of C heriting of TreeItem.
  * The class C must have a default ctor and only this default ctor is generated.
  */
-public class izMakeTreeItem(C): C, izTreeItem
+class MakeTreeItem(C): C, TreeItem
 if ((is(C==class)))
 {
-    mixin izTreeItemAccessors;
+    mixin TreeItemAccessors;
 }
 
 version(unittest)
 {
     private class bar{int a,b,c;}
-    alias linkedBar = izMakeTreeItem!bar;
+    alias linkedBar = MakeTreeItem!bar;
     private class linkedBarTest: linkedBar
     {
         unittest
         {
             auto a = construct!linkedBarTest;
             scope(exit) destruct(a);
-            assert(cast(izTreeItem)a);
+            assert(cast(TreeItem)a);
             
             foreach(item; a.children){}
             
-            writeln("izMakeLinkedClass passed the tests");
+            writeln("MakeTreeItem passed the tests");
         }
     }
 }
 
-private class Foo: izTreeItem
+private class Foo: TreeItem
 {
     int member;
-    mixin izTreeItemAccessors;
+    mixin TreeItemAccessors;
 
     bool changeMonitor,getMonitor;
 
-    @safe final void treeChanged(izContainerChangeKind aChangeKind, izTreeItem involvedItem)
+    @safe final void treeChanged(ContainerChangeKind aChangeKind, TreeItem involvedItem)
     {
         changeMonitor = true;
     }
-    @safe @property final izTreeItem nextSibling()
+    @safe @property final TreeItem nextSibling()
     {
         getMonitor = true;
         return fNextSibling;
@@ -2390,7 +2390,7 @@ private class Foo: izTreeItem
         assert(Driver.findSibling(foos[0]) > -1);
 
         // remember that "item" type is the interface not its implementer.
-        foreach(izTreeItem item; Driver.siblings)
+        foreach(TreeItem item; Driver.siblings)
         {
             assert(Driver.findSibling(item) == item.siblingIndex);
             assert( cast(Foo) item);
@@ -2487,14 +2487,14 @@ private class Foo: izTreeItem
         assert(Root.children[1].children[3].children[0].root is Root);
         assert(Root.children[1].children[3].root is Root);
 
-        auto str = construct!izMemoryStream;
+        auto str = construct!MemoryStream;
         Root.saveToStream(str);
         //str.saveToFile("izTreeNodes.txt");
         str.destruct;
 
         Root.deleteChildren;
 
-        writeln("izTreeItem passed the tests");
+        writeln("TreeItem passed the tests");
     }
 }
 

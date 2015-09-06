@@ -1,16 +1,18 @@
 module iz.streams;
 
 import core.exception;
-import std.stdio, std.string;
-import std.digest.md, std.conv;
-import iz.types;
+import std.string;
+import std.digest.md, std.conv: to;
+import iz.types, iz.memory;
+
+version(unittest) import std.stdio;
 
 /// stream creation mode 'There': open only if exists.
-public immutable int cmThere    = 0;
+immutable int cmThere    = 0;
 /// stream creation mode 'NotThere': create only if not exists.
-public immutable int cmNotThere = 1;
+immutable int cmNotThere = 1;
 /// stream creation mode 'Always': create if not exists otherwise open.
-public immutable int cmAlways   = 2;
+immutable int cmAlways   = 2;
 
 version (Windows) 
 {
@@ -32,32 +34,32 @@ version (Windows)
        LPSECURITY_ATTRIBUTES lpSecurityAttributes
     );
 
-    public alias izStreamHandle = HANDLE;
+    public alias StreamHandle = HANDLE;
 
-    // izStream seek modes, used as platform-specific constants in izSeekMode.
-    public immutable int skBeg = FILE_BEGIN;
-    public immutable int skCur = FILE_CURRENT;
-    public immutable int skEnd = FILE_END;
+    // Stream seek modes, used as platform-specific constants in SeekMode.
+    immutable int skBeg = FILE_BEGIN;
+    immutable int skCur = FILE_CURRENT;
+    immutable int skEnd = FILE_END;
 
     /// share modes.
-    public immutable int shNone = 0;
-    public immutable int shRead = FILE_SHARE_READ;
-    public immutable int shWrite= FILE_SHARE_WRITE;
-    public immutable int shAll  = shWrite | shRead;
+    immutable int shNone = 0;
+    immutable int shRead = FILE_SHARE_READ;
+    immutable int shWrite= FILE_SHARE_WRITE;
+    immutable int shAll  = shWrite | shRead;
 
     /// access modes.
-    public immutable uint acRead = GENERIC_READ;
-    public immutable uint acWrite= GENERIC_WRITE;
-    public immutable uint acAll  = acRead | acWrite;
+    immutable uint acRead = GENERIC_READ;
+    immutable uint acWrite= GENERIC_WRITE;
+    immutable uint acAll  = acRead | acWrite;
 
     /// returns true if aHandle is valid.
-    public bool isHandleValid(izStreamHandle aHandle)
+    bool isHandleValid(StreamHandle aHandle)
     {
         return (aHandle != INVALID_HANDLE_VALUE);
     }
 
     /// translates a cmXX to a platform specific option.
-    public int cmToSystem(int aCreationMode)
+    int cmToSystem(int aCreationMode)
     {
         switch(aCreationMode)
         {
@@ -73,37 +75,37 @@ version (Posix)
 {
     import core.sys.posix.fcntl, core.sys.posix.unistd;
 
-    public alias izStreamHandle = int;
+    public alias StreamHandle = int;
 
-    // izStream seek modes, used as platform-specific constants in izSeekMode.
-    public immutable int skBeg = SEEK_SET;
-    public immutable int skCur = SEEK_CUR;
-    public immutable int skEnd = SEEK_END;
+    // Stream seek modes, used as platform-specific constants in SeekMode.
+    immutable int skBeg = SEEK_SET;
+    immutable int skCur = SEEK_CUR;
+    immutable int skEnd = SEEK_END;
 
     /// share modes. (does not allow execution)
-    public immutable int shNone = octal!600;
-    public immutable int shRead = octal!644;
-    public immutable int shWrite= octal!622;
-    public immutable int shAll  = octal!666;
+    immutable int shNone = octal!600;
+    immutable int shRead = octal!644;
+    immutable int shWrite= octal!622;
+    immutable int shAll  = octal!666;
 
     /// access modes.
-    public immutable uint acRead = O_RDONLY;
-    public immutable uint acWrite= O_WRONLY;
-    public immutable uint acAll  = O_RDWR;
+    immutable uint acRead = O_RDONLY;
+    immutable uint acWrite= O_WRONLY;
+    immutable uint acAll  = O_RDWR;
 
     /// pipe direction
-    public immutable uint pdIn  = 0;
-    public immutable uint pdOut = 0;
-    public immutable uint pdAll = 0;
+    immutable uint pdIn  = 0;
+    immutable uint pdOut = 0;
+    immutable uint pdAll = 0;
 
     /// returns true if aHandle is valid.
-    public bool isHandleValid(izStreamHandle aHandle)
+    bool isHandleValid(StreamHandle aHandle)
     {
         return (aHandle > -1);
     }
 
     /// translates a cmXX to a platform specific option.
-    public int cmToSystem(int aCreationMode)
+    int cmToSystem(int aCreationMode)
     {
         switch(aCreationMode)
         {
@@ -119,27 +121,28 @@ version (Posix)
  * Enumerates the possible streams seek modes.
  * triggers this ICE: https://issues.dlang.org/show_bug.cgi?id=13975
  */
-public enum izSeekMode {
+enum SeekMode 
+{
     beg = skBeg, /// seek from the beginning. 
     cur = skCur, /// seek from the current position.
     end = skEnd  /// seek from the ending.
 }
 
 /**
- * An implementer can save or load from an izStream. 
+ * An implementer can save or load from an Stream. 
  */
-public interface izStreamPersist
+interface StreamPersist
 {
     /// Saves something in aStream
-    void saveToStream(izStream aStream);
+    void saveToStream(Stream aStream);
     /// Loads something from aStream. aStream initial position is preserved.
-    void loadFromStream(izStream aStream);
+    void loadFromStream(Stream aStream);
 }
 
 /**
  * An implementer can save to or load from a file with a given UTF8 file name.
  */
-public interface izFilePersist8
+interface FilePersist8
 {
     /// Saves something to aFilename.
     void saveToFile(in char[] aFilename);
@@ -149,38 +152,35 @@ public interface izFilePersist8
     string filename();
 }
 
-/// Generates all the typed write() and read() of an izStream implementation.
-private template genReadWriteVar()
+/// Generates all the typed write() and read() of an Stream implementation.
+string genReadWriteVar()
 {
-    string genReadWriteVar()
+    string result;
+    foreach(T; FixedSizeTypes)
     {
-        string result;
-        foreach(T; izConstantSizeTypes)
-        {
-            result ~= "alias readVariable!" ~ T.stringof ~ " read" ~
-                T.stringof ~ ';' ~ '\r' ~ '\n';
-            result ~= "alias writeVariable!" ~ T.stringof ~ " write" ~
-                T.stringof ~ ';' ~ '\r' ~ '\n';
-        }
-        return result;
+        result ~= "alias readVariable!" ~ T.stringof ~ " read" ~
+            T.stringof ~ ';' ~ '\r' ~ '\n';
+        result ~= "alias writeVariable!" ~ T.stringof ~ " write" ~
+            T.stringof ~ ';' ~ '\r' ~ '\n';
     }
+    return result;
 }
 
 /**
  * Defines the members of stream implementation.
  */
-public interface izStream
+interface Stream
 {
     /**
      * Reads aCount bytes from aBuffer.
      * Returns the count of bytes effectively read.
      */
-    size_t read(izPtr aBuffer, size_t aCount);
+    size_t read(Ptr aBuffer, size_t aCount);
     /**
      * Read T.sizeof bytes in aValue.
      * Returns the count of bytes effectively read (either T.sizeof or 0).
-     * T must verify isConstantSize.
-     * A typed reader is generated for each type in izConstantSizeTypes
+     * T must verify isFixedSize.
+     * A typed reader is generated for each type in FixedSizeTypes
      * and named readint, readchar, etc.
      */
     final size_t readVariable(T)(T* aValue)
@@ -191,12 +191,12 @@ public interface izStream
      * Writes aCount bytes to aBuffer.
      * Returns the count of bytes effectively written.
      */
-    size_t write(izPtr aBuffer, size_t aCount);
+    size_t write(Ptr aBuffer, size_t aCount);
     /**
      * Writes T.sizeof bytes to the pointer aValue.
      * Returns the count of bytes effectively written (either T.sizeof or 0).
      * T must verify isConstantSize.
-     * A typed writer is generated for each type in izConstantSizeTypes
+     * A typed writer is generated for each type in FixedSizeTypes
      * and named writeint, writechar, etc.
      */
     final size_t writeVariable(T)(T* aValue)
@@ -208,9 +208,9 @@ public interface izStream
      * to Position + anOffset if anOrigin = 1 or
      * to Size + anOffset if anOrigin = 2.
      */
-    ulong seek(ulong anOffset, izSeekMode aMode);
+    ulong seek(ulong anOffset, SeekMode aMode);
     /// ditto
-    ulong seek(uint anOffset, izSeekMode aMode);
+    ulong seek(uint anOffset, SeekMode aMode);
     /**
      * Sets or gets the stream size.
      */
@@ -232,15 +232,15 @@ public interface izStream
      */
     void clear();
     /// support for the concatenation operator.
-    final void opOpAssign(string op)(izStream rhs)
+    final void opOpAssign(string op)(Stream rhs)
     {
         static if(op == "~")
         {
-            izStream lhs = this;
+            Stream lhs = this;
             auto stored = rhs.position;
 
-            lhs.seek(0, izSeekMode.end);
-            rhs.seek(0, izSeekMode.beg);
+            lhs.seek(0, SeekMode.end);
+            rhs.seek(0, SeekMode.beg);
 
             size_t read;
             size_t buff_sz = 4096;
@@ -258,33 +258,32 @@ public interface izStream
                 lhs.write(buff, read);
             }
         }
+        else static assert(0, "Stream.opOpAssign not implemented for " ~op);
     }
 }
 
-
- 
 /**
- * Helper designed to construct a new heap-allocated izStreamRange.
+ * Helper designed to construct a new heap-allocated StreamRange.
  * The result is a pointer and to be used it must be derferenced.
  * The result must be manually freed with destruct().
  * Params:
- * ST = the izStream descendant for which the range will be created, likely to be inferred.
+ * ST = the Stream descendant for which the range will be created, likely to be inferred.
  * T = the range element type.
  */
-auto newStreamRange(T, ST)(ST st)
-if (is(ST : izStream))
+auto streamRange(T, ST)(ST st)
+if (is(ST : Stream))
 {
-    return construct!(izStreamRange!(ST,T))(st);
+    return construct!(StreamRange!(ST,T))(st);
 } 
  
 /** 
- * Input, forward and bidirectional range for an izStream.
+ * Input, forward and bidirectional range for an Stream.
  * Params:
- * ST = the izStream descendant for which the range will be created.
+ * ST = the Stream descendant for which the range will be created.
  * T = the range element type.
  */
-struct izStreamRange(ST, T)
-if (is(ST : izStream))
+struct StreamRange(ST, T)
+if (is(ST : Stream))
 {
     private:
     
@@ -346,12 +345,12 @@ if (is(ST : izStream))
 unittest
 {
     uint i;
-    izMemoryStream str = construct!izMemoryStream;
+    MemoryStream str = construct!MemoryStream;
     scope(exit) destruct(str);
     
     ushort[] src1 = [0,1,2,3,4,5,6,7,8,9];
     str.write(src1.ptr, src1.length * ushort.sizeof); 
-    auto rng1 = construct!(izStreamRange!(izMemoryStream,ushort))(str);
+    auto rng1 = construct!(StreamRange!(MemoryStream,ushort))(str);
     scope(exit) destruct(rng1);
     
     // foreach processes a copy of rng.
@@ -380,11 +379,11 @@ unittest
     }
     assert(rng1.empty);
      
-    // other type + newStreamRange type inference
+    // other type + streamRange type inference
     str.clear;
     long[] src2 = [10,11,12,13,14,15,16,17,18,19];
     str.write(src2.ptr, src2.length * long.sizeof);
-    auto rng2 = newStreamRange!long(str);
+    auto rng2 = streamRange!long(str);
     scope(exit) destruct(rng2);
     foreach(long v; *rng2)
     {
@@ -396,7 +395,7 @@ unittest
     ubyte tail = 98;
     str.position = str.size;
     str.write(&tail,1);
-    auto rng3 = newStreamRange!long(str);
+    auto rng3 = streamRange!long(str);
     scope(exit) destruct(rng3);
     while(!rng3.empty) rng3.popFront;
     str.position = rng3._fpos;
@@ -405,19 +404,19 @@ unittest
     assert(tail == 98);
     
     
-    writeln("izStreamRange passed the tests (InputRange)");   
+    writeln("StreamRange passed the tests (InputRange)");   
 }
  
 
 /**
- * Copies the content of an _izStream_ to another one.
+ * Copies the content of an _Stream_ to another one.
  * The position in the source is preserved.
  *
  * Params:
- * aSource = the _izStream_ instance whose content will be copied.
- * aTarger = the _izStream_ instance whose content will be replaced.
+ * aSource = the _Stream_ instance whose content will be copied.
+ * aTarger = the _Stream_ instance whose content will be replaced.
  */
-public void copyStream(izStream aSource, izStream aTarget)
+void copyStream(Stream aSource, Stream aTarget)
 {
     auto oldpos = aSource.position; 
     auto buffsz = 4096;
@@ -445,8 +444,8 @@ unittest
 {
     ubyte[] _a = [0x11,0x22,0x33,0x44];
     ubyte[] _b = [0x55,0x66,0x77,0x88];
-    auto a = construct!izMemoryStream;
-    auto b = construct!izMemoryStream;
+    auto a = construct!MemoryStream;
+    auto b = construct!MemoryStream;
     a.write(_a.ptr, 4);
     b.write(_b.ptr, 4);
     a ~= b;
@@ -465,16 +464,16 @@ unittest
  * system stream (based on a file handle).
  * This class is not directly usable.
  */
-package class izSystemStream: izStream, izStreamPersist
+class SystemStream: Stream, StreamPersist
 {
     private
     {
-        izStreamHandle fHandle;
+        StreamHandle fHandle;
     }
     public
     {
         mixin(genReadWriteVar);
-        size_t read(izPtr aBuffer, size_t aCount)
+        size_t read(Ptr aBuffer, size_t aCount)
         {
             if (!fHandle.isHandleValid) return 0;
             version(Windows)
@@ -491,7 +490,7 @@ package class izSystemStream: izStream, izStreamPersist
             }
         }
 
-        size_t write(izPtr aBuffer, size_t aCount)
+        size_t write(Ptr aBuffer, size_t aCount)
         {
             if (!fHandle.isHandleValid) return 0;
             version(Windows)
@@ -508,7 +507,7 @@ package class izSystemStream: izStream, izStreamPersist
             }
         }
 
-        ulong seek(ulong anOffset, izSeekMode aMode)
+        ulong seek(ulong anOffset, SeekMode aMode)
         {
             if (!fHandle.isHandleValid) return 0;
             version(Windows)
@@ -524,7 +523,7 @@ package class izSystemStream: izStream, izStreamPersist
             }
         }
 
-        ulong seek(uint anOffset, izSeekMode aMode)
+        ulong seek(uint anOffset, SeekMode aMode)
         {
             return seek(cast(ulong)anOffset, aMode);
         }
@@ -534,9 +533,9 @@ package class izSystemStream: izStream, izStreamPersist
             if (!fHandle.isHandleValid) return 0;
             ulong lRes, lSaved;
 
-            lSaved = seek(0, izSeekMode.cur);
-            lRes = seek(0, izSeekMode.end);
-            seek(lSaved, izSeekMode.beg);
+            lSaved = seek(0, SeekMode.cur);
+            lRes = seek(0, SeekMode.end);
+            seek(lSaved, SeekMode.beg);
 
             return lRes;
         }
@@ -575,25 +574,25 @@ package class izSystemStream: izStream, izStreamPersist
 
         @property ulong position()
         {
-            return seek(0, izSeekMode.cur);
+            return seek(0, SeekMode.cur);
         }
 
         @property void position(ulong aValue)
         {
             ulong lSize = size;
             if (aValue >  lSize) aValue = lSize;
-            seek(aValue, izSeekMode.beg);
+            seek(aValue, SeekMode.beg);
         }
 
         @property void position(uint aValue)
         {
-            seek(aValue, izSeekMode.beg);
+            seek(aValue, SeekMode.beg);
         }
 
         /**
          * Exposes the handle for additional system stream operations.
          */
-        @property const(izStreamHandle) handle(){return fHandle;}
+        @property const(StreamHandle) handle(){return fHandle;}
 
         void clear()
         {
@@ -601,12 +600,12 @@ package class izSystemStream: izStream, izStreamPersist
             position(0);
         }
 
-        void saveToStream(izStream aStream)
+        void saveToStream(Stream aStream)
         {
             copyStream(this, aStream);
         }
 
-        void loadFromStream(izStream aStream)
+        void loadFromStream(Stream aStream)
         {
             copyStream(aStream, this);
         }
@@ -617,11 +616,11 @@ package class izSystemStream: izStream, izStreamPersist
  * System stream specialized into reading and writing files, including huge ones
  * (up to 2^64 bytes). Several constructors are avalaible with predefined options. 
  */
-public class izFileStream: izSystemStream
+class FileStream: SystemStream
 {
     private
     {
-        string fFilename;
+        string _filename;
     }
     public
     {
@@ -667,7 +666,7 @@ public class izFileStream: izSystemStream
             {
                 throw new Error(format("stream exception: cannot create or open '%s'", aFilename));
             }
-            fFilename = aFilename.dup;
+            _filename = aFilename.dup;
             return fHandle.isHandleValid;
         }
 
@@ -691,7 +690,7 @@ public class izFileStream: izSystemStream
             {
                 throw new Error(format("stream exception: cannot create or open '%s'", aFilename));
             }
-            fFilename = aFilename.dup;
+            _filename = aFilename.dup;
             return fHandle.isHandleValid;
         }
 
@@ -712,7 +711,7 @@ public class izFileStream: izSystemStream
                 fHandle = core.sys.posix.fcntl.open(aFilename.toStringz,
                     access | cmToSystem(creationMode), share);
             }
-            fFilename = aFilename.dup;
+            _filename = aFilename.dup;
             return fHandle.isHandleValid;
         }
 
@@ -732,15 +731,14 @@ public class izFileStream: izSystemStream
                 if (fHandle.isHandleValid) core.sys.posix.unistd.close(fHandle);
                 fHandle = -1;
             }
-            fFilename = "";
+            _filename = "";
         }
         /**
          * Exposes the filename.
          */
-        @property string filename(){return fFilename;}
+        @property string filename(){return _filename;}
     }
 }
-
 
 /**
  * Implements a stream of contiguous, GC-free, heap-memory.
@@ -748,20 +746,20 @@ public class izFileStream: izSystemStream
  * Its practical size limit is damped by the amount of remaining DRAM.
  * This limit is itself reduced by the memory fragmentation. 
  */
-public class izMemoryStream: izStream, izStreamPersist, izFilePersist8
+class MemoryStream: Stream, StreamPersist, FilePersist8
 {
     private
     {
-        size_t fSize;
-        izPtr fMemory;
+        size_t _size;
+        Ptr _memory;
         
-        size_t fPosition;
-        string fFilename;
+        size_t _position;
+        string _filename;
         
         struct Ubytes{size_t length; void* ptr;}
         Ubytes fBytes;
         
-        void freeNonGc(ref izPtr ptr)
+        void freeNonGc(ref Ptr ptr)
         {
             import core.memory : GC;
             if (!ptr) return;
@@ -774,56 +772,56 @@ public class izMemoryStream: izStream, izStreamPersist, izFilePersist8
         mixin(genReadWriteVar);
         this()
         {
-            fMemory = getMem(16);
-            if (!fMemory) throw new OutOfMemoryError();
+            _memory = getMem(16);
+            if (!_memory) throw new OutOfMemoryError();
         }
         
         ~this()
         {
-            freeNonGc(fMemory);
+            freeNonGc(_memory);
         }
         
 // read -----------------------------------------------------------------------+
 
-        size_t read(izPtr aBuffer, size_t aCount)
+        size_t read(Ptr aBuffer, size_t aCount)
         {
-            if (aCount + fPosition > fSize) aCount = fSize - fPosition;
-            moveMem(aBuffer, fMemory + fPosition, aCount);
-            fPosition += aCount;
+            if (aCount + _position > _size) aCount = _size - _position;
+            moveMem(aBuffer, _memory + _position, aCount);
+            _position += aCount;
             return aCount;
         }
         
 // ----     
 // write ----------------------------------------------------------------------+
 
-        size_t write(izPtr aBuffer, size_t aCount)
+        size_t write(Ptr aBuffer, size_t aCount)
         {
-            if (fPosition + aCount > fSize) size(fPosition + aCount);
-            moveMem(fMemory + fPosition, aBuffer, aCount);
-            fPosition += aCount;
+            if (_position + aCount > _size) size(_position + aCount);
+            moveMem(_memory + _position, aBuffer, aCount);
+            _position += aCount;
             return aCount;
         }
 
 // ----     
 // seek -----------------------------------------------------------------------+
 
-        ulong seek(ulong anOffset, izSeekMode aMode)
+        ulong seek(ulong anOffset, SeekMode aMode)
         {
-            with(izSeekMode) final switch(aMode) 
+            with(SeekMode) final switch(aMode) 
             {
                 case beg:
-                    fPosition = cast(typeof(fPosition)) anOffset;
-                    if (fPosition > fSize) fPosition = fSize;
-                    return fPosition;       
+                    _position = cast(typeof(_position)) anOffset;
+                    if (_position > _size) _position = _size;
+                    return _position;       
                 case cur:
-                    fPosition += anOffset;
-                    if (fPosition > fSize) fPosition = fSize;
-                    return fPosition;   
+                    _position += anOffset;
+                    if (_position > _size) _position = _size;
+                    return _position;   
                 case end:
-                    return fSize;
+                    return _size;
             }
         }
-        ulong seek(uint anOffset, izSeekMode aMode)
+        ulong seek(uint anOffset, SeekMode aMode)
         {
             ulong longOffs = anOffset;
             return seek(longOffs, aMode);
@@ -833,20 +831,20 @@ public class izMemoryStream: izStream, izStreamPersist, izFilePersist8
 
         @property ulong size()
         {
-            return fSize;
+            return _size;
         }
         
         @property void size(uint aValue)
         {
-            if (fSize == aValue) return;
+            if (_size == aValue) return;
             if (aValue == 0)
             {
                 clear;
                 return;
             }
-            fMemory = reallocMem(fMemory, aValue);
-            if (!fMemory) throw new OutOfMemoryError();
-            else fSize = aValue;            
+            _memory = reallocMem(_memory, aValue);
+            if (!_memory) throw new OutOfMemoryError();
+            else _size = aValue;            
         }
         
         @property void size(ulong aValue)
@@ -863,27 +861,27 @@ public class izMemoryStream: izStream, izStreamPersist, izFilePersist8
         
         @property ulong position()
         {
-            return fPosition;
+            return _position;
         }
         
         @property void position(ulong aValue)
         {
-            seek(aValue, izSeekMode.beg);
+            seek(aValue, SeekMode.beg);
         }
         
         @property void position(uint aValue)
         {
-            seek(aValue, izSeekMode.beg);
+            seek(aValue, SeekMode.beg);
         }
 // ----     
 // misc -----------------------------------------------------------------------+
 
         void clear()
         {
-            fMemory = reallocMem(fMemory, 16);
-            if (!fMemory) throw new OutOfMemoryError();
-            fSize = 0;
-            fPosition = 0;
+            _memory = reallocMem(_memory, 16);
+            if (!_memory) throw new OutOfMemoryError();
+            _size = 0;
+            _position = 0;
         }
 
         /**
@@ -893,23 +891,23 @@ public class izMemoryStream: izStream, izStreamPersist, izFilePersist8
          * Returns the previous memory, only usefull when freeCurrent is set
          * to false.
          */
-        final izPtr setMemory(izPtr aPtr, size_t aSize, bool freeCurrent = true)
+        final Ptr setMemory(Ptr aPtr, size_t aSize, bool freeCurrent = true)
         {
-            izPtr result = fMemory;
+            Ptr result = _memory;
             if (!aPtr) return result;
-            if (freeCurrent) freeNonGc(fMemory);
-            fPosition = 0;
-            fSize = aSize;
-            fMemory = aPtr; 
+            if (freeCurrent) freeNonGc(_memory);
+            _position = 0;
+            _size = aSize;
+            _memory = aPtr; 
             return result;
         }
         
         /**
          * Read-only access to the memory chunk.
          */
-        @property final const(izPtr) memory()
+        @property final const(Ptr) memory()
         {
-            return fMemory;
+            return _memory;
         }
 
         /**
@@ -917,19 +915,19 @@ public class izMemoryStream: izStream, izStreamPersist, izFilePersist8
          */
         const(ubyte[]) ubytes()
         {
-            fBytes.length = fSize;
-            fBytes.ptr = fMemory;
+            fBytes.length = _size;
+            fBytes.ptr = _memory;
             return * cast(ubyte[] *) &fBytes;
         }
 // ----     
-// izStreamPersist ------------------------------------------------------------+
+// StreamPersist ------------------------------------------------------------+
     
-        /// Refer to izStreamPersist.
-        void saveToStream(izStream aStream)
+        /// Refer to StreamPersist.
+        void saveToStream(Stream aStream)
         {
-            if (cast(izMemoryStream) aStream)
+            if (cast(MemoryStream) aStream)
             {
-                auto target = cast(izMemoryStream) aStream;
+                auto target = cast(MemoryStream) aStream;
                 auto oldpos = target.position;
                 scope(exit) target.position = oldpos;
                 
@@ -945,10 +943,10 @@ public class izMemoryStream: izStream, izStreamPersist, izFilePersist8
                 size_t pos;
                 for (auto i = 0; i < blocks; i++)
                 {
-                    moveMem(target.fMemory + pos, fMemory + pos, buffsz);
+                    moveMem(target._memory + pos, _memory + pos, buffsz);
                     pos += buffsz;
                 }
-                if (tail) moveMem(target.fMemory + pos, fMemory + pos, tail);   
+                if (tail) moveMem(target._memory + pos, _memory + pos, tail);   
             }
             else
             {
@@ -957,11 +955,11 @@ public class izMemoryStream: izStream, izStreamPersist, izFilePersist8
         }
         
         /// ditto
-        void loadFromStream(izStream aStream)
+        void loadFromStream(Stream aStream)
         {
-            if (cast(izMemoryStream) aStream) 
+            if (cast(MemoryStream) aStream) 
             {
-                izMemoryStream source = cast(izMemoryStream) aStream;
+                MemoryStream source = cast(MemoryStream) aStream;
                 source.saveToStream(this);
             }
             else
@@ -986,9 +984,9 @@ public class izMemoryStream: izStream, izStreamPersist, izFilePersist8
                 scope(exit) CloseHandle(hdl); 
                 uint numRead;
                 SetFilePointer(hdl, 0, null, FILE_BEGIN);
-                WriteFile(hdl, fMemory, cast(uint)fSize, &numRead, null);
+                WriteFile(hdl, _memory, cast(uint)_size, &numRead, null);
                 
-                if (numRead != fSize)
+                if (numRead != _size)
                     throw new Error(format("stream exception: '%s' is corrupted", aFilename));
             }
             version(Posix)
@@ -998,13 +996,13 @@ public class izMemoryStream: izStream, izStreamPersist, izFilePersist8
                     throw new Error(format("stream exception: cannot create or overwrite '%s'", aFilename));
 
                 scope(exit) core.sys.posix.unistd.close(hdl);
-                auto numRead = core.sys.posix.unistd.write(hdl, fMemory, fSize);
-                ftruncate64(hdl, fSize);
+                auto numRead = core.sys.posix.unistd.write(hdl, _memory, _size);
+                ftruncate64(hdl, _size);
 
-                if (numRead != fSize)
+                if (numRead != _size)
                     throw new Error(format("stream exception: '%s' is corrupted", aFilename));
             }
-            fFilename = aFilename.idup;
+            _filename = aFilename.idup;
         }
         
         /// ditto
@@ -1022,10 +1020,10 @@ public class izMemoryStream: izStream, izStreamPersist, izFilePersist8
                 scope(exit) CloseHandle(hdl);
                 size( SetFilePointer(hdl, 0, null, FILE_END));
                 SetFilePointer(hdl, 0, null, FILE_BEGIN);
-                ReadFile(hdl, fMemory, cast(uint)fSize, &numRead, null);
+                ReadFile(hdl, _memory, cast(uint)_size, &numRead, null);
                 position = 0;
                 
-                if (numRead != fSize)
+                if (numRead != _size)
                     throw new Error(format("stream exception: '%s' is not correctly loaded", aFilename));
             }
             version(Posix)
@@ -1038,19 +1036,19 @@ public class izMemoryStream: izStream, izStreamPersist, izFilePersist8
                 scope(exit) core.sys.posix.unistd.close(hdl);
                 size(core.sys.posix.unistd.lseek64(hdl, 0, SEEK_END));
                 core.sys.posix.unistd.lseek64(hdl, 0, SEEK_SET);
-                auto numRead = core.sys.posix.unistd.read(hdl, fMemory, fSize);
+                auto numRead = core.sys.posix.unistd.read(hdl, _memory, _size);
                 position = 0;
 
-                if (numRead != fSize)
+                if (numRead != _size)
                     throw new Error(format("stream exception: '%s' is not correctly loaded", aFilename));
             }
-            fFilename = aFilename.idup;
+            _filename = aFilename.idup;
         }   
         
         /// ditto
         @property string filename()
         {
-            return fFilename;
+            return _filename;
         }
 // ---- 
     }
@@ -1058,9 +1056,9 @@ public class izMemoryStream: izStream, izStreamPersist, izFilePersist8
 
 unittest
 {
-    // izMemoryStream.setMemory
-    izPtr mem = getMem(4096);
-    auto str = construct!izMemoryStream;
+    // MemoryStream.setMemory
+    Ptr mem = getMem(4096);
+    auto str = construct!MemoryStream;
     scope(exit) destruct(str);
     //
     str.size = 128;
@@ -1083,9 +1081,9 @@ unittest
 
 unittest
 {
-    // izStream.opOpAssign!("~")
-    auto str1 = construct!izMemoryStream;
-    auto str2 = construct!izMemoryStream;
+    // Stream.opOpAssign!("~")
+    auto str1 = construct!MemoryStream;
+    auto str2 = construct!MemoryStream;
     scope(exit) destruct(str1, str2);
     //
     auto dat1 = "1234";
@@ -1104,13 +1102,13 @@ unittest
 
 version(unittest)
 {
-    class izMemoryStreamTest1 : commonStreamTester!izMemoryStream {}
-    class izFileStreamTest1: commonStreamTester!(izFileStream, "filestream1.txt"){}
+    class MemoryStreamTest1 : commonStreamTester!MemoryStream {}
+    class FileStreamTest1: commonStreamTester!(FileStream, "filestream1.txt"){}
 
     unittest
     {
         auto sz = 0x1_FFFF_FFFFUL;
-        auto huge = construct!izFileStream("huge.bin");
+        auto huge = construct!FileStream("huge.bin");
         scope(exit)
         {
             huge.destruct;
@@ -1151,7 +1149,7 @@ version(unittest)
             }   
             str.position = 0;
 
-            static if (is(T == izFileStream))
+            static if (is(T == FileStream))
             {
                 auto strcpy = construct!T("filestream2.txt");
             }
@@ -1187,7 +1185,7 @@ version(unittest)
             ubyte[16] md5_1 = md5Of(food1);
             assert(md5_0 != md5_1);
             
-            static if (is(T == izMemoryStream))
+            static if (is(T == MemoryStream))
             {
                 str.saveToFile("memstream.txt");
                 str.clear;
@@ -1209,14 +1207,14 @@ version(unittest)
             md5_1 = md5Of(food1);
             assert(md5_0 == md5_1);
 
-            static if (is(T == izMemoryStream))
+            static if (is(T == MemoryStream))
             {
               str.clear;
               for(ubyte i = 0; i < 100; i++) str.write(&i, 1);
               for(ubyte i = 0; i < 100; i++) assert( str.ubytes[i] == i );
             }
 
-            static if (is(T == izFileStream))
+            static if (is(T == FileStream))
             {
                 str.closeFile;
                 strcpy.closeFile;
@@ -1228,3 +1226,4 @@ version(unittest)
         }
     }
 }
+

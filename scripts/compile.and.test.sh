@@ -1,9 +1,9 @@
 echo ---------------------------------------
 echo compiling library...
-dmd -main -unittest -debug -w -wi "../import/iz/types.d" "../import/iz/logicver.d" "../import/iz/classes.d" "../import/iz/enumset.d" "../import/iz/observer.d" "../import/iz/streams.d" "../import/iz/containers.d" "../import/iz/properties.d" "../import/iz/referencable.d" "../import/iz/serializer.d" -of"testsrunner" -I"../import"
+dmd -main -unittest -debug -w -wi "../import/iz/memory.d" "../import/iz/types.d" "../import/iz/logicver.d" "../import/iz/classes.d" "../import/iz/enumset.d" "../import/iz/observer.d" "../import/iz/streams.d" "../import/iz/containers.d" "../import/iz/properties.d" "../import/iz/referencable.d" "../import/iz/serializer.d" "../import/iz/sugar.d" -of"iz-tester" -I"../import"
 echo ---------------------------------------
-./testsrunner
+./iz-tester
 echo ---------------------------------------
-rm ./testsrunner.o
-rm ./testsrunner
+rm ./iz-tester.o
+rm ./iz-tester
 read

@@ -1,12 +1,11 @@
 module iz.observer;
 
-import iz.types;
-import iz.containers;
+import iz.types, iz.memory, iz.containers;
 
 /**
  * Subject (one to many) interface.
  */
-interface izSubject
+interface Subject
 {
     /// determines if anObserver is suitable for this subject.
     bool acceptObserver(Object anObserver);
@@ -19,22 +18,22 @@ interface izSubject
 }
 
 /**
- * izCustomSubject handles a list of obsever.
+ * CustomSubject handles a list of obsever.
  * Params:
  * OT = the observer type, either an interface or a class.
  */
-class izCustomSubject(OT): izSubject
+class CustomSubject(OT): Subject
 if (is(OT == interface) || is(OT == class))
 {
     protected
     {
-        izDynamicList!OT fObservers;
+        DynamicList!OT fObservers;
     }
     public
     {
         this()
         {
-            fObservers = construct!(izDynamicList!OT);
+            fObservers = construct!(DynamicList!OT);
         }
 
         ~this()
@@ -77,23 +76,23 @@ if (is(OT == interface) || is(OT == class))
 }
 
 /**
- * izObserverInterconnector is in charge for inter-connecting
+ * ObserverInterconnector is in charge for inter-connecting
  * some subjects with their observers, whatever their specializations are.
  */
-class izObserverInterconnector
+class ObserverInterconnector
 {
     private
     {
-        izDynamicList!Object fObservers;
-        izDynamicList!Object fSubjects;
+        DynamicList!Object fObservers;
+        DynamicList!Object fSubjects;
         ptrdiff_t fUpdateCount;
     }
     public
     {
         this()
         {
-            fObservers = construct!(izDynamicList!Object);
-            fSubjects = construct!(izDynamicList!Object);
+            fObservers = construct!(DynamicList!Object);
+            fSubjects = construct!(DynamicList!Object);
         }
 
         ~this()
@@ -153,7 +152,7 @@ class izObserverInterconnector
             beginUpdate;
             fObservers.remove(anObserver);
             for (auto i = 0; i < fSubjects.count; i++)
-                (cast(izSubject) fSubjects[i]).removeObserver(anObserver);
+                (cast(Subject) fSubjects[i]).removeObserver(anObserver);
             endUpdate;
         }
 
@@ -163,7 +162,7 @@ class izObserverInterconnector
         void addSubject(Object aSubject)
         {
             if (fSubjects.find(aSubject) != -1) return;
-            if( (cast(izSubject) aSubject) is null) return;
+            if( (cast(Subject) aSubject) is null) return;
             beginUpdate;
             fSubjects.add(aSubject);
             endUpdate;
@@ -201,7 +200,7 @@ class izObserverInterconnector
             fUpdateCount = 0;
             for(auto subjectIx = 0; subjectIx < fSubjects.count; subjectIx++)
             {
-                auto subject = cast(izSubject) fSubjects[subjectIx];
+                auto subject = cast(Subject) fSubjects[subjectIx];
                 for(auto observerIx = 0; observerIx < fObservers.count; observerIx++)
                 {
                     subject.addObserver(fObservers[observerIx]);
@@ -241,7 +240,7 @@ version(unittest)
         void def(uint aValue){_def = aValue;}
     }
 
-    class intPropSubject : izCustomSubject!intPropObserver
+    class intPropSubject : CustomSubject!intPropObserver
     {
         int _min = int.min; 
         int _max = int.max;
@@ -257,7 +256,7 @@ version(unittest)
         }
     }
 
-    class uintPropSubject : izCustomSubject!uintPropObserver
+    class uintPropSubject : CustomSubject!uintPropObserver
     {
         uint _min = uint.min; 
         uint _max = uint.max;
@@ -277,7 +276,7 @@ version(unittest)
     {
         auto nots1 = construct!Object;
         auto nots2 = construct!Object;
-        auto inter = construct!izObserverInterconnector;
+        auto inter = construct!ObserverInterconnector;
         auto isubj = construct!intPropSubject;
         auto iobs1 = construct!foo;
         auto iobs2 = construct!foo;
@@ -348,7 +347,7 @@ version(unittest)
         assert(uobs3._max == 256);        
 
         import std.stdio;
-        writeln( "izObserverInterconnector passed the tests");
+        writeln( "ObserverInterconnector passed the tests");
     }
 }
 
@@ -359,7 +358,7 @@ version(unittest)
  * E = an enum.
  * T = variadic type of the parameters an observer monitors.
  */
-interface izEnumBasedObserver(E, T...)
+interface EnumBasedObserver(E, T...)
 if (is(E == enum))
 {
     /**
@@ -372,25 +371,25 @@ if (is(E == enum))
 }
 
 /**
- * izCustomSubject handles a list of obsever.
- * This version only accept an observer if it's an izEnumBasedObserver.
+ * CustomSubject handles a list of obsever.
+ * This version only accept an observer if it's an EnumBasedObserver.
  * Params:
  * E = an enum.
  * T = the variadic list of parameter types used in the notification. 
  */
-class izCustomSubject(E, T...) : izSubject 
+class CustomSubject(E, T...) : Subject 
 if (is(E == enum))
 {
     protected
     {
-        alias ObserverType = izEnumBasedObserver!(E,T);
-        izDynamicList!ObserverType fObservers;
+        alias ObserverType = EnumBasedObserver!(E,T);
+        DynamicList!ObserverType fObservers;
     }
     public
     {
         this()
         {
-            fObservers = construct!(izDynamicList!ObserverType);
+            fObservers = construct!(DynamicList!ObserverType);
         }
 
         ~this()
@@ -441,7 +440,7 @@ unittest
     class Document {}
     class Highlighter {}
     
-    class DocSubject : izCustomSubject!(DocumentNotification, Document, Highlighter)
+    class DocSubject : CustomSubject!(DocumentNotification, Document, Highlighter)
     {
         void notify(DocumentNotification dn)
         {
@@ -450,7 +449,7 @@ unittest
                     .subjectNotification(dn, null, null);
         }
     }
-    class DocObserver: izEnumBasedObserver!(DocumentNotification, Document, Highlighter)
+    class DocObserver: EnumBasedObserver!(DocumentNotification, Document, Highlighter)
     {
         DocumentNotification lastNotification;
         void subjectNotification(DocumentNotification notification, Document doc, Highlighter hl)
@@ -459,7 +458,7 @@ unittest
         }
     }   
     
-    auto inter = construct!izObserverInterconnector;
+    auto inter = construct!ObserverInterconnector;
     auto subj = construct!DocSubject;
     auto obs1 = construct!DocObserver;
     auto obs2 = construct!DocObserver;
@@ -483,5 +482,6 @@ unittest
     assert(obs3.lastNotification == DocumentNotification.opening);
     
     import std.stdio;
-    writeln( "izEnumBasedObserver passed the tests");       
+    writeln( "EnumBasedObserver passed the tests");       
 }
+
