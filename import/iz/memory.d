@@ -29,7 +29,7 @@ import iz.types;
  * Params:
  * dst = the data source.
  * src = the data destination.
- * count = the count of byte to meove from src to dst. 
+ * count = the count of byte to move from src to dst. 
  */
 @trusted @nogc void moveMem(ref Ptr dst, ref Ptr src, size_t count) nothrow
 {

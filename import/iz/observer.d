@@ -1,6 +1,7 @@
 module iz.observer;
 
 import iz.types, iz.memory, iz.containers;
+version(unittest) import std.stdio: writeln;
 
 /**
  * Subject (one to many) interface.
@@ -27,84 +28,93 @@ if (is(OT == interface) || is(OT == class))
 {
     protected
     {
-        DynamicList!OT fObservers;
+        DynamicList!OT _observers;
     }
     public
     {
         this()
         {
-            fObservers = construct!(DynamicList!OT);
+            _observers = construct!(DynamicList!OT);
         }
 
         ~this()
         {
-            fObservers.destruct;
+            _observers.destruct;
         }
 
+        /// see the Subject interface.
         void updateObservers()
         {
             /*virtual: send all values*/
         }
 
-        bool acceptObserver(Object anObserver)
+        /// see the Subject interface.
+        bool acceptObserver(Object observer)
         {
-            return (cast(OT) anObserver !is null);
+            return (cast(OT) observer !is null);
         }
 
-        void addObserver(Object anObserver)
+        /// see the Subject interface.
+        void addObserver(Object observer)
         {
-            if (!acceptObserver(anObserver))
+            if (!acceptObserver(observer))
                 return;
-            auto obs = cast(OT) anObserver;
-            if (fObservers.find(obs) != -1)
+            auto obs = cast(OT) observer;
+            if (_observers.find(obs) != -1)
                 return;
-            fObservers.add(obs);
+            _observers.add(obs);
         }
 
+        /// Calls addObserver() foreach object passed as argument.
         void addObservers(Objs...)(Objs objs)
         {
             foreach(obj; objs)
                 addObserver(obj);
         }
 
-        void removeObserver(Object anObserver)
+        /// see the Subject interface.
+        void removeObserver(Object observer)
         {
-            auto obs = cast(OT) anObserver;
-            if (obs) fObservers.remove(obs);
+            if (auto obs = cast(OT) observer)
+                _observers.remove(obs);
         }
     }
 }
 
 /**
- * ObserverInterconnector is in charge for inter-connecting
- * some subjects with their observers, whatever their specializations are.
+ * ObserverInterconnector is in charge for inter-connecting subjects with 
+ * their observers, whatever their specializations are.
+ *
+ * With this class, an observer can connect itself to the right subject(s) 
+ * without having to know it. In the same fashion, the subjects gets their
+ * client list automatically filled.
  */
 class ObserverInterconnector
 {
     private
     {
-        DynamicList!Object fObservers;
-        DynamicList!Object fSubjects;
+        DynamicList!Object _observers;
+        DynamicList!Object _subjects;
         ptrdiff_t fUpdateCount;
     }
     public
     {
         this()
         {
-            fObservers = construct!(DynamicList!Object);
-            fSubjects = construct!(DynamicList!Object);
+            _observers = construct!(DynamicList!Object);
+            _subjects = construct!(DynamicList!Object);
         }
 
         ~this()
         {
-            fObservers.destruct;
-            fSubjects.destruct;
+            _observers.destruct;
+            _subjects.destruct;
         }
 
         /** 
-         * Several subjects or observers will be added.
-         * Avoid any superfluous updates while adding.
-         * Every beginUpdate() must be followed by an endUpdate.
+         * Several entities will be added.
+         * This Avoids any superfluous update while adding.
+         * Every beginUpdate() must be followed by an endUpdate().
          */
         void beginUpdate()
         {
@@ -123,18 +133,18 @@ class ObserverInterconnector
         }
 
         /**
-         * Add anObserver to the entity list.
+         * Adds an observer to the entity list.
          */
-        void addObserver(Object anObserver)
+        void addObserver(Object observer)
         {
-            if (fObservers.find(anObserver) != -1) return;
+            if (_observers.find(observer) != -1) return;
             beginUpdate;
-            fObservers.add(anObserver);
+            _observers.add(observer);
             endUpdate;
         }
         
         /**
-         * Adds the list of observer objs to the entity list.
+         * Adds a list of observer to the entity list.
          * Optimized for bulk adding.
          */
         void addObservers(Objs...)(Objs objs)
@@ -145,31 +155,31 @@ class ObserverInterconnector
         }
 
         /**
-         * Removes anObserver from the entity list.
+         * Removes an observer from the entity list.
          */
-        void removeObserver(Object anObserver)
+        void removeObserver(Object observer)
         {
             beginUpdate;
-            fObservers.remove(anObserver);
-            for (auto i = 0; i < fSubjects.count; i++)
-                (cast(Subject) fSubjects[i]).removeObserver(anObserver);
+            _observers.remove(observer);
+            for (auto i = 0; i < _subjects.count; i++)
+                (cast(Subject) _subjects[i]).removeObserver(observer);
             endUpdate;
         }
 
         /**
-         * Adds aSubject to the entity list.
+         * Adds a subject to the entity list.
          */
-        void addSubject(Object aSubject)
+        void addSubject(Object subject)
         {
-            if (fSubjects.find(aSubject) != -1) return;
-            if( (cast(Subject) aSubject) is null) return;
+            if (_subjects.find(subject) != -1) return;
+            if( (cast(Subject) subject) is null) return;
             beginUpdate;
-            fSubjects.add(aSubject);
+            _subjects.add(subject);
             endUpdate;
         }
 
         /**
-         * Adds the list of subject subjs to the entity list.
+         * Adds several subjects to the entity list.
          * Optimized for bulk adding.
          */
         void addSubjects(Subjs...)(Subjs subjs)
@@ -180,30 +190,34 @@ class ObserverInterconnector
         }
 
         /**
-         * Removes aSubject from the entity list.
+         * Removes a subject from the entity list.
          */
-        void removeSubject(Object aSubject)
+        void removeSubject(Object subject)
         {
             beginUpdate;
-            fSubjects.remove(aSubject);
+            _subjects.remove(subject);
             endUpdate;
         }
 
         /**
-         * Updates the connections between the entities stored in the global list. 
-         * Usually has not be called manually.
-         * During the process, each subject kept in global list will be visited
-         * by each observer of the global list.
+         * Updates the connections between the entities stored in the global list.
+         * 
+         * It has usually not be called manually.
+         * During the process, each subject previously added is
+         * visited by each observer previously added.
+         *
+         * The complexity of the operation is usually reduced if beginUpdate()
+         * and endUpdate() are used adequatly.
          */
         void updateObservers()
         {
             fUpdateCount = 0;
-            for(auto subjectIx = 0; subjectIx < fSubjects.count; subjectIx++)
+            for(auto subjectIx = 0; subjectIx < _subjects.count; subjectIx++)
             {
-                auto subject = cast(Subject) fSubjects[subjectIx];
-                for(auto observerIx = 0; observerIx < fObservers.count; observerIx++)
+                auto subject = cast(Subject) _subjects[subjectIx];
+                for(auto observerIx = 0; observerIx < _observers.count; observerIx++)
                 {
-                    subject.addObserver(fObservers[observerIx]);
+                    subject.addObserver(_observers[observerIx]);
                 }
             }
         }
@@ -247,12 +261,12 @@ version(unittest)
         int _def = int.init; 
         final override void updateObservers()
         {
-            for(auto i = 0; i < fObservers.count; i++)
-                (cast(intPropObserver)fObservers[i]).min(_min);
-            for(auto i = 0; i < fObservers.count; i++)
-                (cast(intPropObserver)fObservers[i]).max(_max);
-            for(auto i = 0; i < fObservers.count; i++)
-                (cast(intPropObserver)fObservers[i]).def(_def);
+            for(auto i = 0; i < _observers.count; i++)
+                (cast(intPropObserver)_observers[i]).min(_min);
+            for(auto i = 0; i < _observers.count; i++)
+                (cast(intPropObserver)_observers[i]).max(_max);
+            for(auto i = 0; i < _observers.count; i++)
+                (cast(intPropObserver)_observers[i]).def(_def);
         }
     }
 
@@ -263,12 +277,12 @@ version(unittest)
         uint _def = uint.init; 
         final override void updateObservers()
         {
-            for(auto i = 0; i < fObservers.count; i++)
-                (cast(uintPropObserver)fObservers[i]).min(_min);
-            for(auto i = 0; i < fObservers.count; i++)
-                (cast(uintPropObserver)fObservers[i]).max(_max);
-            for(auto i = 0; i < fObservers.count; i++)
-                (cast(uintPropObserver)fObservers[i]).def(_def);
+            for(auto i = 0; i < _observers.count; i++)
+                (cast(uintPropObserver)_observers[i]).min(_min);
+            for(auto i = 0; i < _observers.count; i++)
+                (cast(uintPropObserver)_observers[i]).max(_max);
+            for(auto i = 0; i < _observers.count; i++)
+                (cast(uintPropObserver)_observers[i]).def(_def);
         }
     }
 
@@ -307,19 +321,19 @@ version(unittest)
         inter.endUpdate;
 
         // check the subject and observers count
-        assert(inter.fSubjects.count == 2);
-        assert(inter.fObservers.count == 8);
-        assert(isubj.fObservers.count == 3);
-        assert(usubj.fObservers.count == 3);
+        assert(inter._subjects.count == 2);
+        assert(inter._observers.count == 8);
+        assert(isubj._observers.count == 3);
+        assert(usubj._observers.count == 3);
 
         inter.beginUpdate;
         inter.removeObserver(iobs1);
         inter.endUpdate;
 
-        assert(inter.fSubjects.count == 2);
-        assert(inter.fObservers.count == 7);
-        assert(isubj.fObservers.count == 2);
-        assert(usubj.fObservers.count == 3);
+        assert(inter._subjects.count == 2);
+        assert(inter._observers.count == 7);
+        assert(isubj._observers.count == 2);
+        assert(usubj._observers.count == 3);
         
         // update subject
         isubj._min = -127;
@@ -346,7 +360,6 @@ version(unittest)
         assert(uobs3._min == 2);
         assert(uobs3._max == 256);        
 
-        import std.stdio;
         writeln( "ObserverInterconnector passed the tests");
     }
 }
@@ -383,52 +396,57 @@ if (is(E == enum))
     protected
     {
         alias ObserverType = EnumBasedObserver!(E,T);
-        DynamicList!ObserverType fObservers;
+        DynamicList!ObserverType _observers;
     }
     public
     {
         this()
         {
-            fObservers = construct!(DynamicList!ObserverType);
+            _observers = construct!(DynamicList!ObserverType);
         }
 
         ~this()
         {
-            fObservers.destruct;
+            _observers.destruct;
         }
 
+        /// see the Subject interface.
         void updateObservers()
         {
             /*virtual: send all values*/
         }
 
-        bool acceptObserver(Object anObserver)
+        /// see the Subject interface.
+        bool acceptObserver(Object observer)
         {
-            return (cast(ObserverType) anObserver !is null);
+            return (cast(ObserverType) observer !is null);
         }
 
-        void addObserver(Object anObserver)
+        /// see the Subject interface.
+        void addObserver(Object observer)
         {
-            auto obs = cast(ObserverType) anObserver;
+            auto obs = cast(ObserverType) observer;
             if (!obs)
                 return;
-            if (fObservers.find(obs) != -1)
+            if (_observers.find(obs) != -1)
                 return;
-            fObservers.add(obs);
+            _observers.add(obs);
         }
 
+        /// Calls addObserver() foreach object passed as argument.
         void addObservers(Objs...)(Objs objs)
         {
             foreach(obj; objs)
                 addObserver(obj);
         }
 
-        void removeObserver(Object anObserver)
+        /// see the Subject interface.
+        void removeObserver(Object observer)
         {
-            auto obs = cast(ObserverType) anObserver;
+            auto obs = cast(ObserverType) observer;
             if (!obs)
                 return;
-            fObservers.remove(obs);
+            _observers.remove(obs);
         }
     }
 } 
@@ -444,7 +462,7 @@ unittest
     {
         void notify(DocumentNotification dn)
         {
-            foreach(obs;fObservers)
+            foreach(obs;_observers)
                 (cast(ObserverType) obs)
                     .subjectNotification(dn, null, null);
         }
@@ -469,8 +487,8 @@ unittest
     inter.addSubject(subj);
     inter.addObservers(obs1, obs2, obs3);
     inter.addObservers(obs1, obs2, obs3);
-    assert(inter.fObservers.count == 3);
-    assert(subj.fObservers.count == 3);
+    assert(inter._observers.count == 3);
+    assert(subj._observers.count == 3);
     
     subj.notify(DocumentNotification.changed);
     assert(obs1.lastNotification == DocumentNotification.changed);
@@ -481,7 +499,6 @@ unittest
     assert(obs2.lastNotification == DocumentNotification.opening);
     assert(obs3.lastNotification == DocumentNotification.opening);
     
-    import std.stdio;
     writeln( "EnumBasedObserver passed the tests");       
 }
 

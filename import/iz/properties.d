@@ -39,55 +39,56 @@ struct PropDescriptor(T)
     }
     private
     {
-        PropSetter fSetter;
-        PropGetter fGetter;
+        PropSetter _setter;
+        PropGetter _getter;
         Object fDeclarator;
 
-        T* fSetPtr;
-        T* fGetPtr;
+        T* _setPtr;
+        T* _getPtr;
 
-        PropAccess fAccess;
+        PropAccess _access;
 
         string fName;
         
         void cleanup()
         {
-            fSetPtr = null;
-            fGetPtr = null, 
-            fSetter = null;
-            fGetter = null;
+            _setPtr = null;
+            _getPtr = null; 
+            _setter = null;
+            _getter = null;
             fDeclarator = null;
-            fAccess = PropAccess.none;
+            _access = PropAccess.none;
             fName = fName.init;
         }
 
         void updateAccess()
         {
-            if ((fSetter is null) && (fGetter !is null))
-                fAccess = PropAccess.ro;
-            else if ((fSetter !is null) && (fGetter is null))
-                fAccess = PropAccess.wo;
-            else if ((fSetter !is null) && (fGetter !is null))
-                fAccess = PropAccess.rw;
-            else fAccess = PropAccess.none;
+            if ((_setter is null) && (_getter !is null))
+                _access = PropAccess.ro;
+            else if ((_setter !is null) && (_getter is null))
+                _access = PropAccess.wo;
+            else if ((_setter !is null) && (_getter !is null))
+                _access = PropAccess.rw;
+            else _access = PropAccess.none;
         }
         
         /// pseudo setter internally used when a T is directly written.
         void internalSetter(T value)
         {
-            T current = getter()();
-            if (value != current) *fSetPtr = value;
+            const T current = getter()();
+            if (value != current) *_setPtr = value;
         }
         
         /// pseudo getter internally used when a T is directly read
         T internalGetter()
         {
-            return *fGetPtr;
+            return *_getPtr;
         }
     }
     public
     {
-        static immutable ubyte DescriptorFormat = 0;
+        /// version number that can be used in case of breaking change.
+        static immutable ubyte descriptorFormat = 0;
         
 // constructors ---------------------------------------------------------------+
         /**
@@ -189,25 +190,25 @@ struct PropDescriptor(T)
          */
         @property void setter(PropSetter aSetter)
         {
-            fSetter = aSetter;
+            _setter = aSetter;
             fDeclarator = cast(Object) aSetter.ptr;
             updateAccess;
         }
         /// ditto
-        @property PropSetter setter(){return fSetter;}    
+        @property PropSetter setter(){return _setter;}    
         /**
          * Sets the property setter using a pointer to a variable
          */
         void setDirectTarget(T* aLoc)
         {
-            fSetPtr = aLoc;
-            fSetter = &internalSetter;
+            _setPtr = aLoc;
+            _setter = &internalSetter;
             updateAccess;
         }
         /**
          * Sets the property value
          */
-        void set(T aValue) {fSetter(aValue);}
+        void set(T aValue) {_setter(aValue);}
 
 // ---- 
 // getter ---------------------------------------------------------------------+
@@ -217,25 +218,25 @@ struct PropDescriptor(T)
          */
         @property void getter(PropGetter aGetter)
         {
-            fGetter = aGetter;
+            _getter = aGetter;
             fDeclarator = cast(Object) aGetter.ptr;
             updateAccess;
         }
         /// ditto
-        @property PropGetter getter(){return fGetter;}    
+        @property PropGetter getter(){return _getter;}    
         /** 
          * Sets the property getter using a pointer to a variable
          */
         void setDirectSource(T* aLoc)
         {
-            fGetPtr = aLoc;
-            fGetter = &internalGetter;
+            _getPtr = aLoc;
+            _getter = &internalGetter;
             updateAccess;
         }
         /**
          * Gets the property value
          */
-        T get(){return fGetter();}
+        T get(){return _getter();}
 
 // ----     
 // misc -----------------------------------------------------------------------+
@@ -245,7 +246,7 @@ struct PropDescriptor(T)
          */
         @property const(PropAccess) access()
         {
-            return fAccess;
+            return _access;
         }   
         /** 
          * Defines a string used to identify the prop
@@ -282,12 +283,12 @@ version(unittest)
         @property int i(){return fi;}
         @property void i(in int aValue){fi = aValue;}
     }
-    struct si{uint f,r,e;}
+    struct Si{uint f,r,e;}
     class B
     {       
-        private si fi;
-        @property si i(){return fi;}
-        @property void i(const si aValue){fi = aValue;}
+        private Si fi;
+        @property Si i(){return fi;}
+        @property void i(const Si aValue){fi = aValue;}
     }
     class propdescrtest
     {
@@ -300,9 +301,9 @@ version(unittest)
             assert(a.i == descrAi.getter()());
             assert(descrAi.declarator is a);
             
-            auto refval = si(1,2,333);
+            auto refval = Si(1,2,333);
             auto b = construct!B;
-            auto descrBi = PropDescriptor!si(&b.i,&b.i,"I");
+            auto descrBi = PropDescriptor!Si(&b.i,&b.i,"I");
             descrBi.setter()(refval);
             assert(b.i.e == 333);
             assert(b.i.e == descrBi.getter()().e);
@@ -314,17 +315,17 @@ version(unittest)
 }
 
 /// designed to annotate a detectable property setter.
-struct Set{}
+struct Set;
 /// designed to annotate a detectable property getter. 
-struct Get{}
+struct Get;
 /// designed to annotate a detectable "direct" field.
-struct SetGet{}
+struct SetGet;
 /// ditto
 alias GetSet = SetGet;
 
 /**
  * When mixed in an agregate this generates a property. 
- * This property is detectable by an PropertiesAnalyzer.
+ * This property is detectable by a PropertiesAnalyzer.
  * Params:
  * T = the type of the property.
  * propName = the name of the property.
@@ -353,11 +354,11 @@ mixin(genStandardPropDescriptors);
 
 
 /**
- * When mixed in a class, several analyzers can be used to automatically create
- * some izPropertyDescriptors for the properties anotated with @Set and @Get
+ * When mixed in a class, several analyzers can be used to create automatically
+ * some PropertyDescriptors for the properties anotated with @Set and @Get
  * or the fields annotated with @SetGet.
  *
- * The analyzers are callable in every non-static method, usually *this()*. 
+ * The analyzers are callable in non-static methods, usually this(). 
  */
 mixin template PropertiesAnalyzer(){
 
@@ -602,7 +603,7 @@ unittest
  * This container maintains a list of property synchronized between themselves.
  *
  * The reference to the properties are stored using the PropDescriptor format. 
- * The PropDescriptor *name* can be omitted.
+ * The PropDescriptor name can be omitted.
  *
  * Params:
  * T = the common type of the properties.
@@ -611,26 +612,27 @@ class PropertyBinder(T)
 {
     private
     {
-        DynamicList!(PropDescriptor!T *) fToFree;
-        DynamicList!(PropDescriptor!T *) fItems;
-        PropDescriptor!T *fSource;
+        DynamicList!(PropDescriptor!T *) _itemsToDestruct;
+        DynamicList!(PropDescriptor!T *) _items;
+        PropDescriptor!T *_source;
     }
     public
     {
+        ///
         this()
         {
-            fItems = construct!(DynamicList!(PropDescriptor!T *));
-            fToFree = construct!(DynamicList!(PropDescriptor!T *));
+            _items = construct!(DynamicList!(PropDescriptor!T *));
+            _itemsToDestruct = construct!(DynamicList!(PropDescriptor!T *));
         }
         ~this()
         {
-            for(auto i = 0; i < fToFree.count; i++)
+            for(auto i = 0; i < _itemsToDestruct.count; i++)
             {
-                auto descr = fToFree[i];
+                auto descr = _itemsToDestruct[i];
                 if (descr) destruct(descr);
             }
-            fItems.destruct;
-            fToFree.destruct;
+            _items.destruct;
+            _itemsToDestruct.destruct;
         }
         /**
          * Adds a property to the list.
@@ -643,8 +645,8 @@ class PropertyBinder(T)
          */
         ptrdiff_t addBinding(ref PropDescriptor!T aProp, bool isSource = false)
         {
-            if (isSource) fSource = &aProp;
-            return fItems.add(&aProp);
+            if (isSource) _source = &aProp;
+            return _items.add(&aProp);
         }
 
         /**
@@ -657,8 +659,8 @@ class PropertyBinder(T)
         PropDescriptor!T * newBinding()
         {
             auto result = construct!(PropDescriptor!T);
-            fItems.add(result);
-            fToFree.add(result);
+            _items.add(result);
+            _itemsToDestruct.add(result);
             return result;
         }
 
@@ -672,9 +674,9 @@ class PropertyBinder(T)
          */
         void removeBinding(size_t anIndex)
         {
-            auto itm = fItems.extract(anIndex);
-            if (fSource && itm == fSource) fSource = null;
-            if (fToFree.remove(itm)) destruct(itm);
+            auto itm = _items.extract(anIndex);
+            if (_source && itm == _source) _source = null;
+            if (_itemsToDestruct.remove(itm)) destruct(itm);
         }
         
         /**
@@ -687,7 +689,7 @@ class PropertyBinder(T)
          */ 
         void change(T aValue)
         {
-            foreach(item; fItems)
+            foreach(item; _items)
             {
                 if (item.access == PropAccess.none) continue;
                 if (item.access == PropAccess.ro) continue;
@@ -700,8 +702,8 @@ class PropertyBinder(T)
          */
         void updateFromSource()
         {
-            if (!fSource) return;
-            change(fSource.getter()());
+            if (!_source) return;
+            change(_source.getter()());
         }
         
         /**
@@ -710,25 +712,25 @@ class PropertyBinder(T)
          * aSource = the property to be used as source.
          */
         @property void source(ref PropDescriptor!T aSource)
-        {fSource = &aSource;}
+        {_source = &aSource;}
         
         /**
          * Returns the property used as source in _updateFromSource().
          */        
         @property PropDescriptor!T * source()
-        {return fSource;}
+        {return _source;}
         
         /**
          * Provides an access to the property descriptors for additional _izList_ operations.
          * Note that the items whose life-time is managed should not be modified.
          */
         @property List!(PropDescriptor!T *) items()
-        {return fItems;}    
+        {return _items;}    
     }
 }   
 
 version(unittest)
-private class izPropertyBinderTester
+private class PropertyBinderTester
 {
     unittest
     {
@@ -772,12 +774,12 @@ private class izPropertyBinderTester
                 }
                 float B(){return fB;}
 
-                void AddABinding(ref intprop aProp)
+                void addABinding(ref intprop aProp)
                 {
                     fASlaves.addBinding(aProp);
                 }
 
-                void AddBBinding(ref floatprop aProp)
+                void addBBinding(ref floatprop aProp)
                 {
                     fBSlaves.addBinding(aProp);
                 }
@@ -813,20 +815,20 @@ private class izPropertyBinderTester
         auto a3 = construct!Bar;
 
         auto prp1 = intprop(&a1.A,&a1.A);
-        a0.AddABinding(prp1);
+        a0.addABinding(prp1);
 
         auto prp2 = intprop(&a2.A,&a2.A);
-        a0.AddABinding(prp2);
+        a0.addABinding(prp2);
 
         intprop prp3 = intprop(&a3.A);
-        a0.AddABinding(prp3);
+        a0.addABinding(prp3);
 
         auto prpf1 = floatprop(&a1.B,&a1.B);
         auto prpf2 = floatprop(&a2.B,&a2.B);
         auto prpf3 = floatprop(&a3.B);
-        a0.AddBBinding(prpf1);
-        a0.AddBBinding(prpf2);
-        a0.AddBBinding(prpf3);
+        a0.addBBinding(prpf1);
+        a0.addBBinding(prpf2);
+        a0.addBBinding(prpf3);
 
         a0.A = 2;
         assert( a1.A == a0.A);
@@ -855,14 +857,14 @@ private class izPropertyBinderTester
         intprop mprp1 = intprop(&m1.A, &m1.A);
         intprop mprp2 = intprop(&m2.A, &m2.A);
 
-        m0.AddABinding(mprp1);
-        m0.AddABinding(mprp2);
+        m0.addABinding(mprp1);
+        m0.addABinding(mprp2);
 
-        m1.AddABinding(mprp0);
-        m1.AddABinding(mprp2);
+        m1.addABinding(mprp0);
+        m1.addABinding(mprp2);
 
-        m2.AddABinding(mprp0);
-        m2.AddABinding(mprp1);
+        m2.addABinding(mprp0);
+        m2.addABinding(mprp1);
 
         m0.A = 2;
         assert( m1.A == m0.A);
