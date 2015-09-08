@@ -37,3 +37,24 @@ unittest
     assert(isFixedSize!Bar);
 }
 
+/**
+ * Aliases the element type of an array
+ * Params:
+ * T = an array type
+ */
+template ArrayElementType(T)
+if (isArray!T)
+{
+    alias ArrayElementType = typeof(T.init[0]); 
+}
+
+unittest
+{
+    alias A = uint[8];
+    alias B = string[];
+    assert(is(ArrayElementType!A == uint));
+    assert(is(ArrayElementType!B == string)); 
+    static assert(is(ArrayElementType!A == uint));
+    static assert(is(ArrayElementType!B == string));        
+}
+
