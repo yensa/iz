@@ -1,7 +1,7 @@
 module iz.streams;
 
 import core.exception;
-import std.string;
+import std.string, std.range;
 import std.digest.md, std.conv: to;
 import iz.types, iz.memory;
 
@@ -469,6 +469,47 @@ unittest
     b.destruct;
 }
 
+
+/**
+ * Writes an input range to a stream.
+ *
+ * A failure can be verified by testing the range for empty after the call.
+ * Params:
+ * target = a Stream instance.
+ * r = an input range.
+ */
+void writeRange(R)(Stream target, R r)
+if (isInputRange!R)
+{
+    alias T = ElementType!R;
+    size_t c = void;
+    T t;
+    while (!r.empty)
+    {
+        t = r.front;
+        c = target.write(&t, T.sizeof);
+        if (!c) break;
+        r.popFront;        
+    }
+}
+
+unittest
+{
+    auto rng = iota(0u,100u);
+    auto rng1 = rng.save;
+    MemoryStream str = construct!MemoryStream;
+    scope(exit) str.destruct;
+    str.writeRange(rng);
+    assert(str.size == 100 * 4);
+    auto rng2 = streamRange!uint(str);
+    while (!rng2.empty)
+    {
+        assert(rng2.front == rng1.front);
+        rng1.popFront;
+        rng2.popFront;
+    }
+} 
+
 /**
  * Unspecialized stream class. Descendants are all some
  * system stream (based on a OS-specific handle).
@@ -547,13 +588,12 @@ class SystemStream: Stream, StreamPersist
         @property ulong size()
         {
             if (!_handle.isHandleValid) return 0;
-            ulong lRes, lSaved;
 
-            lSaved = seek(0, SeekMode.cur);
-            lRes = seek(0, SeekMode.end);
-            seek(lSaved, SeekMode.beg);
+            ulong saved = seek(0, SeekMode.cur);
+            ulong result = seek(0, SeekMode.end);
+            seek(saved, SeekMode.beg);
 
-            return lRes;
+            return result;
         }
 
         /// ditto
@@ -599,7 +639,7 @@ class SystemStream: Stream, StreamPersist
         /// ditto
         @property void position(ulong value)
         {
-            ulong sz = size;
+            immutable ulong sz = size;
             if (value >  sz) value = sz;
             seek(value, SeekMode.beg);
         }
@@ -800,10 +840,37 @@ class MemoryStream: Stream, StreamPersist, FilePersist8
     {
         mixin(genReadWriteVar);
         
+        ///
         this()
         {
             _memory = getMem(16);
             if (!_memory) throw new OutOfMemoryError();
+        }
+        
+        /**
+         * Constructs a MemoryStream and write the input argument.
+         * Params:
+         * a = either an array, an input range, a variable with a basic type
+         * or a stream. Even if the argument is written, the position remains
+         * at 0. 
+         */
+        this(A)(A a)
+        {
+            _memory = getMem(16);
+            if (!_memory) throw new OutOfMemoryError();
+            
+            import std.traits: isArray;
+            static if (isInputRange!A)
+                this.writeRange(a);
+            else static if (isArray!A)
+                write(a.ptr, a.length * ArrayElementType!A);
+            else static if (isFixedSize!A)
+                write(&a, A.sizeof); 
+            else static if (is(A : Stream))
+                copyStream(a, this);
+            else static assert(0, "unsupported MemoryStream __ctor argument");
+                
+            position = 0;  
         }
         
         ~this()
@@ -1264,5 +1331,16 @@ version(unittest)
             writeln( T.stringof ~ " passed the tests");
         }
     }
+}
+
+unittest
+{
+    uint a;
+    auto s1 = new MemoryStream(a);
+    assert(s1.size == a.sizeof);
+    auto s2 = new MemoryStream([1,2]);
+    assert(s2.size == [1,2].sizeof);
+    auto s3 = new MemoryStream(iota(0,2));
+    auto s4 = new MemoryStream(s3);
 }
 
