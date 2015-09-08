@@ -161,8 +161,8 @@ private bool isSerArrayType(T)()
 {
     static if (!isArray!T) return false;
     else static if (is(T : Serializable)) return false;
-    else static if (isSerObjectType!(ArrayElementType!T)) return false;    
-    else static if (staticIndexOf!((ArrayElementType!T), SerializableTypes) == -1) return false;
+    else static if (isSerObjectType!(typeof(T.init[0]))) return false;    
+    else static if (staticIndexOf!(typeof(T.init[0]), SerializableTypes) == -1) return false;
     else return true;
 }
 
@@ -208,7 +208,7 @@ unittest
 
 private string getElemStringOf(T)() if (isArray!T)
 {
-    return (ArrayElementType!T).stringof;
+    return typeof(T.init[0]).stringof;
 }
 
 unittest
