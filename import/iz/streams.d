@@ -860,10 +860,10 @@ class MemoryStream: Stream, StreamPersist, FilePersist8
             if (!_memory) throw new OutOfMemoryError();
             
             import std.traits: isArray;
-            static if (isInputRange!A)
+            static if (isArray!A)
+                write(a.ptr, a.length * (ElementType!A).sizeof);
+            else static if (isInputRange!A)
                 this.writeRange(a);
-            else static if (isArray!A)
-                write(a.ptr, a.length * ArrayElementType!A);
             else static if (isFixedSize!A)
                 write(&a, A.sizeof); 
             else static if (is(A : Stream))

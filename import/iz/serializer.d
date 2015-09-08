@@ -1,5 +1,6 @@
 module iz.serializer;
 
+import std.range: ElementType;
 import std.stdio, std.typetuple, std.conv, std.traits;
 import iz.types, iz.memory, iz.properties, iz.containers, iz.streams, iz.referencable;
 
@@ -161,8 +162,8 @@ private bool isSerArrayType(T)()
 {
     static if (!isArray!T) return false;
     else static if (is(T : Serializable)) return false;
-    else static if (isSerObjectType!(typeof(T.init[0]))) return false;    
-    else static if (staticIndexOf!(typeof(T.init[0]), SerializableTypes) == -1) return false;
+    else static if (isSerObjectType!(ElementType!T)) return false;    
+    else static if (staticIndexOf!(ElementType!T, SerializableTypes) == -1) return false;
     else return true;
 }
 
