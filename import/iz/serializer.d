@@ -163,8 +163,8 @@ private bool isSerArrayType(T)()
 {
     static if (!isArray!T) return false;
     else static if (is(T : Serializable)) return false;
-    else static if (isSerObjectType!(ElementType!T)) return false;    
-    else static if (staticIndexOf!(ElementType!T, SerializableTypes) == -1) return false;
+    else static if (isSerObjectType!(typeof(T.init[0]))) return false;    
+    else static if (staticIndexOf!(typeof(T.init[0]), SerializableTypes) == -1) return false;
     else return true;
 }
 
@@ -250,14 +250,13 @@ struct SerNodeInfo
 /** 
  * Event triggered when a serializer needs a particular property descriptor.
  * Params:
- * nodeInfo = the information the callee can use to determine the descriptor 
- * to return.
- * matchingDescriptor = the callee can set a pointer to the izPropertyDescriptor 
- * matching to the info.
+ * nodeInfo = The information the callee uses to determine the descriptor to return.
+ * matchingDescriptor = The callee can set or modify a pointer to the PropDescriptor 
+ * matching to the info. It can be set to null to prevent restoration.
  * stop = the callee can set this value to true in order to stop the restoration 
  * process. According to the serialization context, this value can be noop.
  */
-alias WantDescriptorEvent = void delegate(IstNode node, out void * matchingDescriptor, out bool stop);
+alias WantDescriptorEvent = void delegate(IstNode node, ref Ptr matchingDescriptor, out bool stop);
 
 // add double quotes escape 
 private char[] add_dqe(char[] input)
@@ -962,14 +961,12 @@ class Serializer
         {
             if (!_onWantDescriptor) 
                 return false;
-            Ptr descr;
             bool done;
-            _onWantDescriptor(node, descr, stop);
-            done = (descr != null);
+            _onWantDescriptor(node, node.nodeInfo.descriptor, stop);
+            done = (node.nodeInfo.descriptor != null);
             if (done) 
             {
-                node.nodeInfo.descriptor = descr;
-                    nodeInfo2Declarator(node.nodeInfo);
+                nodeInfo2Declarator(node.nodeInfo);
                 return true;
             }
             else if (isSerObjectType(node.nodeInfo.type))
@@ -1222,7 +1219,8 @@ class Serializer
             bool restore(IstNode current)
             {
                 bool result = true;
-                if (current.nodeInfo.descriptor)
+                if (current.nodeInfo.descriptor && 
+                    current.nodeInfo.name ==  (cast(PropDescriptor!byte *)current.nodeInfo.descriptor).name)
                     nodeInfo2Declarator(current.nodeInfo);
                 else
                 {
@@ -1260,7 +1258,7 @@ class Serializer
         {
             _serState = SerializationState.restore;
             _restoreMode = RestoreMode.random;
-            if (descriptor)
+            if (descriptor && node.nodeInfo.name == descriptor.name)
             {
                 node.nodeInfo.descriptor = descriptor;
                 nodeInfo2Declarator(node.nodeInfo);
@@ -1308,7 +1306,8 @@ class Serializer
                 
             if (_mustRead) {
                 readFormat(_format)(_stream, _currNode);
-                if (_currNode.nodeInfo.descriptor)
+                if (_currNode.nodeInfo.descriptor && 
+                    _currNode.nodeInfo.name == descriptor.name)
                     nodeInfo2Declarator(_currNode.nodeInfo);
                 else 
                 {
@@ -1561,7 +1560,7 @@ version(unittest)
         // restore elsewhere than in the declarator ---+
         float outside;
         auto node = ser.findNode("Root.aFloat");
-        auto aFloatDescr = PropDescriptor!float(&outside, "namedoesnotmatter");
+        auto aFloatDescr = PropDescriptor!float(&outside, "aFloat");
         ser.restoreProperty(node, &aFloatDescr);
         assert(outside == 0.123456f);
         //----
@@ -1653,7 +1652,7 @@ version(unittest)
         //----
             
         // decomposed de/serialization phases with event ---+ 
-        void wantDescr(IstNode node, out void * matchingDescriptor, out bool stop)
+        void wantDescr(IstNode node, ref Ptr matchingDescriptor, out bool stop)
         {
             immutable string chain = node.parentIdentifiers;
             if (chain == "Root")
@@ -1727,8 +1726,83 @@ version(unittest)
         str.position = 0;
         ser.streamToObject(str, bar, format);
         assert( bar.set == SetofA(A.a1,A.a2), to!string(bar.set));
+        
+        // ----
     
         writeln("Serializer passed the ", to!string(format), " format test");
     }
+
+
+    // test fields renamed between two versions ---+
+    class ErrSer: Serializable
+    {
+        @GetSet private uint _a = 78;
+        @GetSet private char[] _b = "foobar".dup;
+        
+        mixin PropertiesAnalyzer;
+        
+        this()
+        {
+            analyzeAll;
+        }
+        
+        void declareProperties(Serializer serializer)
+        {
+            serializer.addProperty(getDescriptor!uint("a"));
+            serializer.addProperty(getDescriptor!(char[])("b"));
+        }   
+    }
+    
+    class ErrDeSer: Serializable
+    {
+        @GetSet private int _c;
+        @GetSet private ubyte[] _d;
+        
+        mixin PropertiesAnalyzer;
+        
+        this()
+        {
+            analyzeAll;
+        }
+        
+        void declareProperties(Serializer serializer)
+        {
+            serializer.addProperty(getDescriptor!int("c"));
+            serializer.addProperty(getDescriptor!(ubyte[])("d"));
+        }   
+    }    
+    
+    unittest
+    {
+        ErrSer errser = construct!ErrSer;
+        ErrDeSer errdeser = construct!ErrDeSer;
+        Serializer ser = construct!Serializer;
+        MemoryStream str = construct!MemoryStream;
+        scope(exit) destruct(errser, ser, str, errdeser);
+        
+        ser.objectToStream(errser, str);
+        str.position = 0;
+        
+        void error(IstNode node, ref Ptr matchingDescriptor, out bool stop)
+        {
+            writeln(node.nodeInfo.name);
+            if (node.nodeInfo.name == "a")
+            {/*will be restored in _c, same size, almost safe*/}
+            if (node.nodeInfo.name == "b")
+            {matchingDescriptor = errdeser.getDescriptor!(ubyte[])("d");}
+                
+            stop = false;   
+        }        
+        
+        ser.onWantDescriptor = &error;
+        ser.streamToObject(str, errdeser); 
+        
+        assert(errdeser._c == 78);
+        assert(cast(char[])errdeser._d == "foobar"); 
+    }
+    //----
+
+
+
 }
 
