@@ -418,6 +418,7 @@ mixin template PropDescriptorCollector(){
     {
         propCollectorGetFields;
         propCollectorGetPairs;
+        propCollectorGetPairs2;
     }
     
     /**
@@ -479,8 +480,8 @@ mixin template PropDescriptorCollector(){
             else static if (is(attribute == Set) && isCallable!overload && 
                 __traits(isVirtualMethod, overload))
             {
-                alias DescriptorType = PropDescriptor!(ParameterTypeTuple!overload);
-                auto descriptor = propCollectorGet!(ParameterTypeTuple!overload)(member, true);
+                alias DescriptorType = PropDescriptor!(Parameters!overload);
+                auto descriptor = propCollectorGet!(Parameters!overload)(member, true);
                 auto virtualIndex = __traits(getVirtualIndex, overload);
                 assert(virtualIndex > -1);                        
                 // setup the setter   
@@ -493,6 +494,37 @@ mixin template PropDescriptorCollector(){
             }                
         }
     }
+    
+    protected final void propCollectorGetPairs2()
+    {
+        struct Delegate {void* ptr, funcptr;}
+        auto virtualTable = typeid(this).vtbl;
+
+        foreach(member; __traits(allMembers, typeof(this))) 
+        foreach(overload; __traits(getOverloads, typeof(this), member)) 
+        foreach(attribute; __traits(getAttributes, overload))
+        {
+            static if (is(attribute == Get) && isCallable!overload)
+            {
+                alias DescriptorType = PropDescriptor!(ReturnType!overload);
+                auto descriptor = propCollectorGet!(ReturnType!overload)(member, true);
+                // https://issues.dlang.org/show_bug.cgi?id=15043
+                //descriptor.getter(&overload);     
+                //
+                version(none) writeln(attribute.stringof, " < ", member);
+            }
+            else static if (is(attribute == Set) && isCallable!overload)
+            {
+                alias DescriptorType = PropDescriptor!(Parameters!overload);
+                auto descriptor = propCollectorGet!(Parameters!overload)(member, true);   
+                // 
+                //descriptor.setter(&overload);
+                //   
+                version(none) writeln(attribute.stringof, " > ", member);            
+            }              
+        }
+    }    
+    
 }
 
 version(unittest){
