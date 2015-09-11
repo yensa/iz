@@ -292,11 +292,11 @@ void nodeInfo2Declarator(const SerNodeInfo * nodeInfo)
 {
     void toDecl1(T)()  {
         auto descr = cast(PropDescriptor!T *) nodeInfo.descriptor;
-        descr.setter()( *cast(T*) nodeInfo.value.ptr );
+        descr.set( *cast(T*) nodeInfo.value.ptr );
     }
     void toDecl2(T)() {
         auto descr = cast(PropDescriptor!(T[]) *) nodeInfo.descriptor;
-        descr.setter()(cast(T[]) nodeInfo.value[]);
+        descr.set(cast(T[]) nodeInfo.value[]);
     } 
     void toDecl(T)() {
         (!nodeInfo.isArray) ? toDecl1!T : toDecl2!T;
@@ -323,7 +323,7 @@ void nodeInfo2Declarator(const SerNodeInfo * nodeInfo)
             str.write(cast(ubyte*)nodeInfo.value.ptr, nodeInfo.value.length);
             str.position = 0;
             auto descr = cast(PropDescriptor!Stream *) nodeInfo.descriptor;
-            descr.setter()(str);
+            descr.set(str);
             destruct(str); 
             break;                                                                                                                                  
     }
@@ -423,7 +423,7 @@ void setNodeInfo(T)(SerNodeInfo * nodeInfo, PropDescriptor!T * descriptor)
         nodeInfo.value.length = type2size[nodeInfo.type];
         nodeInfo.descriptor = cast(Ptr) descriptor;
         nodeInfo.name = descriptor.name.dup;
-        * cast(T*) nodeInfo.value.ptr = descriptor.getter()();
+        * cast(T*) nodeInfo.value.ptr = descriptor.get();
         //
         return;
     }
@@ -437,7 +437,7 @@ void setNodeInfo(T)(SerNodeInfo * nodeInfo, PropDescriptor!T * descriptor)
                 static if (isAssignable!(T,TT[]))
                 {
                     nodeInfo.type = text2type[TT.stringof];
-                    TT[] value = to!(TT[])(descriptor.getter()());
+                    TT[] value = to!(TT[])(descriptor.get());
                     nodeInfo.value.length = value.length * type2size[nodeInfo.type];
                     memmove(nodeInfo.value.ptr, cast(void*) value.ptr, nodeInfo.value.length);
                     break;
@@ -446,9 +446,9 @@ void setNodeInfo(T)(SerNodeInfo * nodeInfo, PropDescriptor!T * descriptor)
         else*/
         { 
             nodeInfo.type = text2type[getElemStringOf!T];
-            T value = descriptor.getter()();
+            T value = descriptor.get();
             nodeInfo.value.length = value.length * type2size[nodeInfo.type];
-            memmove(nodeInfo.value.ptr, cast(void*) value.ptr, nodeInfo.value.length);
+            moveMem (nodeInfo.value.ptr, cast(void*) value.ptr, nodeInfo.value.length);
         }
         //
         nodeInfo.isArray = true;
@@ -463,9 +463,9 @@ void setNodeInfo(T)(SerNodeInfo * nodeInfo, PropDescriptor!T * descriptor)
     {
         Serializable ser;
         static if (is(T == Object))
-            ser =  cast(Serializable) descriptor.getter()();       
+            ser =  cast(Serializable) descriptor.get();       
         else
-            ser = descriptor.getter()();
+            ser = descriptor.get();
             
         char[] value = ser.className.dup;
         //
@@ -474,7 +474,7 @@ void setNodeInfo(T)(SerNodeInfo * nodeInfo, PropDescriptor!T * descriptor)
         nodeInfo.descriptor = cast(Ptr) descriptor;
         nodeInfo.name = descriptor.name.dup;
         nodeInfo.value.length = value.length;
-        memmove(nodeInfo.value.ptr, cast(void*) value.ptr, nodeInfo.value.length);      
+        memmove(nodeInfo.value.ptr, value.ptr, nodeInfo.value.length);      
         //
         return;   
     }   
@@ -487,7 +487,7 @@ void setNodeInfo(T)(SerNodeInfo * nodeInfo, PropDescriptor!T * descriptor)
         nodeInfo.descriptor = cast(Ptr) descriptor;
         nodeInfo.name = descriptor.name.dup;
         //
-        Stream value = descriptor.getter()();
+        Stream value = descriptor.get();
         value.position = 0;
         nodeInfo.value.length = cast(uint) value.size;
         value.read(nodeInfo.value.ptr, cast(uint) value.size); 
@@ -501,7 +501,7 @@ void setNodeInfo(T)(SerNodeInfo * nodeInfo, PropDescriptor!T * descriptor)
 public class IstNode : TreeItem
 {
     mixin TreeItemAccessors;
-    private SerNodeInfo fNodeInfo;
+    private SerNodeInfo _info;
     public
     {
         /**
@@ -510,16 +510,16 @@ public class IstNode : TreeItem
          */
         void setDescriptor(T)(PropDescriptor!T * descriptor)
         {
-            if(descriptor)
-                setNodeInfo!T(&fNodeInfo, descriptor);
+            if (descriptor)
+                setNodeInfo!T(&_info, descriptor);
         }
         /** 
          * Returns a pointer to the information describing the property
          * associated to this IST node.
          */
-        SerNodeInfo * nodeInfo()
+        SerNodeInfo * info()
         {
-            return &fNodeInfo;
+            return &_info;
         }   
         /**
          * Returns the identifier chain of the parents.
@@ -537,7 +537,7 @@ public class IstNode : TreeItem
             {
                 cnt--;
                 items[cnt--] = ".";
-                items[cnt] = curr.nodeInfo.name;
+                items[cnt] = curr.info.name;
                 curr = cast(IstNode) curr.parent;
             }
             return items.join[0..$-1];    
@@ -557,10 +557,10 @@ private void writeJSON(IstNode istNode, Stream stream)
     import std.json;
     //    
     auto level  = JSONValue(istNode.level);
-    auto type   = JSONValue(istNode.nodeInfo.type);
-    auto name   = JSONValue(istNode.nodeInfo.name.idup);
-    auto isarray= JSONValue(cast(ubyte)istNode.nodeInfo.isArray);
-    auto value  = JSONValue(value2text(istNode.nodeInfo).idup);
+    auto type   = JSONValue(istNode.info.type);
+    auto name   = JSONValue(istNode.info.name.idup);
+    auto isarray= JSONValue(cast(ubyte)istNode.info.isArray);
+    auto value  = JSONValue(value2text(istNode.info).idup);
     auto prop   = JSONValue(["level":level,"type":type,"name":name,"isarray":isarray,"value":value]);
     auto txt    = toJSON(&prop, false).dup;
     //
@@ -605,33 +605,33 @@ private void readJSON(Stream stream, IstNode istNode)
     
     JSONValue level = prop["level"];
     if (level.type == JSON_TYPE.INTEGER) 
-        istNode.nodeInfo.level = cast(uint) level.integer;
+        istNode.info.level = cast(uint) level.integer;
     else 
-        istNode.nodeInfo.isDamaged = true;
+        istNode.info.isDamaged = true;
         
     JSONValue type = prop["type"];
     if (type.type == JSON_TYPE.INTEGER) 
-        istNode.nodeInfo.type = cast(SerializableType) type.integer;
+        istNode.info.type = cast(SerializableType) type.integer;
     else 
-        istNode.nodeInfo.isDamaged = true;       
+        istNode.info.isDamaged = true;       
         
     JSONValue name = prop["name"];
     if (name.type == JSON_TYPE.STRING) 
-        istNode.nodeInfo.name = name.str.dup;
+        istNode.info.name = name.str.dup;
     else 
-        istNode.nodeInfo.isDamaged = true;   
+        istNode.info.isDamaged = true;   
         
     immutable JSONValue isarray = prop["isarray"];
     if (isarray.type == JSON_TYPE.INTEGER) 
-        istNode.nodeInfo.isArray = cast(bool) isarray.integer;
+        istNode.info.isArray = cast(bool) isarray.integer;
     else 
-        istNode.nodeInfo.isDamaged = true;                    
+        istNode.info.isDamaged = true;                    
         
     JSONValue value = prop["value"];
     if (value.type == JSON_TYPE.STRING) 
-        istNode.nodeInfo.value = text2value(value.str.dup, istNode.nodeInfo);
+        istNode.info.value = text2value(value.str.dup, istNode.info);
     else 
-        istNode.nodeInfo.isDamaged = true;                   
+        istNode.info.isDamaged = true;                   
     
 }
 // ----
@@ -645,21 +645,21 @@ private void writeText(IstNode istNode, Stream stream)
     foreach(i; 0 .. istNode.level)
         stream.write(&tabulation, tabulation.sizeof);
     // type
-    char[] type = type2text[istNode.nodeInfo.type].dup;
+    char[] type = type2text[istNode.info.type].dup;
     stream.write(type.ptr, type.length);
     // array
     char[2] arr = "[]";
-    if (istNode.nodeInfo.isArray) stream.write(arr.ptr, arr.length); 
+    if (istNode.info.isArray) stream.write(arr.ptr, arr.length); 
     stream.write(&separator, separator.sizeof);
     // name
-    char[] name = istNode.nodeInfo.name.dup;
+    char[] name = istNode.info.name.dup;
     stream.write(name.ptr, name.length);
     stream.write(&separator, separator.sizeof);
     // name value separators
     char[] name_value = " = \"".dup;
     stream.write(name_value.ptr, name_value.length);
     // value
-    char[] value = value2text(istNode.nodeInfo); // add_dqe
+    char[] value = value2text(istNode.info); // add_dqe
     stream.write(value.ptr, value.length);
     char[] eol = "\"\n".dup;
     stream.write(eol.ptr, eol.length);
@@ -687,7 +687,7 @@ private void readText(Stream stream, IstNode istNode)
     // level
     i = 0;
     while (propText[i] == '\t') i++;
-    istNode.nodeInfo.level = cast(uint) i;
+    istNode.info.level = cast(uint) i;
     
     // type
     identifier = identifier.init;
@@ -697,19 +697,19 @@ private void readText(Stream stream, IstNode istNode)
     if (identifier.length > 2) 
     {
         arr = identifier[$-2 .. $];
-        istNode.nodeInfo.isArray = (arr == "[]");
+        istNode.info.isArray = (arr == "[]");
     }
-    if (istNode.nodeInfo.isArray) 
+    if (istNode.info.isArray) 
         identifier = identifier[0 .. $-2];
     if (identifier in text2type) 
-        istNode.nodeInfo.type = text2type[identifier];
+        istNode.info.type = text2type[identifier];
          
     // name
     i++;
     identifier = identifier.init;
     while(propText[i] != ' ') 
         identifier ~= propText[i++];
-    istNode.nodeInfo.name = identifier.idup; 
+    istNode.info.name = identifier.idup; 
     
     // name value separators
     i++;
@@ -723,7 +723,7 @@ private void readText(Stream stream, IstNode istNode)
     i++;
     identifier = propText[i..$];
     identifier = identifier[1..$-1];
-    istNode.nodeInfo.value = text2value(identifier, istNode.nodeInfo);
+    istNode.info.value = text2value(identifier, istNode.info);
 }  
 //----
 
@@ -770,26 +770,26 @@ private void writeBin(IstNode istNode, Stream stream)
     datalength = cast(uint) istNode.level;
     stream.write(&datalength, datalength.sizeof);
     // type
-    bin = cast(ubyte) istNode.nodeInfo.type; 
+    bin = cast(ubyte) istNode.info.type; 
     stream.write(&bin, bin.sizeof);
     // as array
-    bin = istNode.nodeInfo.isArray; 
+    bin = istNode.info.isArray; 
     stream.write(&bin, bin.sizeof);  
     // name length then name
-    data = cast(ubyte[]) istNode.nodeInfo.name;
+    data = cast(ubyte[]) istNode.info.name;
     datalength = cast(uint) data.length;
     stream.write(&datalength, datalength.sizeof);
     stream.write(data.ptr, datalength);
     // value length then value
     version(LittleEndian)
     {
-        datalength = cast(uint) istNode.nodeInfo.value.length;
+        datalength = cast(uint) istNode.info.value.length;
         stream.write(&datalength, datalength.sizeof);
-        stream.write(istNode.nodeInfo.value.ptr, datalength);        
+        stream.write(istNode.info.value.ptr, datalength);        
     }
     else
     {
-        data = swapBE(istNode.nodeInfo.value, type2size[istNode.nodeInfo.type]);
+        data = swapBE(istNode.info.value, type2size[istNode.info.type]);
         datalength = cast(uint) data.length;
         stream.write(&datalength, datalength.sizeof);
         stream.write(data.ptr, datalength); 
@@ -818,25 +818,25 @@ private void readBin(Stream stream, IstNode istNode)
     stream.read(data.ptr, data.length);
     // level
     datalength = *cast(uint*) data.ptr;
-    istNode.nodeInfo.level = datalength;                
+    istNode.info.level = datalength;                
     // type and array
-    istNode.nodeInfo.type = cast(SerializableType) data[4];
-    istNode.nodeInfo.isArray = cast(bool) data[5];      
+    istNode.info.type = cast(SerializableType) data[4];
+    istNode.info.isArray = cast(bool) data[5];      
     // name length then name;
     datalength = *cast(uint*) (data.ptr + 6);
-    istNode.nodeInfo.name = cast(string) data[10.. 10 + datalength].idup; 
+    istNode.info.name = cast(string) data[10.. 10 + datalength].idup; 
     beg =  10 +  datalength;      
     // value length then value
     version(LittleEndian)
     {
         datalength = *cast(uint*) (data.ptr + beg);
-        istNode.nodeInfo.value = data[beg + 4 .. beg + 4 + datalength];    
+        istNode.info.value = data[beg + 4 .. beg + 4 + datalength];    
     }
     else
     {
         datalength = *cast(uint*) (data.ptr + beg);
         data = data[beg + 4 .. beg + 4 + datalength];
-        istNode.nodeInfo.value = swapBE(data, type2size[istNode.nodeInfo.type]);
+        istNode.info.value = swapBE(data, type2size[istNode.info.type]);
     } 
 }  
 //----
@@ -962,14 +962,14 @@ class Serializer
             if (!_onWantDescriptor) 
                 return false;
             bool done;
-            _onWantDescriptor(node, node.nodeInfo.descriptor, stop);
-            done = (node.nodeInfo.descriptor != null);
+            _onWantDescriptor(node, node.info.descriptor, stop);
+            done = (node.info.descriptor != null);
             if (done) 
             {
-                nodeInfo2Declarator(node.nodeInfo);
+                nodeInfo2Declarator(node.info);
                 return true;
             }
-            else if (isSerObjectType(node.nodeInfo.type))
+            else if (isSerObjectType(node.info.type))
                 return true;
             return false;
         }
@@ -1069,7 +1069,7 @@ class Serializer
                 foreach(node; parent.children)
                 {
                     auto child = cast(IstNode) node;           
-                    if (isSerObjectType(child.nodeInfo.type))
+                    if (isSerObjectType(child.info.type))
                         writeNodesFrom(child);
                     else writeFormat(_format)(child, _stream); 
                 }
@@ -1113,8 +1113,8 @@ class Serializer
             if (unorderNodes.length > 1)
             foreach(i; 1 .. unorderNodes.length)
             {
-                unorderNodes[i-1].nodeInfo.isLastChild = 
-                  unorderNodes[i].nodeInfo.level < unorderNodes[i-1].nodeInfo.level;       
+                unorderNodes[i-1].info.isLastChild = 
+                  unorderNodes[i].info.level < unorderNodes[i-1].info.level;       
             }
             
             parents ~= _rootNode;
@@ -1123,10 +1123,10 @@ class Serializer
                 auto node = unorderNodes[i];
                 parents[$-1].addChild(node);
                 
-                if (node.nodeInfo.isLastChild)
+                if (node.info.isLastChild)
                     parents.length -= 1;
                  
-                if (isSerObjectType(node.nodeInfo.type))
+                if (isSerObjectType(node.info.type))
                     parents ~= node;
             }  
             //
@@ -1183,7 +1183,7 @@ class Serializer
         
             //TODO-cfeature : optimize random access by caching in an AA, "à la JSON"
             
-            if (_rootNode.nodeInfo.name == descriptorName)
+            if (_rootNode.info.name == descriptorName)
                 return _rootNode;
             
             IstNode scanNode(IstNode parent, in char[] namePipe)
@@ -1192,16 +1192,16 @@ class Serializer
                 foreach(node; parent.children)
                 {
                     auto child = cast(IstNode) node;//parent.children[i]; 
-                    if ( namePipe ~ "." ~ child.nodeInfo.name == descriptorName)
+                    if ( namePipe ~ "." ~ child.info.name == descriptorName)
                         return child;
                     if (child.childrenCount)
-                        result = scanNode(child, namePipe ~ "." ~ child.nodeInfo.name);
+                        result = scanNode(child, namePipe ~ "." ~ child.info.name);
                     if (result)
                         return result;
                 }
                 return result;
             }
-            return scanNode(_rootNode, _rootNode.nodeInfo.name);
+            return scanNode(_rootNode, _rootNode.info.name);
         }
         
         /**
@@ -1219,9 +1219,9 @@ class Serializer
             bool restore(IstNode current)
             {
                 bool result = true;
-                if (current.nodeInfo.descriptor && 
-                    current.nodeInfo.name ==  (cast(PropDescriptor!byte *)current.nodeInfo.descriptor).name)
-                    nodeInfo2Declarator(current.nodeInfo);
+                if (current.info.descriptor && 
+                    current.info.name ==  (cast(PropDescriptor!byte *)current.info.descriptor).name)
+                    nodeInfo2Declarator(current.info);
                 else
                 {
                     bool stop;
@@ -1238,7 +1238,7 @@ class Serializer
                 {
                     auto childNode = cast(IstNode) child;
                     if (!restore(childNode)) return false;
-                    if (isSerObjectType(childNode.nodeInfo.type) & recursive)
+                    if (isSerObjectType(childNode.info.type) & recursive)
                         if (!restoreLoop(childNode)) return false;
                 }
                 return true;
@@ -1258,10 +1258,10 @@ class Serializer
         {
             _serState = SerializationState.restore;
             _restoreMode = RestoreMode.random;
-            if (descriptor && node.nodeInfo.name == descriptor.name)
+            if (descriptor && node.info.name == descriptor.name)
             {
-                node.nodeInfo.descriptor = descriptor;
-                nodeInfo2Declarator(node.nodeInfo);
+                node.info.descriptor = descriptor;
+                nodeInfo2Declarator(node.info);
             }
             else 
             {
@@ -1306,9 +1306,9 @@ class Serializer
                 
             if (_mustRead) {
                 readFormat(_format)(_stream, _currNode);
-                if (_currNode.nodeInfo.descriptor && 
-                    _currNode.nodeInfo.name == descriptor.name)
-                    nodeInfo2Declarator(_currNode.nodeInfo);
+                if (_currNode.info.descriptor && 
+                    _currNode.info.name == descriptor.name)
+                    nodeInfo2Declarator(_currNode.info);
                 else 
                 {
                     bool noop;
@@ -1319,15 +1319,15 @@ class Serializer
             static if (isSerObjectType!T)
             {
                 if (_previousNode)
-                    _previousNode.nodeInfo.isLastChild = true;
+                    _previousNode.info.isLastChild = true;
             
                 auto oldSerializable = _currSerializable;
                 auto oldParentNode = _parentNode;
                 _parentNode = _currNode;
                 static if (is(T : Serializable))
-                    _currSerializable = descriptor.getter()();
+                    _currSerializable = descriptor.get();
                 else
-                   _currSerializable = cast(Serializable) descriptor.getter()(); 
+                   _currSerializable = cast(Serializable) descriptor.get(); 
                 _currSerializable.declareProperties(this);
                 _parentNode = oldParentNode;
                 _currSerializable = oldSerializable;
@@ -1656,11 +1656,11 @@ version(unittest)
         {
             immutable string chain = node.parentIdentifiers;
             if (chain == "Root")
-                matchingDescriptor = a.getUntypedDescriptor(node.nodeInfo.name);
+                matchingDescriptor = a.getUntypedDescriptor(node.info.name);
             else if (chain == "Root.aB1")
-                matchingDescriptor = a._aB1.getUntypedDescriptor(node.nodeInfo.name);
+                matchingDescriptor = a._aB1.getUntypedDescriptor(node.info.name);
             else if (chain == "Root.aB2")
-                matchingDescriptor = a._aB2.getUntypedDescriptor(node.nodeInfo.name);                      
+                matchingDescriptor = a._aB2.getUntypedDescriptor(node.info.name);                      
         }
           
         str.clear;
@@ -1785,10 +1785,10 @@ version(unittest)
         
         void error(IstNode node, ref Ptr matchingDescriptor, out bool stop)
         {
-            writeln(node.nodeInfo.name);
-            if (node.nodeInfo.name == "a")
+            writeln(node.info.name);
+            if (node.info.name == "a")
             {/*will be restored in _c, same size, almost safe*/}
-            if (node.nodeInfo.name == "b")
+            if (node.info.name == "b")
             {matchingDescriptor = errdeser.getDescriptor!(ubyte[])("d");}
                 
             stop = false;   
@@ -1801,8 +1801,5 @@ version(unittest)
         assert(cast(char[])errdeser._d == "foobar"); 
     }
     //----
-
-
-
 }
 
