@@ -48,12 +48,12 @@ class SerializableReference: Serializable
     {
         char[] _tp;
         ulong  _id;
-        mixin PropertiesAnalyzer;
+        mixin PropDescriptorCollector;
     }
     public
     {
         ///
-        this() {analyzeVirtualSetGet;}
+        this() {propCollectorAll;}
 
         /**
          * Sets the internal fields according to a referenced.
@@ -80,8 +80,8 @@ class SerializableReference: Serializable
         /// declares the data needed to retrieve the reference associated to this class
         void declareProperties(Serializer serializer)
         {
-            serializer.addProperty(getDescriptor!(char[])("type"));
-            serializer.addProperty(getDescriptor!(ulong)("id"));
+            serializer.addProperty(propCollectorGet!(char[])("type"));
+            serializer.addProperty(propCollectorGet!(ulong)("id"));
         }
     }
 }
@@ -1545,14 +1545,14 @@ version(unittest)
     
     class ClassB : Serializable
     {
-        mixin PropertiesAnalyzer;
+        mixin PropDescriptorCollector;
         private:
             int[]  _anIntArray;
             float  _aFloat;
             char[] _someChars;
         public:
             this() {
-                analyzeAll;
+                propCollectorAll;
                 _anIntArray = [0, 1, 2, 3];
                 _aFloat = 0.123456f;
                 _someChars = "azertyuiop".dup;
@@ -1568,9 +1568,9 @@ version(unittest)
             mixin(genPropFromField!(typeof(_someChars), "someChars", "_someChars")); 
             
             void declareProperties(Serializer serializer) {
-                serializer.addProperty(getDescriptor!(typeof(_anIntArray))("anIntArray"));
-                serializer.addProperty(getDescriptor!(typeof(_aFloat))("aFloat"));
-                serializer.addProperty(getDescriptor!(typeof(_someChars))("someChars"));
+                serializer.addProperty(propCollectorGet!(typeof(_anIntArray))("anIntArray"));
+                serializer.addProperty(propCollectorGet!(typeof(_aFloat))("aFloat"));
+                serializer.addProperty(propCollectorGet!(typeof(_someChars))("someChars"));
             }
     }
     
@@ -1686,13 +1686,13 @@ version(unittest)
         ser.streamToIst(str,format);
         
         auto node_anIntArray = ser.findNode("Root.anIntArray");
-        if(node_anIntArray) ser.restoreProperty(node_anIntArray, b.getDescriptor!(int[])("anIntArray"));
+        if(node_anIntArray) ser.restoreProperty(node_anIntArray, b.propCollectorGet!(int[])("anIntArray"));
         else assert(0);        
         auto node_aFloat = ser.findNode("Root.aFloat");
-        if(node_aFloat) ser.restoreProperty(node_aFloat, b.getDescriptor!float("aFloat"));
+        if(node_aFloat) ser.restoreProperty(node_aFloat, b.propCollectorGet!float("aFloat"));
         else assert(0);  
         auto node_someChars = ser.findNode("Root.someChars");
-        if(node_someChars) ser.restoreProperty(node_someChars, b.getDescriptor!(char[])("someChars"));
+        if(node_someChars) ser.restoreProperty(node_someChars, b.propCollectorGet!(char[])("someChars"));
         else assert(0);                  
         assert(b.anIntArray == [0, 1, 2, 3]);
         assert(b.aFloat == 0.123456f);
@@ -1704,11 +1704,11 @@ version(unittest)
         {
             immutable string chain = node.parentIdentifiers;
             if (chain == "Root")
-                matchingDescriptor = a.getUntypedDescriptor(node.info.name);
+                matchingDescriptor = a.propCollectorGetPtr(node.info.name);
             else if (chain == "Root.aB1")
-                matchingDescriptor = a._aB1.getUntypedDescriptor(node.info.name);
+                matchingDescriptor = a._aB1.propCollectorGetPtr(node.info.name);
             else if (chain == "Root.aB2")
-                matchingDescriptor = a._aB2.getUntypedDescriptor(node.info.name);                      
+                matchingDescriptor = a._aB2.propCollectorGetPtr(node.info.name);                      
         }
           
         str.clear;
@@ -1787,17 +1787,17 @@ version(unittest)
         @GetSet private uint _a = 78;
         @GetSet private char[] _b = "foobar".dup;
         
-        mixin PropertiesAnalyzer;
+        mixin PropDescriptorCollector;
         
         this()
         {
-            analyzeAll;
+            propCollectorAll;
         }
         
         void declareProperties(Serializer serializer)
         {
-            serializer.addProperty(getDescriptor!uint("a"));
-            serializer.addProperty(getDescriptor!(char[])("b"));
+            serializer.addProperty(propCollectorGet!uint("a"));
+            serializer.addProperty(propCollectorGet!(char[])("b"));
         }   
     }
     
@@ -1806,17 +1806,17 @@ version(unittest)
         @GetSet private int _c;
         @GetSet private ubyte[] _d;
         
-        mixin PropertiesAnalyzer;
+        mixin PropDescriptorCollector;
         
         this()
         {
-            analyzeAll;
+            propCollectorAll;
         }
         
         void declareProperties(Serializer serializer)
         {
-            serializer.addProperty(getDescriptor!int("c"));
-            serializer.addProperty(getDescriptor!(ubyte[])("d"));
+            serializer.addProperty(propCollectorGet!int("c"));
+            serializer.addProperty(propCollectorGet!(ubyte[])("d"));
         }   
     }    
     
@@ -1836,7 +1836,7 @@ version(unittest)
             if (node.info.name == "a")
             {/*will be restored in _c, same size, almost safe*/}
             if (node.info.name == "b")
-            {matchingDescriptor = errdeser.getDescriptor!(ubyte[])("d");}
+            {matchingDescriptor = errdeser.propCollectorGet!(ubyte[])("d");}
                 
             stop = false;   
         }        

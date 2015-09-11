@@ -325,7 +325,7 @@ alias GetSet = SetGet;
 
 /**
  * When mixed in an agregate this generates a property. 
- * This property is detectable by a PropertiesAnalyzer.
+ * This property is detectable by a PropDescriptorCollector.
  * Params:
  * T = the type of the property.
  * propName = the name of the property.
@@ -354,24 +354,24 @@ mixin(genStandardPropDescriptors);
 
 
 /**
- * When mixed in a class, several analyzers can be used to create automatically
- * some PropertyDescriptors for the properties anotated with @Set and @Get
+ * When mixed in a class, several analyzers can be used to automatically create
+ * the PropDescriptors for the properties anotated with @Set and @Get
  * or the fields annotated with @SetGet.
  *
- * The analyzers are callable in non-static methods, usually this(). 
+ * The analyzers are callable in non-static methods, in this(). 
  */
-mixin template PropertiesAnalyzer(){
+mixin template PropDescriptorCollector(){
 
     /**
      * Contains the list of izPropDesrcriptors created by the analyzers.
-     * getDescriptor() can be used to correctly cast an item.
+     * propCollectorGet() can be used to correctly cast an item.
      */
     private void * [] descriptors;
     
     /**
      * Returns the count of descriptor the analyzers have created.
      */
-    public final size_t descriptorCount(){return descriptors.length;}
+    public final size_t propCollectorCount(){return descriptors.length;}
     
     /** 
      * Returns a pointer to a descriptor according to its name.
@@ -381,7 +381,7 @@ mixin template PropertiesAnalyzer(){
      * Returns:
      * null if the operation fails otherwise a pointer to an PropDescriptor!T.
      */
-    protected final PropDescriptor!T * getDescriptor(T)(string name, bool createIfMissing = false)
+    protected final PropDescriptor!T * propCollectorGet(T)(string name, bool createIfMissing = false)
     {
         PropDescriptor!T * descr;
         
@@ -403,21 +403,21 @@ mixin template PropertiesAnalyzer(){
 
     /** 
      * Returns a pointer to a descriptor according to its name.
-     * Similar to the *getDescriptor()* excepted that the result
+     * Similar to the *propCollectorGet()* excepted that the result
      * type has not to be specified.
      */    
-    protected final void * getUntypedDescriptor(string name)
+    protected final void * propCollectorGetPtr(string name)
     {
-        return getDescriptor!size_t(name);
+        return propCollectorGet!size_t(name);
     }
     
     /**
      * Performs all the possible analysis.
      */
-    protected final void analyzeAll()
+    protected final void propCollectorAll()
     {
-        analyzeFields;
-        analyzeVirtualSetGet;
+        propCollectorGetFields;
+        propCollectorGetPairs;
     }
     
     /**
@@ -425,7 +425,7 @@ mixin template PropertiesAnalyzer(){
      * and whose identifier starts with one of the following prefix: underscore, f, F.
      * The resulting property descriptors names don't include the prefix.
      */
-    protected final void analyzeFields()
+    protected final void propCollectorGetFields()
     {
         import std.algorithm : canFind;
         import std.traits: isCallable;
@@ -439,7 +439,7 @@ mixin template PropertiesAnalyzer(){
                 alias propType = typeof(__traits(getMember, this, member));
                 auto propPtr = &__traits(getMember, this, member);
                 auto propName = member[1..$];
-                auto descriptor = getDescriptor!propType(propName, true); 
+                auto descriptor = propCollectorGet!propType(propName, true); 
                 descriptor.define(propPtr, propName);
                 //
                 version(none) writeln(attribute.stringof, " : ", member);
@@ -452,7 +452,7 @@ mixin template PropertiesAnalyzer(){
      * @Set/@Get. To be detected the methods must still be virtual (not final).
      * In a class hierarchy, an overriden accessor replaces the ancestor's one. 
      */
-    protected final void analyzeVirtualSetGet()
+    protected final void propCollectorGetPairs()
     {
         struct Delegate {void* ptr, funcptr;}
         auto virtualTable = typeid(this).vtbl;
@@ -465,7 +465,7 @@ mixin template PropertiesAnalyzer(){
                 __traits(isVirtualMethod, overload))
             {
                 alias DescriptorType = PropDescriptor!(ReturnType!overload);
-                auto descriptor = getDescriptor!(ReturnType!overload)(member, true);
+                auto descriptor = propCollectorGet!(ReturnType!overload)(member, true);
                 auto virtualIndex = __traits(getVirtualIndex, overload);
                 assert(virtualIndex > -1);
                 // setup the getter   
@@ -480,7 +480,7 @@ mixin template PropertiesAnalyzer(){
                 __traits(isVirtualMethod, overload))
             {
                 alias DescriptorType = PropDescriptor!(ParameterTypeTuple!overload);
-                auto descriptor = getDescriptor!(ParameterTypeTuple!overload)(member, true);
+                auto descriptor = propCollectorGet!(ParameterTypeTuple!overload)(member, true);
                 auto virtualIndex = __traits(getVirtualIndex, overload);
                 assert(virtualIndex > -1);                        
                 // setup the setter   
@@ -498,10 +498,10 @@ mixin template PropertiesAnalyzer(){
 version(unittest){
     class Foo
     {
-        mixin PropertiesAnalyzer;
+        mixin PropDescriptorCollector;
         this(A...)(A a){
-            analyzeVirtualSetGet;
-            analyzeFields;
+            propCollectorGetPairs;
+            propCollectorGetFields;
         }
         
         @SetGet private uint _anUint;
@@ -521,29 +521,29 @@ version(unittest){
         void use()
         {
             assert(propA == 0);
-            auto aDescriptor = getDescriptor!uint("propA");
+            auto aDescriptor = propCollectorGet!uint("propA");
             aDescriptor.setter()(123456789);
             assert(propA == 123456789);
             
             assert(propB == 0);
-            auto bDescriptor = getDescriptor!uint("propB");
+            auto bDescriptor = propCollectorGet!uint("propB");
             bDescriptor.setter()(987654321);
             assert(propB == 987654321);
             
             assert(!propC.length);
-            auto cDescriptor = getDescriptor!(char[])("propC");
+            auto cDescriptor = propCollectorGet!(char[])("propC");
             cDescriptor.setter()("Too Strange To Be Good".dup);
             assert(propC == "Too Strange To Be Good");
             propC = "Too Good To Be Strange".dup;
-            assert( getDescriptor!(char[])("propC").getter()() == "Too Good To Be Strange");
+            assert( propCollectorGet!(char[])("propC").getter()() == "Too Good To Be Strange");
             
             assert(_anUint == 0);
-            auto anUintDescriptor = getDescriptor!uint("anUint");
+            auto anUintDescriptor = propCollectorGet!uint("anUint");
             anUintDescriptor.setter()(123456789);
             assert(_anUint == 123456789);
             
             assert(_manyChars == null);
-            auto manyCharsDescriptor = getDescriptor!(char[])("manyChars");
+            auto manyCharsDescriptor = propCollectorGet!(char[])("manyChars");
             manyCharsDescriptor.setter()("BimBamBom".dup);
             assert(_manyChars == "BimBamBom");
             _manyChars = "BomBamBim".dup;  
@@ -555,10 +555,10 @@ version(unittest){
     {
         size_t _field;
         string info;
-        mixin PropertiesAnalyzer;
+        mixin PropDescriptorCollector;
         this()
         {
-            analyzeVirtualSetGet;
+            propCollectorGetPairs;
         }
         @Set void field(size_t aValue){
             info ~= "Bar";
@@ -588,15 +588,15 @@ unittest
     foo.destruct;
     
     auto baz = construct!Baz;
-    auto prop = baz.getDescriptor!size_t("field");
+    auto prop = baz.propCollectorGet!size_t("field");
     prop.set(0);
     assert(baz.info == "BarBaz");
-    assert(baz.descriptorCount == 1);
+    assert(baz.propCollectorCount == 1);
     auto a = prop.get;
     assert(baz.info == "most derived");
     baz.destruct;
     
-    writeln("PropertiesAnalyzer passed the tests");
+    writeln("PropDescriptorCollector passed the tests");
 }
 
 /**
