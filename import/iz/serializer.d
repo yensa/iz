@@ -368,7 +368,7 @@ ubyte[] text2value(char[] text, const SerNodeInfo * nodeInfo)
     ubyte[] t2v_2(T)(){
         auto v = to!(T[])(text);
         auto res = new ubyte[](v.length * type2size[nodeInfo.type]);
-        memmove(res.ptr, v.ptr, res.length);
+        moveMem(res.ptr, v.ptr, res.length);
         return res;
     }
     ubyte[] t2v(T)(){
@@ -474,7 +474,7 @@ void setNodeInfo(T)(SerNodeInfo * nodeInfo, PropDescriptor!T * descriptor)
         nodeInfo.descriptor = cast(Ptr) descriptor;
         nodeInfo.name = descriptor.name.dup;
         nodeInfo.value.length = value.length;
-        memmove(nodeInfo.value.ptr, value.ptr, nodeInfo.value.length);      
+        moveMem(nodeInfo.value.ptr, value.ptr, nodeInfo.value.length);      
         //
         return;   
     }   
@@ -1785,7 +1785,6 @@ version(unittest)
         
         void error(IstNode node, ref Ptr matchingDescriptor, out bool stop)
         {
-            writeln(node.info.name);
             if (node.info.name == "a")
             {/*will be restored in _c, same size, almost safe*/}
             if (node.info.name == "b")
