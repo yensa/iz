@@ -418,7 +418,6 @@ mixin template PropDescriptorCollector(){
     {
         propCollectorGetFields;
         propCollectorGetPairs;
-        propCollectorGetPairs2;
     }
     
     /**
@@ -454,6 +453,8 @@ mixin template PropDescriptorCollector(){
      * In a class hierarchy, an overriden accessor replaces the ancestor's one. 
      */
     protected final void propCollectorGetPairs()
+    {
+    version(none)
     {
         struct Delegate {void* ptr, funcptr;}
         auto virtualTable = typeid(this).vtbl;
@@ -494,8 +495,7 @@ mixin template PropDescriptorCollector(){
             }                
         }
     }
-    
-    protected final void propCollectorGetPairs2()
+    else
     {
         struct Delegate {void* ptr, funcptr;}
         auto virtualTable = typeid(this).vtbl;
@@ -508,22 +508,23 @@ mixin template PropDescriptorCollector(){
             {
                 alias DescriptorType = PropDescriptor!(ReturnType!overload);
                 auto descriptor = propCollectorGet!(ReturnType!overload)(member, true);
-                // https://issues.dlang.org/show_bug.cgi?id=15043
-                //descriptor.getter(&overload);     
-                //
+                auto dg = &overload;
+                descriptor.getter(dg);
+                //   
                 version(none) writeln(attribute.stringof, " < ", member);
             }
             else static if (is(attribute == Set) && isCallable!overload)
             {
                 alias DescriptorType = PropDescriptor!(Parameters!overload);
                 auto descriptor = propCollectorGet!(Parameters!overload)(member, true);   
-                // 
-                //descriptor.setter(&overload);
-                //   
+                auto dg = &overload;
+                descriptor.setter(dg);
+                //
                 version(none) writeln(attribute.stringof, " > ", member);            
             }              
         }
-    }    
+    } 
+    }   
     
 }
 
