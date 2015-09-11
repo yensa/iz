@@ -168,25 +168,12 @@ private bool isSerArrayType(T)()
     else return true;
 }
 
-private bool isSerArrayStructType(T)()
-{
-    static if (!is(T==struct)) return false;
-    else
-    { 
-        foreach(TT; SerializableTypes)
-            static if (isAssignable!(T,TT[]))
-                return true;
-        return false;
-    } 
-}
-
 /// Returns true if the template parameter is a serializable type.
 bool isSerializable(T)()
 {
     static if (isSerSimpleType!T) return true;
     else static if (isSerStructType!T) return true;   
     else static if (isSerArrayType!T) return true; 
-    //else static if (isSerArrayStructType!T) return true;  
     else static if (is(T : Stream)) return true;
     else static if (isSerObjectType!T) return true;
     
@@ -222,6 +209,19 @@ unittest
     static assert( getElemStringOf!(int[1]) == int.stringof );
     static assert( getElemStringOf!(int[0]) != "azertyui" );
 }
+
+private string getSerializableTypeString(T)()
+{
+    static if (isArray!T) return getElemStringOf!T;
+    else static if (isSerSimpleType!T) return T.stringof;
+    else static if (is(T:Serializable)) return Serializable.stringof;
+    else static if (is(T:Object)) return Serializable.stringof;
+    else static if (isSerStructType!T)
+        foreach(TT; SerializableTypes)
+            static if (isAssignable!(T,TT))
+                return TT.stringof;
+    assert(0, "failed to get the string for a serializable type");
+}
 // -----------------------------------------------------------------------------
 
 // Tree representation --------------------------------------------------------
@@ -250,13 +250,21 @@ struct SerNodeInfo
 /** 
  * Event triggered when a serializer needs a particular property descriptor.
  * Params:
- * nodeInfo = The information the callee uses to determine the descriptor to return.
+ * node = The information the callee uses to determine the descriptor to return.
  * matchingDescriptor = The callee can set or modify a pointer to the PropDescriptor 
  * matching to the info. It can be set to null to prevent restoration.
  * stop = the callee can set this value to true in order to stop the restoration 
  * process. According to the serialization context, this value can be noop.
  */
 alias WantDescriptorEvent = void delegate(IstNode node, ref Ptr matchingDescriptor, out bool stop);
+
+/**
+ * Event triggered when a serializer failed to get an object to deserialize.
+ * Params:
+ * node = The information the callee uses to instantiate a Serializable.
+ * serializable = the Object the callee has to instantiate. 
+ */
+alias WantObjectEvent = void delegate(IstNode node, ref Serializable serializable);
 
 // add double quotes escape 
 private char[] add_dqe(char[] input)
@@ -498,7 +506,7 @@ void setNodeInfo(T)(SerNodeInfo * nodeInfo, PropDescriptor!T * descriptor)
 }
 
 /// IST node
-public class IstNode : TreeItem
+class IstNode : TreeItem
 {
     mixin TreeItemAccessors;
     private SerNodeInfo _info;
@@ -936,6 +944,7 @@ class Serializer
         Serializable _currSerializable;
         
         WantDescriptorEvent _onWantDescriptor;
+        WantObjectEvent _onWantObject;
         
         SerializationState _serState;
         StoreMode _storeMode;
@@ -972,6 +981,17 @@ class Serializer
             else if (isSerObjectType(node.info.type))
                 return true;
             return false;
+        }
+        
+        bool descriptorMatchesNode(T)(PropDescriptor!T* descr, IstNode node)
+        if (isSerializable!T)
+        {   
+            if (!descr) return false;
+            if (!node.info.name.length) return false;
+            if (descr.name != node.info.name) return false;
+            static if (isArray!T) if (!node.info.isArray) return false;
+            if (getSerializableTypeString!T != type2text[node.info.type]) return false;
+            return true;
         }
     }
     
@@ -1191,8 +1211,8 @@ class Serializer
                 IstNode result;
                 foreach(node; parent.children)
                 {
-                    auto child = cast(IstNode) node;//parent.children[i]; 
-                    if ( namePipe ~ "." ~ child.info.name == descriptorName)
+                    auto child = cast(IstNode) node; 
+                    if (namePipe ~ "." ~ child.info.name == descriptorName)
                         return child;
                     if (child.childrenCount)
                         result = scanNode(child, namePipe ~ "." ~ child.info.name);
@@ -1258,7 +1278,8 @@ class Serializer
         {
             _serState = SerializationState.restore;
             _restoreMode = RestoreMode.random;
-            if (descriptor && node.info.name == descriptor.name)
+            
+            if (descriptorMatchesNode!T(descriptor, node))
             {
                 node.info.descriptor = descriptor;
                 nodeInfo2Declarator(node.info);
@@ -1271,11 +1292,11 @@ class Serializer
         }        
 
 //------------------------------------------------------------------------------
-//---- declaration from an Serializable -------------------------------------+
+//---- declaration from an Serializable ---------------------------------------+
     
         /*( the following methods are designed to be only used by an Serializable !)*/
     
-        mixin(genAllAdders);
+        //mixin(genAllAdders);
         
         /**
          * Designed to be called by an Serializable when it needs to declare 
@@ -1306,8 +1327,7 @@ class Serializer
                 
             if (_mustRead) {
                 readFormat(_format)(_stream, _currNode);
-                if (_currNode.info.descriptor && 
-                    _currNode.info.name == descriptor.name)
+                if (descriptorMatchesNode!T(descriptor, _currNode)) 
                     nodeInfo2Declarator(_currNode.info);
                 else 
                 {
@@ -1324,10 +1344,32 @@ class Serializer
                 auto oldSerializable = _currSerializable;
                 auto oldParentNode = _parentNode;
                 _parentNode = _currNode;
+                
+                
+                if (!descriptorMatchesNode!T(descriptor, _currNode) && _onWantDescriptor)
+                {
+                    bool stop = false;
+                    Ptr descr = &descriptor;
+                    _onWantDescriptor(_currNode, descr, stop);
+                    if (stop) return;
+                }
+                
+                
                 static if (is(T : Serializable))
                     _currSerializable = descriptor.get();
                 else
-                   _currSerializable = cast(Serializable) descriptor.get(); 
+                {
+                    auto obj = descriptor.get();
+                    if (obj) _currSerializable = cast(Serializable) obj;
+                }
+                   
+                if (!_currSerializable && _onWantObject)
+                {
+                    _onWantObject(_currNode, _currSerializable);
+                    if (!_currSerializable) return;
+                }   
+                   
+                    
                 _currSerializable.declareProperties(this);
                 _parentNode = oldParentNode;
                 _currSerializable = oldSerializable;
@@ -1356,6 +1398,12 @@ class Serializer
         
         /// ditto
         @property void onWantDescriptor(WantDescriptorEvent value){_onWantDescriptor = value;}
+        
+        /// Event triggered when the serializer needs a particulat property descriptor.
+        @property WantObjectEvent onWantObject(){return _onWantObject;}
+        
+        /// ditto
+        @property void onWantObject(WantObjectEvent value){_onWantObject = value;}        
 //------------------------------------------------------------------------------
     } 
 }
