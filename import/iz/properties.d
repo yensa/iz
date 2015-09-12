@@ -343,7 +343,7 @@ string genPropFromField(T, string propName, string propField)()
 private char[] genStandardPropDescriptors()
 {
     char[] result;
-    foreach(T; FixedSizeTypes)
+    foreach(T; BasicTypes)
         result ~= ("public alias " ~ T.stringof ~ "prop = PropDescriptor!(" ~ 
             T.stringof ~ ")" ~ ";\r\n").dup;
     return result;

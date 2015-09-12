@@ -160,7 +160,7 @@ interface FilePersist8
 string genReadWriteVar()
 {
     string result;
-    foreach(T; FixedSizeTypes)
+    foreach(T; BasicTypes)
     {
         result ~= "alias readVariable!" ~ T.stringof ~ " read" ~
             T.stringof ~ ';' ~ '\r' ~ '\n';

@@ -8,12 +8,19 @@ alias Ptr = void*;
 
 
 /** 
- * FixedSizeTypes represents all the value types.
+ * FixedSizeTypes elements verify isBasicType().
  */
-alias FixedSizeTypes = AliasSeq!( 
+alias BasicTypes = AliasSeq!( 
     bool, byte, ubyte, short, ushort, int, uint, long, ulong, 
-    char, wchar, dchar, float, double
+    float, double, real, 
+    char, wchar, dchar
 );
+
+static unittest
+{
+    foreach(T; BasicTypes)
+        assert( isBasicType!T, T.stringof);     
+}
 
     
 /**
@@ -22,7 +29,7 @@ alias FixedSizeTypes = AliasSeq!(
 bool isFixedSize(T)()
 {
     return (
-        staticIndexOf!(T,FixedSizeTypes) != -1) || 
+        staticIndexOf!(T,BasicTypes) != -1) || 
         (is(T==struct) & (__traits(isPOD, T))
     );
 }
