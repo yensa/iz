@@ -143,7 +143,8 @@ struct PropDescriptor(T)
         this(T* aData, string aName = "")
         in
         {
-            assert(aData);
+            //assert(aData);
+            
         }
         body
         {
@@ -403,8 +404,9 @@ mixin template PropDescriptorCollector(){
         
         if (createIfMissing && !descr) 
         {   
-            descr = new PropDescriptor!T;
-            descr.name = name;
+            //TODO-cPropDescriptor: when the default _ctor is called, the rtti is not initialized.
+            descr = new PropDescriptor!T(null, name);
+            //descr.name = name;
             descriptors ~= descr;
         }
         return descr;

@@ -1034,7 +1034,7 @@ class Serializer
             _serState = SerializationState.none;
         }
         
-        /** 
+        /* 
          * Builds the IST from an Serializable and stores sequentially in a stream.
          * The process starts by a call to .declaraPropties() in the root then
          * the process is lead by the the subsequent declarations.
@@ -1098,6 +1098,65 @@ class Serializer
             //
             _mustWrite = false;
             _stream = null;
+        }
+        
+        /**
+         * Serializes automatically an oject or a struct that has
+         * been mixed with PropDescriptorCollector.
+         * The sub objects and structs have not to be Serializable but must also
+         * implements the PropDescriptorCollector methods. 
+         */
+        void collectorToStream(T)(T root, Stream outputStream, 
+            SerializationFormat format = SerializationFormat.iztxt)
+        if (is(T==class) || is(T == struct))
+        {
+            if (!hasMember!(T, "propCollectorGet"))
+                throw new Exception("PropDescriptorCollector not mixed in root");
+                
+            // TODO-cSerializer: rewrite addProperty to allow serialization using rtti
+            // problems: 
+            // - the root have to be Serializable
+            // - totally impossible to use a struct as root or sub object     
+                
+            _format = format;
+            _stream = outputStream;
+            _storeMode = StoreMode.sequential;
+            _serState = SerializationState.store;
+            _mustWrite = true; 
+            
+            _rootNode.deleteChildren;
+            _previousNode = null;
+            //setRoot(root);
+            _currSerializable = _rootSerializable;
+            _currNode = _rootNode;
+            writeFormat(_format)(_currNode, _stream);
+            //
+            _parentNode = _rootNode;                           
+                
+            import std.stdio;  
+            
+            writeln(root.propCollectorCount);  
+                
+            foreach(immutable i; 0 .. root.propCollectorCount)
+            {
+                alias DescType = PropDescriptor!int; 
+                DescType* descr = cast(DescType*)root.propCollectorGetPtr(i);
+                
+                writeln(descr.rtti.type);
+                
+                with(RuntimeType) switch(descr.rtti.type)
+                {
+                    default: break;
+                    case _byte:
+                        addProperty!byte(cast(PropDescriptor!byte*) descr);
+                        writeln(descr.name);
+                        break;
+                    case _ubyte:
+                        addProperty!ubyte(cast(PropDescriptor!ubyte*) descr);
+                        writeln(descr.name);
+                        break;                        
+                } 
+            }
         }
  
 //------------------------------------------------------------------------------
@@ -1846,6 +1905,30 @@ version(unittest)
         
         assert(errdeser._c == 78);
         assert(cast(char[])errdeser._d == "foobar"); 
+    }
+    //----
+    
+    // testing the RuntimeTypeInfo-based serialization
+    class Collected
+    {
+        mixin PropDescriptorCollector;
+        @SetGet ubyte _a = 12;
+        @SetGet byte _b = 21;
+        this()
+        {
+            propCollectorGetFields;
+        }
+    }
+    
+    unittest
+    {
+        Collected c = construct!Collected;
+        Serializer ser = construct!Serializer;
+        MemoryStream str = construct!MemoryStream;
+        scope(exit) destruct(c, ser, str);  
+        
+        ser.collectorToStream(c, str); 
+        str.saveToFile(r"test.txt");     
     }
     //----
 }
