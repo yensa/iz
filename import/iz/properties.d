@@ -42,6 +42,7 @@ struct PropDescriptor(T)
         PropSetter _setter;
         PropGetter _getter;
         Object fDeclarator;
+        RuntimeTypeInfo _rtti;
 
         T* _setPtr;
         T* _getPtr;
@@ -102,6 +103,7 @@ struct PropDescriptor(T)
         }
         body
         {
+            _rtti = runtimeTypeInfo!T;
             define(aSetter, aGetter, aName);
         }
         
@@ -116,6 +118,7 @@ struct PropDescriptor(T)
         }
         body
         {
+            _rtti = runtimeTypeInfo!T;
             define(cast(PropSetter)aSetter, aGetter,aName);
         }
         
@@ -130,6 +133,7 @@ struct PropDescriptor(T)
         }
         body
         {
+            _rtti = runtimeTypeInfo!T;
             define(aSetter, aSourceData, aName);
         }
         
@@ -143,6 +147,7 @@ struct PropDescriptor(T)
         }
         body
         {
+            _rtti = runtimeTypeInfo!T;
             define(aData, aName);
         }
 // ---- 
@@ -269,6 +274,10 @@ struct PropDescriptor(T)
         }
         /// ditto
         @property Object declarator(){return fDeclarator;}
+        /**
+         * Returns the RuntimeTypeInfo struct for the property type.
+         */
+         @property const(RuntimeTypeInfo) rtti(){return _rtti;}
 // ----        
     
     }   
@@ -412,6 +421,15 @@ mixin template PropDescriptorCollector(){
     }
     
     /**
+     * Returns a pointer an indexed descriptor.
+     * index must be with the 0 .. propCollectorCount range.
+     */
+    protected final void * propCollectorGetPtr(size_t index)
+    {
+        return descriptors[index];
+    }    
+    
+    /**
      * Performs all the possible analysis.
      */
     protected final void propCollectorAll()
@@ -448,8 +466,8 @@ mixin template PropDescriptorCollector(){
     }
     
     /**
-     * Creates the property descriptors for the setter/getter pairs annotated with 
-     * @Set/@Get. To be detected the methods must still be virtual (not final).
+     * Creates the property descriptors for the setter/getter pairs 
+     * annotated with @Set/@Get.
      * In a class hierarchy, an overriden accessor replaces the ancestor's one. 
      */
     protected final void propCollectorGetPairs()
