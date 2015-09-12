@@ -42,7 +42,7 @@ struct PropDescriptor(T)
         PropSetter _setter;
         PropGetter _getter;
         Object fDeclarator;
-        RuntimeTypeInfo _rtti;
+        static RuntimeTypeInfo _rtti;
 
         T* _setPtr;
         T* _getPtr;
@@ -91,6 +91,11 @@ struct PropDescriptor(T)
         /// version number that can be used in case of breaking change.
         static immutable ubyte descriptorFormat = 0;
         
+        static this()
+        {
+            _rtti = runtimeTypeInfo!T;    
+        }
+        
 // constructors ---------------------------------------------------------------+
         /**
          * Constructs a property descriptor from an PropSetter and an PropGetter method.
@@ -103,7 +108,6 @@ struct PropDescriptor(T)
         }
         body
         {
-            _rtti = runtimeTypeInfo!T;
             define(aSetter, aGetter, aName);
         }
         
@@ -118,7 +122,6 @@ struct PropDescriptor(T)
         }
         body
         {
-            _rtti = runtimeTypeInfo!T;
             define(cast(PropSetter)aSetter, aGetter,aName);
         }
         
@@ -133,7 +136,6 @@ struct PropDescriptor(T)
         }
         body
         {
-            _rtti = runtimeTypeInfo!T;
             define(aSetter, aSourceData, aName);
         }
         
@@ -143,12 +145,10 @@ struct PropDescriptor(T)
         this(T* aData, string aName = "")
         in
         {
-            //assert(aData);
-            
+            assert(aData); 
         }
         body
         {
-            _rtti = runtimeTypeInfo!T;
             define(aData, aName);
         }
 // ---- 
@@ -278,7 +278,7 @@ struct PropDescriptor(T)
         /**
          * Returns the RuntimeTypeInfo struct for the property type.
          */
-         @property const(RuntimeTypeInfo) rtti(){return _rtti;}
+         @property static const(RuntimeTypeInfo) rtti(){return _rtti;}
 // ----        
     
     }   
@@ -405,8 +405,8 @@ mixin template PropDescriptorCollector(){
         if (createIfMissing && !descr) 
         {   
             //TODO-cPropDescriptor: when the default _ctor is called, the rtti is not initialized.
-            descr = new PropDescriptor!T(null, name);
-            //descr.name = name;
+            descr = new PropDescriptor!T;
+            descr.name = name;
             descriptors ~= descr;
         }
         return descr;
