@@ -78,13 +78,15 @@ version (Windows)
 version (Posix) 
 {
     import core.sys.posix.fcntl, core.sys.posix.unistd;
+    import std.conv: octal;
+    import core.sys.posix.stdio;
 
     public alias StreamHandle = int;
 
     // Stream seek modes, used as platform-specific constants in SeekMode.
-    private immutable int skBeg = SEEK_SET;
-    private immutable int skCur = SEEK_CUR;
-    private immutable int skEnd = SEEK_END;
+    private immutable int skBeg = 0;//SEEK_SET;
+    private immutable int skCur = 1;//SEEK_CUR;
+    private immutable int skEnd = 2;//SEEK_END;
 
     /// share modes. (does not allow execution)
     immutable int shNone = octal!600;
