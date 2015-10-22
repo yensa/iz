@@ -9,7 +9,7 @@ import std.range, std.traits, std.algorithm.searching;
 struct CharRange
 {
     import std.conv: to;
-    private dchar _min, _max;
+    private immutable dchar _min, _max;
     
     /**
      * Constructs the char range using a string that contains
@@ -65,7 +65,7 @@ struct CharRange
      * Params:
      * c = A character or any value convertible to a dchar.
      */
-    bool opIn_r(C)(C c) pure nothrow @safe @nogc 
+    const bool opIn_r(C)(C c) pure nothrow @safe @nogc 
     {
         static if (isSomeChar!C || isImplicitlyConvertible!(C, dchar))
         {
@@ -112,18 +112,24 @@ pure @safe unittest
     assert(71 !in cs3);  
 }
 
-// test if CS issupported in the several scanning utils
-private bool isCharRange(CS)()
+static immutable CharRange decimalChars = CharRange('0', '9');
+static immutable CharRange hexLowerChars = CharRange('a', 'f');
+static immutable CharRange hexUpperChars = CharRange('A', 'F');
+
+// Generic Scanning functions -------------------------------------------------+
+
+// test if T issupported in the several scanning utils
+// T must either support the 'in' operator or algorithm.searching.canFind
+private bool isCharRange(T)()
 {
-    static if (is(CS == char[])) return true;
-    else static if (is(CS == char[])) return true;
-    else static if (is(CS == wchar[])) return true;
-    else static if (is(CS == dchar[])) return true;
-    else static if (is(CS == string)) return true;
-    else static if (is(CS == wstring)) return true;
-    else static if (is(CS == dstring)) return true;  
-    else static if (is(CS == CharRange)) return true;   
-    else return false;
+    static if (isArray!T && isSomeChar!(ElementType!T))
+        return true;
+    else static if (is(Unqual!T == CharRange)) 
+        return true;
+    else static if (isAssociativeArray!T && isSomeChar!(KeyType!T)) 
+        return true;   
+    else 
+        return false;
 }
 
 /**
@@ -144,7 +150,7 @@ if (isInputRange!Range && isSomeChar!(ElementType!Range) && isCharRange!CR)
     CharType[] result;
     CharType current; 
                
-    static if (is(CR == CharRange))
+    static if (is(Unqual!CR == CharRange) || isAssociativeArray!CR)
     {
         while (true)
         {
@@ -208,9 +214,12 @@ unittest
     auto cs1 = "azertyuiopqsdfghjklmwxcvbn";
     auto cs2 = " \r\n\t";
     auto cs3 = CharRange('a','z');
+    bool[dchar] cs4 = ['\r':true, '\n': true, '\t':true, ' ':true ];
     auto src1 = "az er
     ty";
     auto src2 = "az er
+    ty";
+    auto src3 = "az er
     ty";
     
     auto w1 = nextWord(src1, cs1); 
@@ -225,13 +234,13 @@ unittest
     
     auto w11 = nextWord(src2, cs3); 
     assert(w11 == "az");
-    nextWord(src2, cs2);
+    nextWord(src2, cs4);
     auto w22 = nextWord(src2, cs3); 
     assert(w22 == "er");
-    nextWord(src2, cs2);
+    nextWord(src2, cs4);
     auto w33 = nextWord(src2, cs3); 
     assert(w33 == "ty");
-    nextWord(src2, cs2);          
+    nextWord(src2, cs4);          
 }
 
 /**
@@ -270,7 +279,7 @@ unittest
 void skipWord(Range, CR, bool until = false)(ref Range range, CR charRange)
 if (isInputRange!Range && isSomeChar!(ElementType!Range) && isCharRange!CR)
 {         
-    static if (is(CR == CharRange))
+    static if (is(CR == CharRange) || isAssociativeArray!CR)
     {
         while (true)
         {
@@ -339,6 +348,9 @@ unittest
     assert(src == "\r");
 }
 
+//------------------------------------------------------------------------------
+// Text scanning utilities ----------------------------------------------------+
+
 auto nextLine(bool keepTerminator = false, Range)(ref Range range)
 {
     auto result = nextWordUntil(range, "\r\n");
@@ -357,4 +369,43 @@ unittest
     assert(nextLine!false(text) == "1");
     assert(nextLine!false(text) == "");   
 }
+
+auto nextDecNumber(Range)(ref Range range)
+{
+    return range.nextWord(decimalChars);
+}
+
+unittest
+{
+    auto text = "0123456 789";
+    assert(text.nextDecNumber == "0123456");
+    text.popFront;
+    assert(text.nextDecNumber == "789");   
+}
+
+auto nextHexNumber(Range)(ref Range range)
+{
+    dstring result;
+    size_t len;
+    while (true)
+    {
+        len = result.length;
+        result ~= range.nextWord(decimalChars);
+        result ~= range.nextWord(hexLowerChars);
+        result ~= range.nextWord(hexUpperChars);
+        if (result.length == len) break;            
+    }
+    return result;
+}
+
+unittest
+{
+    auto text1 = "1a2B3C o";
+    auto text2 = "A897F2f2Ff2fF3c6C9c9Cc9cC9c123 o";
+    assert(text1.nextHexNumber == "1a2B3C");
+    assert(text1 == " o");
+    assert(text2.nextHexNumber == "A897F2f2Ff2fF3c6C9c9Cc9cC9c123");
+    assert(text2 == " o");   
+}
+//------------------------------------------------------------------------------
 
