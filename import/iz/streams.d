@@ -1337,11 +1337,13 @@ version(unittest)
 
 unittest
 {
+    import std.conv;
     uint a;
+    int[2] b = [1,2];
     auto s1 = new MemoryStream(a);
     assert(s1.size == a.sizeof);
-    auto s2 = new MemoryStream([1,2]);
-    assert(s2.size == [1,2].sizeof);
+    auto s2 = new MemoryStream(b);
+    assert(s2.size == b.sizeof);
     auto s3 = new MemoryStream(iota(0,2));
     auto s4 = new MemoryStream(s3);
 }
