@@ -122,7 +122,7 @@ if(is(ST==struct) || is(ST==union))
  * T = a class type or a struct pointer type, likely to be infered by the *instance* parameter
  * instance = an instance of type *T*.
  */
-static void destruct(T)(ref T instance) 
+void destruct(T)(ref T instance) 
 if (is(T == class) || (isPointer!T && is(PointerTarget!T == struct))
     || (isPointer!T && is(PointerTarget!T == union)))
 {
@@ -138,7 +138,7 @@ if (is(T == class) || (isPointer!T && is(PointerTarget!T == struct))
  * T = the type of the pointer to return.
  * preFill = optional boolean indicating if the result has to be initialized.
  */
-@trusted @nogc static T * newPtr(T, bool preFill = false)() if (isBasicType!T)
+@trusted @nogc T * newPtr(T, bool preFill = false)() if (isBasicType!T)
 {
     static if(!preFill)
         return cast(T*) getMem(T.sizeof);
