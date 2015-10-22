@@ -69,5 +69,5 @@ object _1: TCENativeProject
     'import/iz/types.d'
     'import/iz/strings.d'
   )
-  ConfigurationIndex = 2
+  ConfigurationIndex = 0
 end
