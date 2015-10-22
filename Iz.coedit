@@ -9,7 +9,7 @@ object _1: TCENativeProject
       outputOptions.boundsCheck = onAlways
       outputOptions.optimizations = True
       outputOptions.release = True
-      pathsOptions.outputFilename = 'lib\iz'
+      pathsOptions.outputFilename = 'lib/iz'
     end  
     item
       name = 'debug'
@@ -19,7 +19,7 @@ object _1: TCENativeProject
       messagesOptions.additionalWarnings = True
       outputOptions.binaryKind = staticlib
       outputOptions.boundsCheck = onAlways
-      pathsOptions.outputFilename = 'lib\iz'
+      pathsOptions.outputFilename = 'lib/iz'
     end  
     item
       name = 'unittest'
@@ -31,7 +31,7 @@ object _1: TCENativeProject
       outputOptions.versionIdentifiers.Strings = (
         'coeditmessages'
       )
-      pathsOptions.outputFilename = 'temp\iztests'
+      pathsOptions.outputFilename = 'temp/iztests'
       runOptions.options = [poUsePipes, poStderrToOutPut]
       runOptions.showWindow = swoHIDE
     end  
@@ -44,7 +44,7 @@ object _1: TCENativeProject
       outputOptions.targetKind = os64bit
       outputOptions.binaryKind = staticlib
       outputOptions.boundsCheck = onAlways
-      pathsOptions.outputFilename = 'lib\iz'
+      pathsOptions.outputFilename = 'lib/iz'
     end  
     item
       name = 'quick'
@@ -52,21 +52,22 @@ object _1: TCENativeProject
       outputOptions.binaryKind = staticlib
       outputOptions.boundsCheck = onAlways
       outputOptions.release = True
-      pathsOptions.outputFilename = 'lib\iz'
+      pathsOptions.outputFilename = 'lib/iz'
     end>
   Sources.Strings = (
-    'import\iz\classes.d'
-    'import\iz\containers.d'
-    'import\iz\enumset.d'
-    'import\iz\logicver.d'
-    'import\iz\memory.d'
-    'import\iz\observer.d'
-    'import\iz\properties.d'
-    'import\iz\referencable.d'
-    'import\iz\serializer.d'
-    'import\iz\streams.d'
-    'import\iz\sugar.d'
-    'import\iz\types.d'
+    'import/iz/classes.d'
+    'import/iz/containers.d'
+    'import/iz/enumset.d'
+    'import/iz/logicver.d'
+    'import/iz/memory.d'
+    'import/iz/observer.d'
+    'import/iz/properties.d'
+    'import/iz/referencable.d'
+    'import/iz/serializer.d'
+    'import/iz/streams.d'
+    'import/iz/sugar.d'
+    'import/iz/types.d'
+    'import/iz/strings.d'
   )
-  ConfigurationIndex = 0
+  ConfigurationIndex = 2
 end
