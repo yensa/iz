@@ -503,6 +503,55 @@ unittest
 }
 
 /**
+ * Returns an input range consisting of each line in the input argument
+ */
+auto byLine(Range)(ref Range range)
+if (isInputRange!Range && isSomeChar!(ElementType!Range))
+{ 
+    alias CharType = Unqual!(ElementEncodingType!Range);
+
+    struct ByLine
+    {
+        private Range _range;
+        private CharType[] _front;
+        
+        this(Range range)
+        {
+            _range = range;
+            popFront;
+        }
+        
+        void popFront()
+        {
+            _front = nextLine(_range); 
+        }
+        
+        auto front()
+        {
+            return _front;
+        }
+        
+        @property bool empty()
+        {
+            return _front.length == 0;
+        }
+    }
+    return ByLine(range);
+}
+
+unittest
+{
+    auto text = "aw\r\nyess";
+    auto range = text.byLine;
+    assert(range.front == "aw");
+    range.popFront;
+    assert(range.front == "yess");
+    auto nums = "0\n1\n2\n3\n4\n5\n6\n7\n8\n9";
+    import std.algorithm.iteration: reduce;
+    assert(nums.byLine.reduce!((a,b) => a ~ b) == "0123456789");
+}
+
+/**
  * Returns the next word within range. White characters are always removed
  */
 auto nextWord(Range)(ref Range range)
@@ -520,6 +569,57 @@ unittest
 }
 
 /**
+ * Returns an input range consisting of each word in the input argument
+ */
+auto byWord(Range)(ref Range range)
+if (isInputRange!Range && isSomeChar!(ElementType!Range))
+{ 
+    alias CharType = Unqual!(ElementEncodingType!Range);
+
+    struct ByWord
+    {
+        private Range _range;
+        private CharType[] _front;
+        
+        this(Range range)
+        {
+            _range = range;
+            popFront;
+        }
+        
+        void popFront()
+        {
+            _front = nextWord(_range); 
+        }
+        
+        auto front()
+        {
+            return _front;
+        }
+        
+        @property bool empty()
+        {
+            return _front.length == 0;
+        }
+    }
+    return ByWord(range);
+}
+
+unittest
+{
+    auto text = "aw yess, this is so cool";
+    auto range = text.byWord;
+    assert(range.front == "aw");
+    range.popFront;
+    assert(range.front == "yess,");
+    range.popFront;
+    assert(range.front == "this");
+    auto nums = "0 1 2 3 4 5 6 7 8 9";
+    import std.algorithm.iteration: reduce;
+    assert(nums.byWord.reduce!((a,b) => a ~ b) == "0123456789");
+}
+
+/**
  * Tries to read a decimal number in range.
  */
 auto readDecNumber(Range)(ref Range range)
@@ -532,7 +632,11 @@ unittest
     auto text = "0123456 789";
     assert(text.readDecNumber == "0123456");
     text.popFront;
-    assert(text.readDecNumber == "789");   
+    assert(text.readDecNumber == "789");  
+    
+    string t = "456";
+    if (auto num = readDecNumber(t))
+        assert (num == "456");
 }
 
 /**
