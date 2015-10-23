@@ -4,7 +4,7 @@ import std.traits;
 import std.typetuple;
 
 /// void version of the init() type function.
-@trusted void reset(T)(ref T t)
+@trusted void reset(T)(ref T t) 
 {
     t = T.init;
 }
@@ -92,5 +92,85 @@ unittest
 auto bruteCast(OT, IT)(auto ref IT it) @nogc nothrow pure
 {
     return * cast(OT*) &it;
+}
+
+/**
+ * Alternative to std.range primitives for arrays.
+ * The source is never consumed.
+ */
+struct ArrayRange(T)
+{
+    private T* _front, _back;
+
+    ///
+    this(ref T[] stuff) 
+    {
+        _front = stuff.ptr; 
+        _back = _front + stuff.length;
+    } 
+    
+    ///
+    this(ref typeof(this) rng)
+    {
+        _front = rng._front; 
+        _back = rng._back;        
+    }
+    
+    ///
+    @property bool empty()
+    {
+        return _front >= _back;
+    }  
+    
+    ///
+    T front()
+    {
+        return *_front;
+    }  
+    
+    ///
+    T back()
+    {
+        return *_back;
+    }    
+    
+    ///
+    void popFront()
+    { 
+        ++_front;
+    }
+    
+    ///
+    void popBack()
+    {
+        --_back;
+    }
+    
+    /// returns a slice of th source, according to front and back.
+    T[] array()
+    {
+        return _front[0 .. _back - _front];
+    }
+    
+    ///
+    typeof(this) save() 
+    {
+        auto r = this.array.dup;
+        return typeof(this)(r); 
+    }  
+}
+
+unittest
+{
+    auto arr = "bla".dup;
+    auto rng = ArrayRange!char(arr);
+    assert(rng.front == 'b');
+    rng.popFront;
+    assert(rng.front == 'l');
+    rng.popFront;
+    assert(rng.front == 'a');
+    rng.popFront;
+    assert(rng.empty);   
+    assert(arr == "bla");     
 }
 
