@@ -240,8 +240,8 @@ immutable CharMap whiteChars = CharMap['\t'..'\r', ' '];
 // -----------------------------------------------------------------------------
 // Generic Scanning functions -------------------------------------------------+
 
-// test if T issupported in the several scanning utils
-// T must either support the 'in' operator or algorithm.searching.canFind
+// test if T is supported in the several scanning utils
+// T must either supports the 'in' operator or 'algorithm.searching.canFind'
 private bool isCharRange(T)()
 {
     static if (isInputRange!T && isSomeChar!(ElementType!T))
@@ -482,6 +482,7 @@ unittest
  */
 auto nextLine(bool keepTerminator = false, Range)(ref Range range)
 {
+    //TODO-cbugfix: contiguous empty lines count as 1
     auto result = nextWordUntil(range, "\r\n");
     static if (!keepTerminator) skipWord(range, "\r\n");
     return result; 
@@ -546,6 +547,25 @@ unittest
     auto nums = "0\n1\n2\n3\n4\n5\n6\n7\n8\n9";
     import std.algorithm.iteration: reduce;
     assert(nums.byLine.reduce!((a,b) => a ~ b) == "0123456789");
+}
+
+/**
+ * Returns the count of lines within the input range.
+ * The input range is not consumed.
+ */
+size_t lineCount(Range)(Range range)
+{
+    return range.byLine.array.length;    
+}
+
+unittest
+{
+    auto text1= "";
+    assert(text1.lineCount == 0);
+    auto text2 = "\n\r\n";
+    assert(text2.lineCount == 0);
+    auto text3 = "0\n1\n2\n3\n4\n5\n6\n7\n8\n9";
+    assert(text3.lineCount == 10);
 }
 
 /**
@@ -699,7 +719,7 @@ if (isInputRange!Range && isSomeChar!(ElementType!Range))
 
 unittest
 {
-    auto text = "name = Douglas \n age = 27 \n";
+    auto text = "name = Douglas \n age =27 \n";
     auto range = text.bySeparated(CharMap['=', '\n']);
     assert(range.front == "name");
     range.popFront;
