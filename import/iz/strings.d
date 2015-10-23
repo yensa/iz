@@ -127,16 +127,13 @@ struct CharMap
 {
     import iz.memory;
     private bool[] _map;
-    private dchar _min, _max = 1;
+    private dchar _min, _max;
     
     private void setMinMax(dchar value) nothrow 
     {
-        if (value < _min) _min = value;
-        else if (value > _max)
-        {
-            _max = value;
-            _map.length = _max + 1;
-        }   
+        if (value <= _min) _min = value;
+        else if (value >= _max) _max = value;
+        _map.length = _max + 1 - _min; 
     }
 
     /**
@@ -189,8 +186,7 @@ struct CharMap
                 result._map[elem - result._min] = true;   
             else static if (is(T == CharRange))
             {
-                CharRange cr = cast(CharRange) elem;
-                foreach(size_t i; cr._min - result._min .. cr._max - result._min + 1)
+                foreach(size_t i; elem._min - result._min .. elem._max - result._min + 1)
                     result._map[i] = true;          
             } 
         }        
@@ -332,7 +328,7 @@ if (isInputRange!Range && isSomeChar!(ElementType!Range) && isCharRange!CR)
             }
         }  
     }
-    else static assert(0, "unsupported charRange argument in nextWord()");
+    else static assert(0, "unsupported charRange argument type in nextWord(): " ~ CR.stringof);
     
     return result;    
 }
@@ -379,7 +375,7 @@ unittest
  * charRange = Defines the opposite of the valid characters to make a word. 
  *
  * Return:
- * A dstring containing the word. If the result length is null then the
+ * A string containing the word. If the result length is null then the
  * range parameter has not been consumed.
  */
 auto nextWordUntil(Range, CR)(ref Range range, CR charRange)
@@ -446,7 +442,7 @@ if (isInputRange!Range && isSomeChar!(ElementType!Range) && isCharRange!CR)
             }
         }  
     }
-    else static assert(0, "unsupported charRange argument in skipWord()");
+    else static assert(0, "unsupported charRange argument type in skipWord(): " ~ CR.stringof);
 }
 
 unittest
@@ -514,23 +510,23 @@ if (isInputRange!Range && isSomeChar!(ElementType!Range))
     {
         private Range _range;
         private CharType[] _front;
-        
+        ///
         this(Range range)
         {
             _range = range;
             popFront;
         }
-        
+        ///
         void popFront()
         {
             _front = nextLine(_range); 
         }
-        
+        ///
         auto front()
         {
             return _front;
         }
-        
+        ///
         @property bool empty()
         {
             return _front.length == 0;
@@ -580,23 +576,23 @@ if (isInputRange!Range && isSomeChar!(ElementType!Range))
     {
         private Range _range;
         private CharType[] _front;
-        
+        ///
         this(Range range)
         {
             _range = range;
             popFront;
         }
-        
+        ///
         void popFront()
         {
             _front = nextWord(_range); 
         }
-        
+        ///
         auto front()
         {
             return _front;
         }
-        
+        ///
         @property bool empty()
         {
             return _front.length == 0;
@@ -617,6 +613,84 @@ unittest
     auto nums = "0 1 2 3 4 5 6 7 8 9";
     import std.algorithm.iteration: reduce;
     assert(nums.byWord.reduce!((a,b) => a ~ b) == "0123456789");
+}
+
+/**
+ * Returns the next separated word.
+ * Separators are always removed, white characters optionally.
+ */
+auto nextSeparated(Range, Separators, bool strip = true)(ref Range range, Separators sep)
+{
+    auto result = nextWordUntil(range, sep);
+    if (!range.empty) range.popFront;
+    static if (strip)
+    {
+        skipWord(result, whiteChars);
+        result = nextWordUntil(result, whiteChars);
+    }
+    return result;   
+}
+
+unittest
+{
+    import std.stdio;
+    auto seps = CharMap[',', '\n'];
+    auto text = "name, age \n Douglas, 27 \n Sophia 26";
+    assert(text.nextSeparated(seps) == "name");
+    assert(text.nextSeparated(seps) == "age");
+    assert(text.nextSeparated(seps) == "Douglas");
+    assert(text.nextSeparated(seps) == "27");
+}
+
+/**
+ * Returns an input range consisting of each separated word in the input argument
+ */
+auto bySeparated(Range, Separators, bool strip = true)(ref Range range, Separators sep)    
+if (isInputRange!Range && isSomeChar!(ElementType!Range))
+{ 
+    alias CharType = Unqual!(ElementEncodingType!Range);
+
+    struct BySep
+    {
+        private Range _range;
+        private CharType[] _front;
+        ///
+        this(Range range)
+        {
+            _range = range;
+            popFront;
+        }
+        ///
+        void popFront()
+        {
+            _front = nextSeparated!(Range, Separators, strip)(_range, sep); 
+        }
+        ///
+        auto front()
+        {
+            return _front;
+        }
+        ///
+        @property bool empty()
+        {
+            return _front.length == 0;
+        }
+    }
+    return BySep(range);        
+}
+
+unittest
+{
+    auto text = "name = Douglas \n age = 27 \n";
+    auto range = text.bySeparated(CharMap['=', '\n']);
+    assert(range.front == "name");
+    range.popFront;
+    assert(range.front == "Douglas");
+    range.popFront;
+    assert(range.front == "age");
+    range.popFront;
+    assert(range.front == "27");
+    range.popFront;
 }
 
 /**
@@ -667,7 +741,7 @@ void stripLeftWhites(Range)(ref Range range)
 
 unittest
 {
-    auto text = "  \n\r bla";
+    auto text = "  \n\r\v bla";
     text.stripLeftWhites;
     assert(text == "bla");   
 }
