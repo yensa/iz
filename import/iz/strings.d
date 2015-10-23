@@ -1,6 +1,7 @@
 module iz.strings;
 
 import std.range, std.traits, std.algorithm.searching;
+import iz.sugar;
 
 // Character-related-structs --------------------------------------------------+
 
@@ -614,6 +615,23 @@ unittest
     import std.algorithm.iteration: reduce;
     assert(nums.byWord.reduce!((a,b) => a ~ b) == "0123456789");
 }
+
+/**
+ * Returns the count of words within the input range.
+ * Words are separatedd bu ascii whites. input range is not consumed.
+ */
+size_t wordCount(Range)(Range range)
+{
+    return range.byWord.array.length;    
+}
+
+unittest
+{
+    auto text = "1 2 3 4 5 6 7 8 9 \n 10";
+    assert(text.wordCount == 10);
+    assert(text == "1 2 3 4 5 6 7 8 9 \n 10");
+}
+
 
 /**
  * Returns the next separated word.
