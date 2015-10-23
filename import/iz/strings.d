@@ -213,7 +213,7 @@ struct CharMap
 
 unittest
 {
-    CharMap cm = CharMap['a'..'f', '0'..'9' , 'A'..'F', '_'];
+    CharMap cm = CharMap['a'..'f', '0'..'9' , 'A'..'F', '_', 9];
     assert('a' in cm);
     assert('b' in cm);
     assert('c' in cm);
@@ -232,7 +232,8 @@ unittest
     assert('4' in cm);
     assert('9' in cm);
     assert('_' in cm);
-    assert('%' !in cm);    
+    assert('%' !in cm);
+    assert('\t' in cm);      
 }
 
 immutable CharMap hexChars = CharMap['a'..'f', 'A'..'F', '0'..'9'];
@@ -241,8 +242,9 @@ immutable CharMap whiteChars = CharMap['\t'..'\r', ' '];
 // Generic Scanning functions -------------------------------------------------+
 
 // test if T is supported in the several scanning utils
-// T must either supports the 'in' operator or 'algorithm.searching.canFind'
-private bool isCharRange(T)()
+// T must either supports the 'in' operator, supports 'algorithm.searching.canFind'
+// or be a 'bool(dchar)' callable.
+private bool isCharTester(T)()
 {
     static if (isInputRange!T && isSomeChar!(ElementType!T))
         return true;
@@ -251,7 +253,11 @@ private bool isCharRange(T)()
     else static if (is(Unqual!T == CharMap)) 
         return true;    
     else static if (isAssociativeArray!T && isSomeChar!(KeyType!T)) 
-        return true;   
+        return true; 
+    else static if (isSomeFunction!T && is(ReturnType!T == bool) && 
+        (ParameterTypeTuple!T).length == 1 && 
+            isImplicitlyConvertible!((ParameterTypeTuple!T)[0], dchar))
+                return true;
     else 
         return false;
 }
@@ -261,21 +267,21 @@ private bool isCharRange(T)()
  *
  * Params: 
  * range = A character input range. The range is consumed for each word.
- * charRange = Defines the valid characters to make a word.
+ * charTester = Defines the valid characters to make a word.
  *
  * Return:
  * A dstring containing the word. If the result length is null then the
  * range parameter has not been consumed.
  */
-auto nextWord(Range, CR, bool until = false)(ref Range range, CR charRange)
-if (isInputRange!Range && isSomeChar!(ElementType!Range) && isCharRange!CR)
+auto nextWord(Range, T, bool until = false)(ref Range range, T charTester)
+if (isInputRange!Range && isSomeChar!(ElementType!Range) && isCharTester!T)
 {
     alias CharType = Unqual!(ElementEncodingType!Range);
-    alias UCR = Unqual!CR; 
+    alias UT = Unqual!T; 
     CharType[] result;
     CharType current; 
                
-    static if (is(UCR == CharRange) || is(UCR == CharMap) || isAssociativeArray!CR)
+    static if (is(UT == CharRange) || is(UT == CharMap) || isAssociativeArray!T)
     {
         while (true)
         {
@@ -284,7 +290,7 @@ if (isInputRange!Range && isSomeChar!(ElementType!Range) && isCharRange!CR)
             
             static if (until)
             {
-                if (current !in charRange)
+                if (current !in charTester)
                 {
                     result ~= current;
                     range.popFront;
@@ -293,7 +299,7 @@ if (isInputRange!Range && isSomeChar!(ElementType!Range) && isCharRange!CR)
             }
             else
             {                
-                if (current in charRange)
+                if (current in charTester)
                 {
                     result ~= current;
                     range.popFront;
@@ -302,7 +308,7 @@ if (isInputRange!Range && isSomeChar!(ElementType!Range) && isCharRange!CR)
             }            
         }
     }
-    else static if (isInputRange!CR)
+    else static if (isInputRange!T)
     {
         while (true)
         {
@@ -311,7 +317,7 @@ if (isInputRange!Range && isSomeChar!(ElementType!Range) && isCharRange!CR)
             
             static if (until)
             {
-                if (!canFind(charRange, current))
+                if (!canFind(charTester, current))
                 {
                     result ~= current;
                     range.popFront;
@@ -320,7 +326,7 @@ if (isInputRange!Range && isSomeChar!(ElementType!Range) && isCharRange!CR)
             }
             else
             {                        
-                if (canFind(charRange, current))
+                if (canFind(charTester, current))
                 {
                     result ~= current;
                     range.popFront;
@@ -329,7 +335,34 @@ if (isInputRange!Range && isSomeChar!(ElementType!Range) && isCharRange!CR)
             }
         }  
     }
-    else static assert(0, "unsupported charRange argument type in nextWord(): " ~ CR.stringof);
+    else static if (isSomeFunction!UT)
+    {
+        while (true)
+        {
+            if (range.empty) break;
+            current = cast(CharType) range.front;
+            
+            static if (until)
+            {
+                if (!charTester(current))
+                {
+                    result ~= current;
+                    range.popFront;
+                }
+                else break;            
+            }
+            else
+            {                        
+                if (charTester(current))
+                {
+                    result ~= current;
+                    range.popFront;
+                }
+                else break;
+            }
+        }    
+    }
+    else static assert(0, "unsupported charTester argument type in nextWord(): " ~ T.stringof);
     
     return result;    
 }
@@ -363,9 +396,9 @@ unittest
     auto w22 = nextWord(src2, cs3); 
     assert(w22 == "er");
     nextWord(src2, cs4);
-    auto w33 = nextWord(src2, cs3); 
-    assert(w33 == "ty");
-    nextWord(src2, cs4);          
+    import std.ascii: isAlpha;
+    auto w33 = nextWord(src2, &isAlpha); 
+    assert(w33 == "ty");             
 }
 
 /**
@@ -373,15 +406,15 @@ unittest
  *
  * Params: 
  * range = A character input range. The range is consumed for each word.
- * charRange = Defines the opposite of the valid characters to make a word. 
+ * charTester = Defines the opposite of the valid characters to make a word. 
  *
  * Return:
  * A string containing the word. If the result length is null then the
  * range parameter has not been consumed.
  */
-auto nextWordUntil(Range, CR)(ref Range range, CR charRange)
+auto nextWordUntil(Range, T)(ref Range range, T charTester)
 {
-    return nextWord!(Range, CR, true)(range, charRange);
+    return nextWord!(Range, T, true)(range, charTester);
 }
 
 unittest
@@ -399,59 +432,82 @@ unittest
  *
  * Params:
  * range = A character input range. The range is consumed for each word.
- * charRange = Defines the valid characters to make a word.
+ * charTester = Defines the valid characters to make a word.
  */
-void skipWord(Range, CR, bool until = false)(ref Range range, CR charRange)
-if (isInputRange!Range && isSomeChar!(ElementType!Range) && isCharRange!CR)
+void skipWord(Range, T, bool until = false)(ref Range range, T charTester)
+if (isInputRange!Range && isSomeChar!(ElementType!Range) && isCharTester!T)
 {         
-    alias UCR = Unqual!CR;
-    static if (is(UCR == CharRange) || is(UCR == CharMap) || isAssociativeArray!CR)
+    alias UT = Unqual!T;
+    static if (is(UT == CharRange) || is(UT == CharMap) || isAssociativeArray!T)
     {
         while (true)
         {
             if (range.empty) break;
             static if (until)
             {
-                if (range.front !in charRange)
+                if (range.front !in charTester)
                     range.popFront;
                 else break;
             }     
             else
             {
-                if (range.front in charRange)
+                if (range.front in charTester)
                     range.popFront;
                 else break;            
             }       
         }
     }
-    else static if (isInputRange!CR)
+    else static if (isInputRange!T)
     {
         while (true)
         {
             if (range.empty) break;
             static if (until)
             {
-                if (!canFind(charRange, range.front))
+                if (!canFind(charTester, range.front))
                     range.popFront;
                 else break;            
             }
             else
             {
-                if (canFind(charRange, range.front))
+                if (canFind(charTester, range.front))
                     range.popFront;
                 else break;
             }
         }  
     }
-    else static assert(0, "unsupported charRange argument type in skipWord(): " ~ CR.stringof);
+    else static if (isSomeFunction!UT)
+    {
+        while (true)
+        {
+            if (range.empty) break;
+            static if (until)
+            {
+                if (!charTester(range.front))
+                    range.popFront;
+                else break;            
+            }
+            else
+            {                        
+                if (charTester(range.front))
+                    range.popFront;
+                else break;
+            }
+        }    
+    }    
+    else static assert(0, "unsupported charTester argument type in skipWord(): " ~ T.stringof);
 }
 
 unittest
 {
-    auto src = "\t\t\r\ndd";
-    auto skp = CharRange("\r\n\t");
-    skipWord(src, skp);
-    assert(src == "dd");
+    auto src1 = "\t\t\r\ndd";
+    auto skp1 = CharRange("\r\n\t");
+    skipWord(src1, skp1);
+    assert(src1 == "dd");
+    import std.ascii: isWhite;
+    auto src2 = "\t\t\r\nee";
+    skipWord(src2, &isWhite);
+    assert(src2 == "ee");    
 }
 
 /**
@@ -459,11 +515,11 @@ unittest
  *
  * Params:
  * range = A character input range. The range is consumed for each word.
- * charRange = Defines the opposite of the valid characters to make a word.
+ * charTester = Defines the opposite of the valid characters to make a word.
  */
-auto skipWordUntil(Range, CR)(ref Range range, CR charRange)
+auto skipWordUntil(Range, T)(ref Range range, T charTester)
 {
-    return skipWord!(Range, CR, true)(range, charRange);
+    return skipWord!(Range, T, true)(range, charTester);
 }
 
 unittest
@@ -477,6 +533,33 @@ unittest
 //------------------------------------------------------------------------------
 // Text scanning utilities ----------------------------------------------------+
 
+
+auto nextTerminator(Range)(ref Range range)
+if (isInputRange!Range && isSomeChar!(ElementType!Range))
+{
+    alias CharType = Unqual!(ElementEncodingType!Range);
+    CharType[] result;
+    if (!range.empty)
+    {
+        if (range.front == '\r')
+        {
+            result ~= range.front;
+            range.popFront;
+            if (range.front == '\n')
+            {
+                result ~= range.front;
+                range.popFront;
+            }
+        }
+        else if (range.front == '\n')
+        {
+            result ~= range.front;
+            range.popFront;
+        }
+    }
+    return result;
+}
+
 /**
  * Returns the next line within range.
  */
@@ -484,7 +567,8 @@ auto nextLine(bool keepTerminator = false, Range)(ref Range range)
 {
     //TODO-cbugfix: contiguous empty lines count as 1
     auto result = nextWordUntil(range, "\r\n");
-    static if (!keepTerminator) skipWord(range, "\r\n");
+    auto term = nextTerminator(range);
+    static if (keepTerminator) result ~= term;
     return result; 
 }
 
@@ -511,7 +595,8 @@ if (isInputRange!Range && isSomeChar!(ElementType!Range))
     struct ByLine
     {
         private Range _range;
-        private CharType[] _front;
+        private bool _emptyLine;
+        private CharType[] _front, _strippedfront;
         ///
         this(Range range)
         {
@@ -521,12 +606,15 @@ if (isInputRange!Range && isSomeChar!(ElementType!Range))
         ///
         void popFront()
         {
-            _front = nextLine(_range); 
+            _front = nextLine!true(_range);
+            _strippedfront = _front;
+            import std.string;
+            _strippedfront = stripRight(_front);
         }
         ///
         auto front()
         {
-            return _front;
+            return _strippedfront;
         }
         ///
         @property bool empty()
@@ -539,6 +627,7 @@ if (isInputRange!Range && isSomeChar!(ElementType!Range))
 
 unittest
 {
+    import std.stdio;
     auto text = "aw\r\nyess";
     auto range = text.byLine;
     assert(range.front == "aw");
@@ -563,7 +652,7 @@ unittest
     auto text1= "";
     assert(text1.lineCount == 0);
     auto text2 = "\n\r\n";
-    assert(text2.lineCount == 0);
+    assert(text2.lineCount == 2);
     auto text3 = "0\n1\n2\n3\n4\n5\n6\n7\n8\n9";
     assert(text3.lineCount == 10);
 }
