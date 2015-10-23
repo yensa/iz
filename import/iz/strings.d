@@ -2,6 +2,8 @@ module iz.strings;
 
 import std.range, std.traits, std.algorithm.searching;
 
+// Character-related-structs --------------------------------------------------+
+
 /**
  * CharRange is an helper struct that allows to test
  * fastly if a char is within a full range of characters.
@@ -65,13 +67,13 @@ struct CharRange
      * Params:
      * c = A character or any value convertible to a dchar.
      */
-    const bool opIn_r(C)(C c) pure nothrow @safe @nogc 
+    bool opIn_r(C)(C c) pure nothrow @safe @nogc const 
     {
         static if (isSomeChar!C || isImplicitlyConvertible!(C, dchar))
         {
             return ((c >= _min) & (c <= _max)); 
         }
-        else static assert(0, "invalid argument type for CharRange.opIn()");
+        else static assert(0, "invalid argument type for CharRange.opIn_r(): " ~ C.stringof);
     }
     
     /**
@@ -115,7 +117,130 @@ pure @safe unittest
 static immutable CharRange decimalChars = CharRange('0', '9');
 static immutable CharRange hexLowerChars = CharRange('a', 'f');
 static immutable CharRange hexUpperChars = CharRange('A', 'F');
+static immutable CharRange octalChars = CharRange('0', '7');
 
+/**
+ * CharMap is an helper struct that allows to test
+ * if a char is within a set of characters.
+ */
+struct CharMap
+{
+    import iz.memory;
+    private bool[] _map;
+    private dchar _min, _max = 1;
+    
+    private void setMinMax(dchar value) nothrow 
+    {
+        if (value < _min) _min = value;
+        else if (value > _max)
+        {
+            _max = value;
+            _map.length = _max + 1;
+        }   
+    }
+
+    /**
+     * Used in the construction process.
+     * Example:
+     * ---
+     * CharMap cm = CharMap['0'..'9'];
+     * ---
+     */
+    static CharRange opSlice(int index)(dchar lo, dchar hi) nothrow @nogc 
+    {
+        return CharRange(lo, hi);
+    }
+    
+    /**
+     * Used in the construction process.
+     * Params:
+     * a = alist made of character slices, of single character or
+     * any value implicitly convertible to dchar.
+     * Example:
+     * ---
+     * CharMap cm = CharMap['0'..'9', '.', 'f', 'd', 38, 39];
+     * ---
+     */
+    static CharMap opIndex(A...)(A a) nothrow 
+    {   
+        CharMap result;
+        
+        // bounds
+        foreach(elem; a)
+        {
+            alias T = typeof(elem);
+            static if (isSomeChar!T || isImplicitlyConvertible!(T, dchar))
+            {
+                result.setMinMax(elem);      
+            }
+            else static if (is(T == CharRange))
+            {
+                result.setMinMax(elem._min);
+                result.setMinMax(elem._max);    
+            }
+            else static assert(0, "unsupported opIndex argument type: " ~ T.stringof);
+        }
+        
+        result._map[] = false;   
+        foreach(elem; a)
+        {    
+            alias T = typeof(elem);
+            static if (isSomeChar!T || isImplicitlyConvertible!(T, dchar))
+                result._map[elem - result._min] = true;   
+            else static if (is(T == CharRange))
+            {
+                CharRange cr = cast(CharRange) elem;
+                foreach(size_t i; cr._min - result._min .. cr._max - result._min + 1)
+                    result._map[i] = true;          
+            } 
+        }        
+        return result;
+    }
+    
+    /**
+     * Returns true if a character is within the map.
+     *
+     * Params:
+     * c = A character or any value convertible to a dchar.
+     */    
+    bool opIn_r(C)(C c) pure nothrow @nogc const 
+    {
+        static if (isSomeChar!C || isImplicitlyConvertible!(C, dchar))
+        {
+            if (c < _min || c > _max) return false;
+            else return _map[c - _min]; 
+        }
+        else static assert(0, "invalid argument type for CharMap.opIn_r(): " ~ C.stringof);
+    }
+}
+
+unittest
+{
+    CharMap cm = CharMap['a'..'f', '0'..'9' , 'A'..'F', '_'];
+    assert('a' in cm);
+    assert('b' in cm);
+    assert('c' in cm);
+    assert('d' in cm);
+    assert('e' in cm);
+    assert('f' in cm);
+    assert('g' !in cm);
+    assert('A' in cm);
+    assert('B' in cm);
+    assert('C' in cm);
+    assert('D' in cm);
+    assert('E' in cm);
+    assert('F' in cm);
+    assert('G' !in cm);
+    assert('0' in cm);
+    assert('4' in cm);
+    assert('9' in cm);
+    assert('_' in cm);
+    assert('%' !in cm);    
+}
+
+immutable CharMap hexChars = CharMap['a'..'f', 'A'..'F', '0'..'9'];
+immutable CharMap whiteChars = CharMap['\t'..'\r', ' '];
+// -----------------------------------------------------------------------------
 // Generic Scanning functions -------------------------------------------------+
 
 // test if T issupported in the several scanning utils
@@ -126,6 +251,8 @@ private bool isCharRange(T)()
         return true;
     else static if (is(Unqual!T == CharRange)) 
         return true;
+    else static if (is(Unqual!T == CharMap)) 
+        return true;    
     else static if (isAssociativeArray!T && isSomeChar!(KeyType!T)) 
         return true;   
     else 
@@ -146,16 +273,17 @@ private bool isCharRange(T)()
 auto nextWord(Range, CR, bool until = false)(ref Range range, CR charRange)
 if (isInputRange!Range && isSomeChar!(ElementType!Range) && isCharRange!CR)
 {
-    alias CharType = ElementType!Range;
+    alias CharType = Unqual!(ElementEncodingType!Range);
+    alias UCR = Unqual!CR; 
     CharType[] result;
     CharType current; 
                
-    static if (is(Unqual!CR == CharRange) || isAssociativeArray!CR)
+    static if (is(UCR == CharRange) || is(UCR == CharMap) || isAssociativeArray!CR)
     {
         while (true)
         {
             if (range.empty) break;
-            current = range.front;            
+            current = cast(CharType) range.front;            
             
             static if (until)
             {
@@ -182,7 +310,7 @@ if (isInputRange!Range && isSomeChar!(ElementType!Range) && isCharRange!CR)
         while (true)
         {
             if (range.empty) break;
-            current = range.front;
+            current = cast(CharType) range.front;
             
             static if (until)
             {
@@ -262,8 +390,8 @@ auto nextWordUntil(Range, CR)(ref Range range, CR charRange)
 unittest
 {
     auto src = "azertyuiop
-    sdfghjk";
-    auto skp = CharRange("\r\n\t");
+    sdfghjk".dup;
+    auto skp = CharRange("\r\n\t".dup);
     auto w = nextWordUntil(src, skp);
     assert(w == "azertyuiop");
 }
@@ -279,7 +407,8 @@ unittest
 void skipWord(Range, CR, bool until = false)(ref Range range, CR charRange)
 if (isInputRange!Range && isSomeChar!(ElementType!Range) && isCharRange!CR)
 {         
-    static if (is(CR == CharRange) || isAssociativeArray!CR)
+    alias UCR = Unqual!CR;
+    static if (is(UCR == CharRange) || is(UCR == CharMap) || isAssociativeArray!CR)
     {
         while (true)
         {
@@ -351,6 +480,9 @@ unittest
 //------------------------------------------------------------------------------
 // Text scanning utilities ----------------------------------------------------+
 
+/**
+ * Returns the next line within range.
+ */
 auto nextLine(bool keepTerminator = false, Range)(ref Range range)
 {
     auto result = nextWordUntil(range, "\r\n");
@@ -370,7 +502,27 @@ unittest
     assert(nextLine!false(text) == "");   
 }
 
-auto nextDecNumber(Range)(ref Range range)
+/**
+ * Returns the next word within range. White characters are always removed
+ */
+auto nextWord(Range)(ref Range range)
+{
+    skipWord(range, whiteChars);
+    return nextWordUntil(range, whiteChars);
+}
+
+unittest
+{
+    auto text = " lorem ipsum 123456";
+    assert(text.nextWord == "lorem");
+    assert(text.nextWord == "ipsum");
+    assert(text.nextWord == "123456");
+}
+
+/**
+ * Tries to read a decimal number in range.
+ */
+auto readDecNumber(Range)(ref Range range)
 {
     return range.nextWord(decimalChars);
 }
@@ -378,34 +530,42 @@ auto nextDecNumber(Range)(ref Range range)
 unittest
 {
     auto text = "0123456 789";
-    assert(text.nextDecNumber == "0123456");
+    assert(text.readDecNumber == "0123456");
     text.popFront;
-    assert(text.nextDecNumber == "789");   
+    assert(text.readDecNumber == "789");   
 }
 
-auto nextHexNumber(Range)(ref Range range)
+/**
+ * Tries to read an hexadecimal number in range.
+ */
+auto readHexNumber(Range)(ref Range range)
 {
-    dstring result;
-    size_t len;
-    while (true)
-    {
-        len = result.length;
-        result ~= range.nextWord(decimalChars);
-        result ~= range.nextWord(hexLowerChars);
-        result ~= range.nextWord(hexUpperChars);
-        if (result.length == len) break;            
-    }
-    return result;
+    return range.nextWord(hexChars);
 }
 
 unittest
 {
     auto text1 = "1a2B3C o";
     auto text2 = "A897F2f2Ff2fF3c6C9c9Cc9cC9c123 o";
-    assert(text1.nextHexNumber == "1a2B3C");
+    assert(text1.readHexNumber == "1a2B3C");
     assert(text1 == " o");
-    assert(text2.nextHexNumber == "A897F2f2Ff2fF3c6C9c9Cc9cC9c123");
+    assert(text2.readHexNumber == "A897F2f2Ff2fF3c6C9c9Cc9cC9c123");
     assert(text2 == " o");   
+}
+
+/**
+ * Strips the leading white characters.
+ */
+void stripLeftWhites(Range)(ref Range range)
+{
+    range.skipWord(whiteChars);
+}
+
+unittest
+{
+    auto text = "  \n\r bla";
+    text.stripLeftWhites;
+    assert(text == "bla");   
 }
 //------------------------------------------------------------------------------
 
