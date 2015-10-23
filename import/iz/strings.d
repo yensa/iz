@@ -244,7 +244,7 @@ immutable CharMap whiteChars = CharMap['\t'..'\r', ' '];
 // T must either support the 'in' operator or algorithm.searching.canFind
 private bool isCharRange(T)()
 {
-    static if (isArray!T && isSomeChar!(ElementType!T))
+    static if (isInputRange!T && isSomeChar!(ElementType!T))
         return true;
     else static if (is(Unqual!T == CharRange)) 
         return true;
@@ -759,9 +759,10 @@ void stripLeftWhites(Range)(ref Range range)
 
 unittest
 {
-    auto text = "  \n\r\v bla";
-    text.stripLeftWhites;
-    assert(text == "bla");   
+    auto text = "  \n\r\v bla".dup;
+    auto rng = ArrayRange!char(text); 
+    rng.stripLeftWhites;
+    assert(rng.array == "bla");  
 }
 //------------------------------------------------------------------------------
 
