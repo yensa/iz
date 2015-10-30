@@ -7,7 +7,7 @@ import iz.sugar;
 
 /**
  * CharRange is an helper struct that allows to test
- * fastly if a char is within a full range of characters.
+ * fast if a char is within a full range of characters.
  */
 struct CharRange
 {
@@ -236,10 +236,75 @@ unittest
     assert('\t' in cm);      
 }
 
+/// A CharMap that includes the hexadecimal characters.
 immutable CharMap hexChars = CharMap['a'..'f', 'A'..'F', '0'..'9'];
+/// A CharMap that includes the white characters.
 immutable CharMap whiteChars = CharMap['\t'..'\r', ' '];
+
+/**
+ * Returns a input range to process directly a C-style null terminated string 
+ * without converting it to a D string.
+ * Params:
+ * c = a pointer to a character.
+ * Returns:
+ * A InputRange whose elements type matches c target type.
+ */
+auto nullTerminated(C)(C c)
+if (isPointer!C && isSomeChar!(PointerTarget!(C)))
+{
+    struct NullTerminated(C)   
+    {
+        private C _front;
+        ///
+        this(C c)
+        {
+            _front = c;
+        }
+        ///
+        @property bool empty()
+        {
+            return *_front == 0;
+        }
+        ///
+        auto front()
+        {
+            return *_front;
+        }
+        ///
+        void popFront()
+        {
+            ++_front;
+        }
+        ///
+        C save()
+        {
+            return _front;
+        }
+    }
+    return NullTerminated!C(c);
+}
+
+unittest
+{
+    auto text = "ab cd\0";
+    auto cString = nullTerminated(text.ptr);
+    assert(nextWord(cString) == "ab");
+    assert(nextWord(cString) == "cd");
+    assert(cString.empty);
+    auto wtext = "ab cd\0"w;
+    auto cWideString = nullTerminated(wtext.ptr);
+    assert(nextWord(cWideString) == "ab"w);
+    assert(nextWord(cWideString) == "cd"w);
+    assert(cWideString.empty);    
+}
+
+
 // -----------------------------------------------------------------------------
 // Generic Scanning functions -------------------------------------------------+
+private template CharType(T)
+{
+    alias CharType = Unqual!(ElementEncodingType!T);
+}
 
 // test if T is supported in the several scanning utils
 // T must either supports the 'in' operator, supports 'algorithm.searching.canFind'
@@ -255,9 +320,8 @@ private bool isCharTester(T)()
     else static if (isAssociativeArray!T && isSomeChar!(KeyType!T)) 
         return true; 
     else static if (isSomeFunction!T && is(ReturnType!T == bool) && 
-        (ParameterTypeTuple!T).length == 1 && 
-            isImplicitlyConvertible!((ParameterTypeTuple!T)[0], dchar))
-                return true;
+        Parameters!T.length == 1 && is(Parameters!T[0] == dchar))
+        return true;
     else 
         return false;
 }
@@ -269,24 +333,23 @@ private bool isCharTester(T)()
  * range = A character input range. The range is consumed for each word.
  * charTester = Defines the valid characters to make a word.
  *
- * Return:
+ * Returns:
  * A dstring containing the word. If the result length is null then the
  * range parameter has not been consumed.
  */
 auto nextWord(Range, T, bool until = false)(ref Range range, T charTester)
 if (isInputRange!Range && isSomeChar!(ElementType!Range) && isCharTester!T)
 {
-    alias CharType = Unqual!(ElementEncodingType!Range);
     alias UT = Unqual!T; 
-    CharType[] result;
-    CharType current; 
+    CharType!Range[] result;
+    CharType!Range current; 
                
     static if (is(UT == CharRange) || is(UT == CharMap) || isAssociativeArray!T)
     {
         while (true)
         {
             if (range.empty) break;
-            current = cast(CharType) range.front;            
+            current = cast(CharType!Range) range.front;            
             
             static if (until)
             {
@@ -313,7 +376,7 @@ if (isInputRange!Range && isSomeChar!(ElementType!Range) && isCharTester!T)
         while (true)
         {
             if (range.empty) break;
-            current = cast(CharType) range.front;
+            current = cast(CharType!Range) range.front;
             
             static if (until)
             {
@@ -340,7 +403,7 @@ if (isInputRange!Range && isSomeChar!(ElementType!Range) && isCharTester!T)
         while (true)
         {
             if (range.empty) break;
-            current = cast(CharType) range.front;
+            current = cast(CharType!Range) range.front;
             
             static if (until)
             {
@@ -408,7 +471,7 @@ unittest
  * range = A character input range. The range is consumed for each word.
  * charTester = Defines the opposite of the valid characters to make a word. 
  *
- * Return:
+ * Returns:
  * A string containing the word. If the result length is null then the
  * range parameter has not been consumed.
  */
@@ -517,7 +580,7 @@ unittest
  * range = A character input range. The range is consumed for each word.
  * charTester = Defines the opposite of the valid characters to make a word.
  */
-auto skipWordUntil(Range, T)(ref Range range, T charTester)
+void skipWordUntil(Range, T)(ref Range range, T charTester)
 {
     return skipWord!(Range, T, true)(range, charTester);
 }
@@ -530,15 +593,115 @@ unittest
     assert(src == "\r");
 }
 
+/**
+ * Tries to make a fixed length slice by consuming range.
+ */
+auto nextSlice(Range, T)(ref Range range, T len)
+if (isInputRange!Range && isSomeChar!(ElementType!Range) && isIntegral!T)
+{
+    CharType!Range[] result;
+    
+    while (true)
+    {
+        if (result.length == len || range.empty)
+            break;
+        result ~= range.front;
+        range.popFront;   
+    }   
+    
+    return result;       
+}
+
+unittest
+{
+    auto text0 = "012"; 
+    assert(text0.nextSlice(2) == "01");
+    auto text1 = "3";
+    assert(text1.nextSlice(8) == "3");
+    auto text2 = "45";
+    assert(text2.nextSlice(0) == "");
+    assert(text1.nextSlice(123456) == "");
+}
+
+/**
+ * Returns true of str starts with stuff.
+ */
+bool canRead(String, Stuff)(auto ref String str, Stuff stuff)
+if (isSomeString!String && (isSomeChar!Stuff || isSomeString!Stuff))
+{
+    static if (isSomeChar!Stuff)
+        return str.front == stuff;
+    else
+    {
+        auto reader = ArrayRange!(ElementEncodingType!String)(str);
+        auto slice = reader.nextSlice(stuff.length);
+        return (slice.length != stuff.length) ? false : stuff == slice;
+    }    
+}
+
+unittest
+{
+    auto text0 = "{0}".dup;
+    assert(text0.canRead('{'));
+    auto text1 = "(* bla *)".dup;
+    assert(text1.canRead("(*"));
+    assert(text1 == "(* bla *)");
+    string text2 = "0x123456";
+    assert(!text2.canRead("0b"));
+}
 //------------------------------------------------------------------------------
 // Text scanning utilities ----------------------------------------------------+
+
+/**
+ * Returns an input range consisting of the input argument sliced by group of 
+ * length len.
+ */
+auto bySlice(Range)(ref Range range, size_t len)
+if (isInputRange!Range && isSomeChar!(ElementType!Range))
+{ 
+    struct BySlice
+    {
+        private Range _range;
+        private bool _emptyLine;
+        private CharType!Range[] _front;
+        ///
+        this(Range range)
+        {
+            _range = range;
+            popFront;
+        }
+        ///
+        void popFront()
+        {
+            _front = nextSlice(_range, len);
+        }
+        ///
+        auto front()
+        {
+            return _front;
+        }
+        ///
+        @property bool empty()
+        {
+            return _front.length == 0;
+        }
+    }
+    return BySlice(range);
+}
+
+unittest
+{
+    auto text = "AABBCCDD";
+    assert(text.bySlice(2).array == ["AA","BB","CC","DD"]);
+    auto str = "AAE";
+    assert(str.bySlice(2).array == ["AA","E"]);
+}
 
 
 auto nextTerminator(Range)(ref Range range)
 if (isInputRange!Range && isSomeChar!(ElementType!Range))
 {
-    alias CharType = Unqual!(ElementEncodingType!Range);
-    CharType[] result;
+    CharType!Range[] result;
     if (!range.empty)
     {
         if (range.front == '\r')
@@ -590,13 +753,11 @@ unittest
 auto byLine(Range)(ref Range range)
 if (isInputRange!Range && isSomeChar!(ElementType!Range))
 { 
-    alias CharType = Unqual!(ElementEncodingType!Range);
-
     struct ByLine
     {
         private Range _range;
         private bool _emptyLine;
-        private CharType[] _front, _strippedfront;
+        private CharType!Range[] _front, _strippedfront;
         ///
         this(Range range)
         {
@@ -639,7 +800,7 @@ unittest
 }
 
 /**
- * Returns the count of lines within the input range.
+ * Returns the lines count within the input range.
  * The input range is not consumed.
  */
 size_t lineCount(Range)(Range range)
@@ -658,7 +819,8 @@ unittest
 }
 
 /**
- * Returns the next word within range. White characters are always removed
+ * Returns the next word within range. 
+ * Words are spliited using the White characters, which are never included.
  */
 auto nextWord(Range)(ref Range range)
 {
@@ -675,17 +837,15 @@ unittest
 }
 
 /**
- * Returns an input range consisting of each word in the input argument
+ * Returns an input range consisting of each non-blank word in the input argument.
  */
 auto byWord(Range)(ref Range range)
 if (isInputRange!Range && isSomeChar!(ElementType!Range))
 { 
-    alias CharType = Unqual!(ElementEncodingType!Range);
-
     struct ByWord
     {
         private Range _range;
-        private CharType[] _front;
+        private CharType!Range[] _front;
         ///
         this(Range range)
         {
@@ -726,8 +886,8 @@ unittest
 }
 
 /**
- * Returns the count of words within the input range.
- * Words are separatedd bu ascii whites. input range is not consumed.
+ * Returns the word count within the input range.
+ * Words are separatedd by ascii whites. input range is not consumed.
  */
 size_t wordCount(Range)(Range range)
 {
@@ -775,12 +935,10 @@ unittest
 auto bySeparated(Range, Separators, bool strip = true)(ref Range range, Separators sep)    
 if (isInputRange!Range && isSomeChar!(ElementType!Range))
 { 
-    alias CharType = Unqual!(ElementEncodingType!Range);
-
     struct BySep
     {
         private Range _range;
-        private CharType[] _front;
+        private CharType!Range[] _front;
         ///
         this(Range range)
         {
