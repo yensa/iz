@@ -36,6 +36,14 @@ object _1: TCENativeProject
       runOptions.showWindow = swoHIDE
     end  
     item
+      name = 'quick'
+      messagesOptions.additionalWarnings = True
+      outputOptions.binaryKind = staticlib
+      outputOptions.boundsCheck = onAlways
+      outputOptions.release = True
+      pathsOptions.outputFilename = 'lib/iz'
+    end  
+    item
       name = 'test64'
       debugingOptions.debug = True
       debugingOptions.generateMapFile = True
@@ -47,11 +55,14 @@ object _1: TCENativeProject
       pathsOptions.outputFilename = 'lib/iz'
     end  
     item
-      name = 'quick'
-      messagesOptions.additionalWarnings = True
+      name = 'test32'
+      debugingOptions.debug = True
+      debugingOptions.generateMapFile = True
+      messagesOptions.depreciationHandling = silent
+      messagesOptions.warnings = False
+      outputOptions.targetKind = os32bit
       outputOptions.binaryKind = staticlib
       outputOptions.boundsCheck = onAlways
-      outputOptions.release = True
       pathsOptions.outputFilename = 'lib/iz'
     end>
   Sources.Strings = (
@@ -65,9 +76,9 @@ object _1: TCENativeProject
     'import/iz/referencable.d'
     'import/iz/serializer.d'
     'import/iz/streams.d'
+    'import/iz/strings.d'
     'import/iz/sugar.d'
     'import/iz/types.d'
-    'import/iz/strings.d'
   )
   ConfigurationIndex = 0
 end
