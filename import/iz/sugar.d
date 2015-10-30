@@ -155,15 +155,17 @@ struct ArrayRange(T)
     ///
     typeof(this) save() 
     {
-        auto r = this.array.dup;
-        return typeof(this)(r); 
+        typeof(this) result;
+        result._front = _front;
+        result._back = _back;
+        return result; 
     }  
 }
 
 unittest
 {
-    auto arr = "bla".dup;
-    auto rng = ArrayRange!char(arr);
+    auto arr = "bla";
+    auto rng = ArrayRange!(immutable(char))(arr);
     assert(rng.front == 'b');
     rng.popFront;
     assert(rng.front == 'l');
