@@ -149,7 +149,7 @@ struct ArrayRange(T)
     /// returns a slice of th source, according to front and back.
     T[] array()
     {
-        return _front[0 .. _back - _front];
+        return _front[0 .. _back - _front + 1];
     }
     
     ///
@@ -166,6 +166,7 @@ unittest
 {
     auto arr = "bla";
     auto rng = ArrayRange!(immutable(char))(arr);
+    assert(rng.array == "bla");
     assert(rng.front == 'b');
     rng.popFront;
     assert(rng.front == 'l');
