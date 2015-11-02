@@ -626,17 +626,22 @@ unittest
 /**
  * Returns true of str starts with stuff.
  */
-bool canRead(String, Stuff)(auto ref String str, Stuff stuff)
+bool canRead(String, Stuff)(ref String str, Stuff stuff)
 if (isSomeString!String && (isSomeChar!Stuff || isSomeString!Stuff))
 {
-    static if (isSomeChar!Stuff)
-        return str.front == stuff;
+    if (str.empty)
+        return false;
     else
     {
-        auto reader = ArrayRange!(ElementEncodingType!String)(str);
-        auto slice = reader.nextSlice(stuff.length);
-        return (slice.length != stuff.length) ? false : stuff == slice;
-    }    
+        static if (isSomeChar!Stuff)
+            return str.front == stuff;
+        else
+        {
+            auto reader = ArrayRange!(ElementEncodingType!String)(str);
+            auto slice = reader.nextSlice(stuff.length);
+            return (slice.length != stuff.length) ? false : stuff == slice;
+        }  
+    }  
 }
 
 unittest
@@ -698,40 +703,22 @@ unittest
 }
 
 
-auto nextTerminator(Range)(ref Range range)
-if (isInputRange!Range && isSomeChar!(ElementType!Range))
-{
-    CharType!Range[] result;
-    if (!range.empty)
-    {
-        if (range.front == '\r')
-        {
-            result ~= range.front;
-            range.popFront;
-            if (range.front == '\n')
-            {
-                result ~= range.front;
-                range.popFront;
-            }
-        }
-        else if (range.front == '\n')
-        {
-            result ~= range.front;
-            range.popFront;
-        }
-    }
-    return result;
-}
-
 /**
  * Returns the next line within range.
  */
 auto nextLine(bool keepTerminator = false, Range)(ref Range range)
 {
-    //TODO-cbugfix: contiguous empty lines count as 1
     auto result = nextWordUntil(range, "\r\n");
-    auto term = nextTerminator(range);
-    static if (keepTerminator) result ~= term;
+    static if (keepTerminator)
+    {
+        if (range.canRead("\r\n")) result ~= range.nextSlice(2);
+        else if (range.canRead('\n')) result ~= range.nextSlice(1);
+    }
+    else
+    {
+        if (range.canRead("\r\n")) range.nextSlice(2);
+        else if (range.canRead('\n')) range.nextSlice(1);    
+    }       
     return result; 
 }
 
@@ -744,6 +731,7 @@ unittest
     assert(nextLine!false(text) == "123");
     assert(nextLine!false(text) == "12");
     assert(nextLine!false(text) == "1");
+    assert(nextLine!false(text) == "");
     assert(nextLine!false(text) == "");   
 }
 
@@ -768,7 +756,6 @@ if (isInputRange!Range && isSomeChar!(ElementType!Range))
         void popFront()
         {
             _front = nextLine!true(_range);
-            _strippedfront = _front;
             import std.string;
             _strippedfront = stripRight(_front);
         }
@@ -814,8 +801,8 @@ unittest
     assert(text1.lineCount == 0);
     auto text2 = "\n\r\n";
     assert(text2.lineCount == 2);
-    auto text3 = "0\n1\n2\n3\n4\n5\n6\n7\n8\n9";
-    assert(text3.lineCount == 10);
+    auto text3 = "0\n1\n2\n3\n4\n5\n6\n7\n8\n9\n\n\n";
+    assert(text3.lineCount == 12);
 }
 
 /**
