@@ -106,7 +106,7 @@ struct ArrayRange(T)
     this(ref T[] stuff) 
     {
         _front = stuff.ptr; 
-        _back = _front + stuff.length;
+        _back = _front + stuff.length - 1;
     } 
     
     ///
@@ -119,7 +119,7 @@ struct ArrayRange(T)
     ///
     @property bool empty()
     {
-        return _front >= _back;
+        return _front > _back;
     }  
     
     ///
