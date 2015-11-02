@@ -626,22 +626,31 @@ unittest
 /**
  * Returns true of str starts with stuff.
  */
-bool canRead(String, Stuff)(ref String str, Stuff stuff)
-if (isSomeString!String && (isSomeChar!Stuff || isSomeString!Stuff))
+bool canRead(Range, Stuff)(ref Range range, Stuff stuff)
+if (isInputRange!Range && isSomeChar!(ElementType!Range)  
+    && (isSomeChar!Stuff || isSomeString!Stuff))
 {
-    if (str.empty)
-        return false;
-    else
+    static if (isSomeString!Range)
     {
-        static if (isSomeChar!Stuff)
-            return str.front == stuff;
+        if (range.empty)
+            return false;
         else
         {
-            auto reader = ArrayRange!(ElementEncodingType!String)(str);
-            auto slice = reader.nextSlice(stuff.length);
-            return (slice.length != stuff.length) ? false : stuff == slice;
-        }  
-    }  
+            static if (isSomeChar!Stuff)
+                return range.front == stuff;
+            else
+            {
+                auto reader = ArrayRange!(ElementEncodingType!Range)(range);
+                auto slice = reader.nextSlice(stuff.length);
+                return (slice.length != stuff.length) ? false : stuff == slice;
+            }  
+        }
+    } 
+    else
+    {
+        import std.algorithm.searching: starstWith;
+        return startsWith(range, stuff);
+    } 
 }
 
 unittest
@@ -704,21 +713,64 @@ unittest
 
 
 /**
+ * Tries to read immediatly an EOL in range and returns it.
+ */
+auto readEol(Range)(ref Range range)
+if (isInputRange!Range && isSomeChar!(ElementType!Range))
+{
+    CharType!Range[] result;
+    if (range.canRead("\r\n")) result = range.nextSlice(2);
+    else if (range.canRead('\n')) result = range.nextSlice(1);
+    return result;    
+}
+
+unittest
+{
+    auto text0 = "";
+    assert(readEol(text0) == "");
+    auto text1 = " ";
+    assert(readEol(text1) == "");
+    auto text2 = "\n";
+    assert(readEol(text2) == "\n");
+    auto text3 = "\r\n";
+    assert(readEol(text3) == "\r\n");    
+}
+
+/**
+ * Tries to skip immediatly an EOL in range.
+ */
+void skipEol(Range)(ref Range range)
+if (isInputRange!Range && isSomeChar!(ElementType!Range))
+{
+    if (range.canRead("\r\n")) range.nextSlice(2);
+    else if (range.canRead('\n')) range.nextSlice(1);        
+}
+
+unittest
+{
+    auto text0 = "";
+    skipEol(text0);
+    assert(text0 == ""); 
+    auto text1 = " ";
+    skipEol(text1);
+    assert(text1 == " "); 
+    auto text2 = "\n";
+    skipEol(text2);
+    assert(text2 == "");
+    auto text3 = "\r\na";
+    skipEol(text3);
+    assert(text3 == "a");   
+}
+
+
+/**
  * Returns the next line within range.
  */
 auto nextLine(bool keepTerminator = false, Range)(ref Range range)
 {
     auto result = nextWordUntil(range, "\r\n");
-    static if (keepTerminator)
-    {
-        if (range.canRead("\r\n")) result ~= range.nextSlice(2);
-        else if (range.canRead('\n')) result ~= range.nextSlice(1);
-    }
-    else
-    {
-        if (range.canRead("\r\n")) range.nextSlice(2);
-        else if (range.canRead('\n')) range.nextSlice(1);    
-    }       
+    static if (keepTerminator) result ~= range.readEol;
+    else range.skipEol;       
     return result; 
 }
 
@@ -966,7 +1018,7 @@ unittest
 }
 
 /**
- * Tries to read a decimal number in range.
+ * Tries to read immediatly a decimal number in range.
  */
 auto readDecNumber(Range)(ref Range range)
 {
@@ -986,7 +1038,7 @@ unittest
 }
 
 /**
- * Tries to read an hexadecimal number in range.
+ * Tries to read immediatly an hexadecimal number in range.
  */
 auto readHexNumber(Range)(ref Range range)
 {
