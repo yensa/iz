@@ -97,15 +97,18 @@ auto bruteCast(OT, IT)(auto ref IT it) @nogc nothrow pure
 /**
  * Alternative to std.range primitives for arrays.
  *
- * The source is never consumed. When the source array elements are
- * a character type, the ArrayRange element type is always dchar and
- * decoding is automatic. When not, an ArrayRange also provides the
- * primitives for a bidirectional range. In all the case an array range
- * verifies at least isInputRange and isForwardRange.
+ * The source is never consumed. 
+ * The range always verifies isInputRange and isForwardRange. When the source
+ * array element type if not a character type or if the template parameter 
+ * assumeDecoded is set to true then the range also verifies
+ * isForwardRange.
+ *
+ * When the source is an array of character and if assumeDecoded is set to false 
+ * then the ArrayRange front type is always dchar because of the UTF decoding.
  */
-struct ArrayRange(T)
+struct ArrayRange(T, bool assumeDecoded = false)
 {
-    static if (!isSomeChar!T)
+    static if (!isSomeChar!T || assumeDecoded)
     {
         private T* _front, _back;    
         ///
@@ -241,7 +244,11 @@ unittest
     foreach(i; 0 .. 3) r1.popFront;
     assert(r1.empty);
     r1 = r2;
-    assert(r1.front == 'é');    
+    assert(r1.front == 'é');  
+    //
+    auto r3 = ArrayRange!(immutable(char),true)(t1);
+    foreach(i; 0 .. 5) r3.popFront;
+    assert(r3.empty);   
 }
 
 unittest
