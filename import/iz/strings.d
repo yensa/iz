@@ -600,13 +600,14 @@ auto nextSlice(Range, T)(ref Range range, T len)
 if (isInputRange!Range && isSomeChar!(ElementType!Range) && isIntegral!T)
 {
     CharType!Range[] result;
-    
+    size_t cnt;
     while (true)
     {
-        if (result.length == len || range.empty)
+        if (cnt == len || range.empty)
             break;
         result ~= range.front;
-        range.popFront;   
+        range.popFront;
+        ++cnt;   
     }   
     
     return result;       
@@ -621,6 +622,9 @@ unittest
     auto text2 = "45";
     assert(text2.nextSlice(0) == "");
     assert(text1.nextSlice(123456) == "");
+    auto ut = "é_é";
+    assert(ut.nextSlice(3) == "é_é");
+    
 }
 
 /**
@@ -640,15 +644,17 @@ if (isInputRange!Range && isSomeChar!(ElementType!Range)
                 return range.front == stuff;
             else
             {
+                import std.conv: to;
+                auto dstuff = to!dstring(stuff);
                 auto reader = ArrayRange!(ElementEncodingType!Range)(range);
-                auto slice = reader.nextSlice(stuff.length);
-                return (slice.length != stuff.length) ? false : stuff == slice;
+                auto slice = reader.nextSlice(dstuff.walkLength);
+                return dstuff == slice;
             }  
         }
     } 
     else
     {
-        import std.algorithm.searching: starstWith;
+        import std.algorithm.searching: startsWith;
         return startsWith(range, stuff);
     } 
 }

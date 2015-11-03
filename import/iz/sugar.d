@@ -96,77 +96,136 @@ auto bruteCast(OT, IT)(auto ref IT it) @nogc nothrow pure
 
 /**
  * Alternative to std.range primitives for arrays.
- * The source is never consumed.
+ *
+ * The source is never consumed. When the source array elements are
+ * a character type, the ArrayRange element type is always dchar and
+ * decoding is automatic. When not, an ArrayRange also provides the
+ * primitives for a bidirectional range. In all the case an array range
+ * verifies at least isInputRange and isForwardRange.
  */
 struct ArrayRange(T)
 {
-    private T* _front, _back;
-
-    ///
-    this(ref T[] stuff) 
+    static if (!isSomeChar!T)
     {
-        _front = stuff.ptr; 
-        _back = _front + stuff.length - 1;
+        private T* _front, _back;    
+        ///
+        this(ref T[] stuff) 
+        {
+            _front = stuff.ptr; 
+            _back = _front + stuff.length - 1;
+        }      
+        ///
+        @property bool empty()
+        {
+            return _front > _back;
+        }     
+        ///
+        T front()
+        {
+            return *_front;
+        }   
+        ///
+        T back()
+        {
+            return *_back;
+        }    
+        ///
+        void popFront()
+        { 
+            ++_front;
+        }
+        ///
+        void popBack()
+        {
+            --_back;
+        }
+        /// returns a slice of the source, according to front and back.
+        T[] array()
+        {
+            return _front[0 .. _back - _front + 1];
+        }
+        ///
+        typeof(this) save() 
+        {
+            typeof(this) result;
+            result._front = _front;
+            result._back = _back;
+            return result; 
+        } 
     } 
-    
-    ///
-    this(ref typeof(this) rng)
+    else
     {
-        _front = rng._front; 
-        _back = rng._back;        
+    
+    private: 
+    
+        import std.utf: decode;
+        size_t _position, _previous, _len;
+        dchar _decoded;
+        T* _front;
+        bool _decode;
+        
+        void readNext()
+        {
+            _previous = _position;
+            auto str = _front[0 .. _len];
+            _decoded = decode(str, _position);
+        }
+        
+    public:
+    
+        ///
+        this(ref T[] stuff) 
+        { 
+            _front = stuff.ptr;
+            _len = stuff.length;
+            _decode = true;
+        }     
+        ///
+        @property bool empty()
+        {
+            return _position >= _len;
+        } 
+        ///
+        dchar front()
+        {
+            if (_decode)
+            {
+                _decode = false;
+                readNext;
+            }
+            return _decoded;
+        }       
+        ///
+        void popFront()
+        {
+            if (_decode) readNext;
+            _decode = true;
+        }
+        /// returns a slice of the source, according to front and back.
+        T[] array()
+        {
+            return _front[_previous .. _len];
+        }   
+        ///
+        typeof(this) save()
+        {
+            typeof(this) result;
+            result._position   = _position;
+            result._previous   = _previous;
+            result._len        = _len;
+            result._decoded    = _decoded; 
+            result._front      = _front;
+            result._decode     = _decode;  
+            return result;
+        }              
     }
-    
-    ///
-    @property bool empty()
-    {
-        return _front > _back;
-    }  
-    
-    ///
-    T front()
-    {
-        return *_front;
-    }  
-    
-    ///
-    T back()
-    {
-        return *_back;
-    }    
-    
-    ///
-    void popFront()
-    { 
-        ++_front;
-    }
-    
-    ///
-    void popBack()
-    {
-        --_back;
-    }
-    
-    /// returns a slice of th source, according to front and back.
-    T[] array()
-    {
-        return _front[0 .. _back - _front + 1];
-    }
-    
-    ///
-    typeof(this) save() 
-    {
-        typeof(this) result;
-        result._front = _front;
-        result._back = _back;
-        return result; 
-    }  
 }
 
 unittest
 {
     auto arr = "bla";
     auto rng = ArrayRange!(immutable(char))(arr);
-    assert(rng.array == "bla");
+    assert(rng.array == "bla", rng.array);
     assert(rng.front == 'b');
     rng.popFront;
     assert(rng.front == 'l');
@@ -174,6 +233,29 @@ unittest
     assert(rng.front == 'a');
     rng.popFront;
     assert(rng.empty);   
-    assert(arr == "bla");     
+    assert(arr == "bla");  
+    //    
+    auto t1 = "é_é";
+    auto r1 = ArrayRange!(immutable(char))(t1);
+    auto r2 = r1.save;
+    foreach(i; 0 .. 3) r1.popFront;
+    assert(r1.empty);
+    r1 = r2;
+    assert(r1.front == 'é');    
+}
+
+unittest
+{
+    ubyte[] src = [1,2,3,4,5];
+    ubyte[] arr = src.dup;
+    auto rng = ArrayRange!ubyte(arr);
+    ubyte cnt;
+    while (!rng.empty)
+    {
+        ++cnt;
+        assert(rng.front == cnt);
+        rng.popFront;
+    }
+    assert(arr == src);   
 }
 
