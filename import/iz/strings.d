@@ -144,7 +144,7 @@ struct CharMap
      * CharMap cm = CharMap['0'..'9'];
      * ---
      */
-    static CharRange opSlice(int index)(dchar lo, dchar hi) nothrow @nogc 
+    static CharRange opSlice(int index)(dchar lo, dchar hi) pure nothrow @nogc 
     {
         return CharRange(lo, hi);
     }
@@ -189,7 +189,7 @@ struct CharMap
             {
                 foreach(size_t i; elem._min - result._min .. elem._max - result._min + 1)
                     result._map[i] = true;          
-            } 
+            }
         }        
         return result;
     }
@@ -233,7 +233,7 @@ unittest
     assert('9' in cm);
     assert('_' in cm);
     assert('%' !in cm);
-    assert('\t' in cm);      
+    assert('\t' in cm);   
 }
 
 /// A CharMap that includes the hexadecimal characters.
@@ -681,19 +681,19 @@ if (isInputRange!Range && isSomeChar!(ElementType!Range))
 { 
     struct BySlice
     {
-        private Range _range;
+        private Range* _range;
         private bool _emptyLine;
         private CharType!Range[] _front;
         ///
-        this(Range range)
+        this(ref Range range)
         {
-            _range = range;
+            _range = &range;
             popFront;
         }
         ///
         void popFront()
         {
-            _front = nextSlice(_range, len);
+            _front = nextSlice(*_range, len);
         }
         ///
         auto front()
@@ -801,19 +801,19 @@ if (isInputRange!Range && isSomeChar!(ElementType!Range))
 { 
     struct ByLine
     {
-        private Range _range;
+        private Range* _range;
         private bool _emptyLine;
         private CharType!Range[] _front, _strippedfront;
         ///
-        this(Range range)
+        this(ref Range range)
         {
-            _range = range;
+            _range = &range;
             popFront;
         }
         ///
         void popFront()
         {
-            _front = nextLine!true(_range);
+            _front = nextLine!true(*_range);
             import std.string;
             _strippedfront = stripRight(_front);
         }
@@ -889,18 +889,18 @@ if (isInputRange!Range && isSomeChar!(ElementType!Range))
 { 
     struct ByWord
     {
-        private Range _range;
+        private Range* _range;
         private CharType!Range[] _front;
         ///
-        this(Range range)
+        this(ref Range range)
         {
-            _range = range;
+            _range = &range;
             popFront;
         }
         ///
         void popFront()
         {
-            _front = nextWord(_range); 
+            _front = nextWord(*_range); 
         }
         ///
         auto front()
@@ -982,18 +982,18 @@ if (isInputRange!Range && isSomeChar!(ElementType!Range))
 { 
     struct BySep
     {
-        private Range _range;
+        private Range* _range;
         private CharType!Range[] _front;
         ///
-        this(Range range)
+        this(ref Range range)
         {
-            _range = range;
+            _range = &range;
             popFront;
         }
         ///
         void popFront()
         {
-            _front = nextSeparated!(Range, Separators, strip)(_range, sep); 
+            _front = nextSeparated!(Range, Separators, strip)(*_range, sep); 
         }
         ///
         auto front()
