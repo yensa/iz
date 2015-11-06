@@ -94,6 +94,164 @@ auto bruteCast(OT, IT)(auto ref IT it) @nogc nothrow pure
     return * cast(OT*) &it;
 }
 
+/// Describes the unit of a mask.
+enum MaskKind {Byte, Nibble, Bit}
+
+/**
+ * Mask, at compile-time, a byte, a nibble or a bit in the argument.
+ *
+ * Params:
+ * index = the position, 0-based, of the element ot mask.
+ * kind = the kind of the element to mask.
+ * value = the value mask.
+ *
+ * Returns:
+ * The input argument with the element masked.
+ */
+auto mask(size_t index, MaskKind kind = MaskKind.Byte, T)(const T value)
+if (    (kind == MaskKind.Byte && index <= T.sizeof)
+    ||  (kind == MaskKind.Nibble && index <= T.sizeof * 2)
+    ||  (kind == MaskKind.Bit && index <= T.sizeof * 8))
+{
+    import std.typecons;
+    T _mask;
+    static if (kind == MaskKind.Byte)
+    {
+        foreach(i; staticIota!(0, T.sizeof))
+            static if (i != index)
+                _mask += 0xFF << i * 8;
+    }
+    else static if (kind == MaskKind.Nibble)
+    {
+        foreach(i; staticIota!(0, T.sizeof * 2))
+            static if (i != index)
+            {
+                immutable T shift = 8 * i / 2;
+                
+                _mask += (0x0F << ((shift & 3) * 4)) << shift;
+            }                  
+    }
+    else static if (kind == MaskKind.Bit)
+    {
+        foreach(i; staticIota!(0, T.sizeof * 8))
+            static if (i != index)
+                _mask += 0b1 << i;              
+    }    
+    return value & _mask;
+}
+
+/// Compile-time mask() partially specialized for nibble-masking.
+auto maskNibble(size_t index, T)(const T value)
+{
+    return mask!(index, MaskKind.Nibble)(value);
+}
+
+/// Compile-time mask() partially specialized for bit-masking.
+auto maskBit(size_t index, T)(const T value)
+{
+    return mask!(index, MaskKind.Bit)(value);
+}
+
+/**
+ * Mask, at run-time, a byte, a nibble or a bit in the argument.
+ *
+ * Params:
+ * index = the position, 0-based, of the element ot mask.
+ * kind = the kind of the element to mask.
+ * value = the value mask.
+ *
+ * Returns:
+ * The input argument with the element masked.
+ */
+auto mask(MaskKind kind = MaskKind.Byte, T)(const T value, size_t index)
+{
+    static immutable byteMasker = 
+    [
+        0xFFFFFFFFFFFFFF00,
+        0xFFFFFFFFFFFF00FF,
+        0xFFFFFFFFFF00FFFF,
+        0xFFFFFFFF00FFFFFF,
+        0xFFFFFF00FFFFFFFF,
+        0xFFFF00FFFFFFFFFF,
+        0xFF00FFFFFFFFFFFF,
+        0x00FFFFFFFFFFFFFF 
+    ];
+    
+    static immutable nibbleMasker = 
+    [
+        0xFFFFFFFFFFFFFFF0,
+        0xFFFFFFFFFFFFFF0F,
+        0xFFFFFFFFFFFFF0FF,
+        0xFFFFFFFFFFFF0FFF,
+        0xFFFFFFFFFFF0FFFF,
+        0xFFFFFFFFFF0FFFFF,
+        0xFFFFFFFFF0FFFFFF,
+        0xFFFFFFFF0FFFFFFF,
+        0xFFFFFFF0FFFFFFFF,
+        0xFFFFFF0FFFFFFFFF,
+        0xFFFFF0FFFFFFFFFF,
+        0xFFFF0FFFFFFFFFFF,
+        0xFFF0FFFFFFFFFFFF,
+        0xFF0FFFFFFFFFFFFF,
+        0xF0FFFFFFFFFFFFFF,
+        0x0FFFFFFFFFFFFFFF 
+    ];
+    static if (kind == MaskKind.Byte)
+        return value & byteMasker[index];
+    else static if (kind == MaskKind.Nibble)
+        return value & nibbleMasker[index];
+    else
+        return value & (0xFFFFFFFFFFFFFFFF - (1UL << index));
+}
+
+/// Run-time mask() partially specialized for nibble-masking.
+auto maskNibble(size_t index, T)(const T value)
+{
+    return mask!(MaskKind.Nibble)(value, index);
+}
+
+/// Run-time mask() partially specialized for bit-masking.
+auto maskBit(T)(const T value, size_t index)
+{
+    return mask!(MaskKind.Bit)(value, index);
+}
+
+unittest
+{
+    enum v0 = 0x44332211;
+    static assert( mask!0(v0) == 0x44332200);
+    static assert( mask!1(v0) == 0x44330011);  
+    static assert( mask!2(v0) == 0x44002211);
+    static assert( mask!3(v0) == 0x00332211);
+    
+    assert( mask(v0,0) == 0x44332200);
+    assert( mask(v0,1) == 0x44330011);  
+    assert( mask(v0,2) == 0x44002211);
+    assert( mask(v0,3) == 0x00332211);    
+    
+    enum v1 = 0x87654321;
+    static assert( mask!(0, MaskKind.Nibble)(v1) == 0x87654320);
+    static assert( mask!(1, MaskKind.Nibble)(v1) == 0x87654301);
+    static assert( mask!(2, MaskKind.Nibble)(v1) == 0x87654021); 
+    static assert( mask!(3, MaskKind.Nibble)(v1) == 0x87650321);
+    static assert( mask!(7, MaskKind.Nibble)(v1) == 0x07654321);
+    
+    assert( mask!(MaskKind.Nibble)(v1,0) == 0x87654320);
+    assert( mask!(MaskKind.Nibble)(v1,1) == 0x87654301);
+    assert( mask!(MaskKind.Nibble)(v1,2) == 0x87654021); 
+    assert( mask!(MaskKind.Nibble)(v1,3) == 0x87650321);
+    assert( mask!(MaskKind.Nibble)(v1,7) == 0x07654321);     
+    
+    enum v2 = 0b11111111;
+    static assert( mask!(0, MaskKind.Bit)(v2) == 0b11111110);
+    static assert( mask!(1, MaskKind.Bit)(v2) == 0b11111101);
+    static assert( mask!(7, MaskKind.Bit)(v2) == 0b01111111);  
+    
+    assert( maskBit(v2,0) == 0b11111110);
+    assert( maskBit(v2,1) == 0b11111101);
+    assert( mask!(MaskKind.Bit)(v2,7) == 0b01111111);       
+}
+
 /**
  * Alternative to std.range primitives for arrays.
  *
