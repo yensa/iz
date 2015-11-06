@@ -266,7 +266,7 @@ unittest
  */
 struct ArrayRange(T, bool assumeDecoded = false)
 {
-    static if (!isSomeChar!T || assumeDecoded)
+    static if (!isSomeChar!T || assumeDecoded || is(T==dchar))
     {
         private T* _front, _back;    
         ///
