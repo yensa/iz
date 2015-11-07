@@ -130,7 +130,7 @@ struct CharMap
     private bool[] _map;
     private dchar _min, _max;
     
-    private void setMinMax(dchar value) nothrow 
+    private void setMinMax(dchar value) nothrow @safe
     {
         if (value <= _min) _min = value;
         else if (value >= _max) _max = value;
@@ -138,7 +138,7 @@ struct CharMap
     }
 
     /**
-     * Used in the construction process.
+     * Used in the construction process. The upper bound is inclusive.
      * Example:
      * ---
      * CharMap cm = CharMap['0'..'9'];
@@ -152,14 +152,14 @@ struct CharMap
     /**
      * Used in the construction process.
      * Params:
-     * a = alist made of character slices, of single character or
-     * any value implicitly convertible to dchar.
+     * a = alist made of character slices, of single characters or
+     * any other values whose type are implicitly convertible to dchar.
      * Example:
      * ---
      * CharMap cm = CharMap['0'..'9', '.', 'f', 'd', 38, 39];
      * ---
      */
-    static CharMap opIndex(A...)(A a) nothrow 
+    static CharMap opIndex(A...)(A a) nothrow @safe
     {   
         CharMap result;
         
@@ -200,7 +200,7 @@ struct CharMap
      * Params:
      * c = A character or any value convertible to a dchar.
      */    
-    bool opIn_r(C)(C c) pure nothrow @nogc const 
+    bool opIn_r(C)(C c) pure nothrow @nogc const @safe 
     {
         static if (isSomeChar!C || isImplicitlyConvertible!(C, dchar))
         {
@@ -211,7 +211,7 @@ struct CharMap
     }
 }
 
-unittest
+@safe unittest
 {
     CharMap cm = CharMap['a'..'f', '0'..'9' , 'A'..'F', '_', 9];
     assert('a' in cm);
@@ -233,7 +233,7 @@ unittest
     assert('9' in cm);
     assert('_' in cm);
     assert('%' !in cm);
-    assert('\t' in cm);   
+    assert('\t' in cm);  
 }
 
 /// A CharMap that includes the hexadecimal characters.
@@ -243,7 +243,7 @@ immutable CharMap whiteChars = CharMap['\t'..'\r', ' '];
 
 /**
  * Returns a input range to process directly a C-style null terminated string 
- * without converting it to a D string.
+ * without converting it to a D string. The front is not decoded.
  * Params:
  * c = a pointer to a character.
  * Returns:
