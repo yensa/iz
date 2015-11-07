@@ -101,14 +101,14 @@ enum MaskKind {Byte, Nibble, Bit}
  * Mask, at compile-time, a byte, a nibble or a bit in the argument.
  *
  * Params:
- * index = the position, 0-based, of the element ot mask.
+ * index = the position, 0-based, of the element to mask.
  * kind = the kind of the element to mask.
  * value = the value mask.
  *
  * Returns:
  * The input argument with the element masked.
  */
-auto mask(size_t index, MaskKind kind = MaskKind.Byte, T)(const T value)
+auto mask(size_t index, MaskKind kind = MaskKind.Byte, T)(const T value) nothrow
 if (    (kind == MaskKind.Byte && index <= T.sizeof)
     ||  (kind == MaskKind.Nibble && index <= T.sizeof * 2)
     ||  (kind == MaskKind.Bit && index <= T.sizeof * 8))
@@ -127,7 +127,6 @@ if (    (kind == MaskKind.Byte && index <= T.sizeof)
             static if (i != index)
             {
                 immutable T shift = 8 * i / 2;
-                
                 _mask += (0x0F << ((shift & 3) * 4)) << shift;
             }                  
     }
@@ -141,13 +140,15 @@ if (    (kind == MaskKind.Byte && index <= T.sizeof)
 }
 
 /// Compile-time mask() partially specialized for nibble-masking.
-auto maskNibble(size_t index, T)(const T value)
+auto maskNibble(size_t index, T)(const T value) nothrow
 {
+    // note: aliasing prevents template parameter type deduction,
+    // e.g alias maskNibble(size_t index, T) = mask!(index, MaskKind.Nibble, T);
     return mask!(index, MaskKind.Nibble)(value);
 }
 
 /// Compile-time mask() partially specialized for bit-masking.
-auto maskBit(size_t index, T)(const T value)
+auto maskBit(size_t index, T)(const T value) nothrow
 {
     return mask!(index, MaskKind.Bit)(value);
 }
@@ -156,14 +157,14 @@ auto maskBit(size_t index, T)(const T value)
  * Mask, at run-time, a byte, a nibble or a bit in the argument.
  *
  * Params:
- * index = the position, 0-based, of the element ot mask.
+ * index = the position, 0-based, of the element to mask.
  * kind = the kind of the element to mask.
  * value = the value mask.
  *
  * Returns:
  * The input argument with the element masked.
  */
-auto mask(MaskKind kind = MaskKind.Byte, T)(const T value, size_t index)
+auto mask(MaskKind kind = MaskKind.Byte, T)(const T value, size_t index) nothrow
 {
     static immutable byteMasker = 
     [
@@ -205,13 +206,13 @@ auto mask(MaskKind kind = MaskKind.Byte, T)(const T value, size_t index)
 }
 
 /// Run-time mask() partially specialized for nibble-masking.
-auto maskNibble(size_t index, T)(const T value)
+auto maskNibble(T)(const T value, size_t index) nothrow
 {
     return mask!(MaskKind.Nibble)(value, index);
 }
 
 /// Run-time mask() partially specialized for bit-masking.
-auto maskBit(T)(const T value, size_t index)
+auto maskBit(T)(const T value, size_t index) nothrow
 {
     return mask!(MaskKind.Bit)(value, index);
 }
@@ -414,13 +415,55 @@ unittest
     ubyte[] src = [1,2,3,4,5];
     ubyte[] arr = src.dup;
     auto rng = ArrayRange!ubyte(arr);
-    ubyte cnt;
+    ubyte cnt = 1;
     while (!rng.empty)
     {
-        ++cnt;
-        assert(rng.front == cnt);
+        assert(rng.front == cnt++);
         rng.popFront;
     }
     assert(arr == src);   
 }
+
+/**
+ * Calls a function according to a probability
+ *
+ * Params:
+ * t = The chance to call, in percentage.
+ * fun = The function to call. It must be a void function.
+ * a = The variadic argument passed to fun.
+ */
+void pickAndCall(T, Fun, A...)(T t, Fun fun, auto ref A a)
+if (isNumeric!T && isCallable!Fun && is(ReturnType!Fun == void))
+in
+{
+    static immutable string err = "chance to pick must be in the 0..100 range";
+    assert(t <= 100, err);
+    assert(t >= 0, err);
+}
+body
+{
+    import std.random;
+    static immutable T min = 0;
+    static immutable T max = 100;
+    if (uniform(min, max) > max - t)
+        fun(a);
+}
+
+unittest
+{
+    uint cnt;
+    void foo(uint param)
+    {
+        cnt += param;
+    }
+    foreach(immutable i; 0 .. 100)
+        pickAndCall!(double)(75.0, &foo, 1);
+    assert(cnt > 25);
+    cnt = 0;
+    foreach(immutable i; 0 .. 100)
+        pickAndCall!(byte)(0, &foo, 1);
+    assert(cnt == 0);    
+}
+
+
 
