@@ -117,24 +117,15 @@ if (    (kind == MaskKind.Byte && index <= T.sizeof)
     T _mask;
     static if (kind == MaskKind.Byte)
     {
-        foreach(i; staticIota!(0, T.sizeof))
-            static if (i != index)
-                _mask += 0xFF << i * 8;
+        _mask = T.min - 1 - (0xFF << index * 8); 
     }
     else static if (kind == MaskKind.Nibble)
     {
-        foreach(i; staticIota!(0, T.sizeof * 2))
-            static if (i != index)
-            {
-                immutable T shift = 8 * i / 2;
-                _mask += (0x0F << ((shift & 3) * 4)) << shift;
-            }                  
+        _mask = T.min - 1 - (0xF << index * 4);                           
     }
     else static if (kind == MaskKind.Bit)
     {
-        foreach(i; staticIota!(0, T.sizeof * 8))
-            static if (i != index)
-                _mask += 0b1 << i;              
+        _mask = T.min - 1 - (0x1 << index);            
     }    
     return value & _mask;
 }
@@ -204,6 +195,21 @@ auto mask(MaskKind kind = MaskKind.Byte, T)(const T value, size_t index) nothrow
     else
         return value & (0xFFFFFFFFFFFFFFFF - (1UL << index));
 }
+
+/*
+First version: less byte code but more latency do to memory access
+This version: no memory access but equivalent latency due to more byte code.
+auto mask(MaskKind kind = MaskKind.Byte, T)(const T value, size_t index) nothrow
+{
+    static immutable T _max = - 1; 
+    static if (kind == MaskKind.Byte)
+        return value & (_max - (0xFF << index * 8));
+    else static if (kind == MaskKind.Nibble)
+        return value & (_max - (0xF << index * 4));
+    else
+        return value & (_max - (0x1 << index));
+}
+*/
 
 /// Run-time mask() partially specialized for nibble-masking.
 auto maskNibble(T)(const T value, size_t index) nothrow
@@ -432,7 +438,7 @@ unittest
  * fun = The function to call. It must be a void function.
  * a = The variadic argument passed to fun.
  */
-void pickAndCall(T, Fun, A...)(T t, Fun fun, auto ref A a)
+void pickAndCall(T, Fun, A...)(T t, Fun fun, auto ref A a) @safe
 if (isNumeric!T && isCallable!Fun && is(ReturnType!Fun == void))
 in
 {
@@ -442,28 +448,31 @@ in
 }
 body
 {
-    import std.random;
+    import std.random: uniform;
     static immutable T min = 0;
     static immutable T max = 100;
-    if (uniform(min, max) > max - t)
+    if (uniform!"[]"(min, max) > max - t)
         fun(a);
 }
 
-unittest
+@safe unittest
 {
     uint cnt;
-    void foo(uint param)
+    bool test;
+    void foo(uint param0, out bool param1) @safe
     {
-        cnt += param;
+        cnt += param0;
+        param1 = true;
     }
     foreach(immutable i; 0 .. 100)
-        pickAndCall!(double)(75.0, &foo, 1);
+        pickAndCall!(double)(75.0, &foo, 1, test);
     assert(cnt > 25);
+    assert(test);
     cnt = 0;
+    test = false;
     foreach(immutable i; 0 .. 100)
-        pickAndCall!(byte)(0, &foo, 1);
-    assert(cnt == 0);    
+        pickAndCall!(byte)(0, &foo, 1, test);
+    assert(cnt == 0);
+    assert(!test);    
 }
-
-
 
