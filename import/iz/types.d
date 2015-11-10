@@ -61,7 +61,7 @@ enum RuntimeType : ubyte
  *
  * An instance should always be private and exposed as const(RuntimeTypeInfo) */
  /* because A particular requirement in PropDescriptor prevents to set the members as
- * immutable (no default this in struct + declaration without ctor + later call to define).
+ * immutable (no default this in struct + declaration without ctor + later call to define) = ouch
  */
 struct RuntimeTypeInfo
 {

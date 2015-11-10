@@ -102,6 +102,7 @@ public:
     nothrow @safe static size_t opIndex(E aMember)
     {
         if (__ctfe)
+        //static if (!is(__ctfe))
         {
             size_t result;
             foreach(member; EnumMembers!E)
@@ -119,6 +120,7 @@ public:
     nothrow @safe static E opIndex(size_t aRank)
     {
         if (__ctfe)
+        //static if (!is(__ctfe))
         {
             size_t rank;
             foreach(member; EnumMembers!E)
@@ -1078,8 +1080,7 @@ version(unittest)
     {
         static assert(EnumSet!(a8, Set8)(a8.a0,a8.a1) == 0b00000011);
         enum set = EnumSet!(a8, Set8)(a8.a0,a8.a1);
-        set.include(a8.a2);
-        //static assert(set == 0b00000111, set);
+        static assert(set == 0b011, set);
     }
 
     /// EnumSet

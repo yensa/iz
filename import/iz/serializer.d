@@ -6,25 +6,11 @@ import iz.types, iz.memory, iz.properties, iz.containers, iz.streams, iz.referen
 
 // Serializable types ---------------------------------------------------------+
 
-//TODO-cfeature: SerializableReference can be replaced with a struct serialized as string. 
-
 /**
  * Allows an implementer to be serialized by an Serializer.
  */
 interface Serializable
 {
-    /**
-     * Indicates the type of the implementer. This information may be used
-     * during the deserialization phase for type-safety or to create an
-     * new class instance.
-     */
-    /*final string className()
-    {
-        import std.conv, std.array;
-        return to!string(this)
-            .split('.')[1..$]
-            .join;
-    }*/
     /**
      * Called by an Serializer during the de/serialization phase.
      * In the implementation, the Serializable declares its properties to the serializer.
@@ -90,22 +76,24 @@ class SerializableReference: Serializable
  */
 enum SerializableType
 {
+    // must match iz.types.RuntimeType
     _invalid= 0,
     _byte   = 0x01, _ubyte, _short, _ushort, _int, _uint, _long, _ulong,
     _float  = 0x10, _double,
     _char   = 0x20, _wchar, _dchar,
-    _Object = 0x30, _izSerializable,
+    _object = 0x30, _serializable,
     _stream = 0x40,
 } 
 
 private struct InvalidSerType{}
 
+// must match iz.types.RuntimeType
 private alias SerializableTypes = TypeTuple!(
     InvalidSerType, 
     byte, ubyte, short, ushort, int, uint, long, ulong,
     float, double,
     char, wchar, dchar,
-    Serializable, Object,
+    Object, Serializable,
     Stream 
 );
 
@@ -133,7 +121,7 @@ private bool isSerObjectType(T)()
 
 private bool isSerObjectType(SerializableType type)
 {
-    return (type == SerializableType._izSerializable) | (type == SerializableType._Object);
+    return (type == SerializableType._serializable) | (type == SerializableType._object);
 }
 
 private bool isSerSimpleType(T)()
@@ -315,7 +303,7 @@ void nodeInfo2Declarator(const SerNodeInfo * nodeInfo)
     //
     with (SerializableType) final switch(nodeInfo.type)
     {
-        case _invalid,SerializableType._izSerializable,SerializableType._Object: break;
+        case _invalid, _serializable, _object: break;
         case _byte: toDecl!byte; break;
         case _ubyte: toDecl!ubyte; break;
         case _short: toDecl!short; break;
@@ -350,7 +338,7 @@ char[] value2text(const SerNodeInfo * nodeInfo)
     with (SerializableType) final switch(nodeInfo.type)
     {
         case _invalid: return "invalid".dup;
-        case _izSerializable, SerializableType._Object: return cast(char[])(nodeInfo.value);
+        case _serializable, _object: return cast(char[])(nodeInfo.value);
         case _ubyte: return v2t!ubyte;
         case _byte: return v2t!byte;
         case _ushort: return v2t!ushort;
@@ -386,26 +374,26 @@ ubyte[] text2value(char[] text, const SerNodeInfo * nodeInfo)
         if (!nodeInfo.isArray) return t2v_1!T; else return t2v_2!T;
     }
     //    
-    final switch(nodeInfo.type)
+    with(SerializableType) final switch(nodeInfo.type)
     {
-        case SerializableType._invalid:
+        case _invalid:
             return cast(ubyte[])"invalid".dup;
-        case SerializableType._izSerializable, SerializableType._Object:
+        case _serializable, _object:
             return cast(ubyte[])(text);
-        case SerializableType._ubyte: return t2v!ubyte;
-        case SerializableType._byte: return t2v!byte;
-        case SerializableType._ushort: return t2v!ushort;
-        case SerializableType._short: return t2v!short;
-        case SerializableType._uint: return t2v!uint;
-        case SerializableType._int: return t2v!int;
-        case SerializableType._ulong: return t2v!ulong;
-        case SerializableType._long: return t2v!long;
-        case SerializableType._float: return t2v!float;
-        case SerializableType._double: return t2v!double;
-        case SerializableType._char: return t2v!char;
-        case SerializableType._wchar: return t2v_2!wchar;
-        case SerializableType._dchar: return t2v!dchar;
-        case SerializableType._stream: return to!(ubyte[])(text);
+        case _ubyte: return t2v!ubyte;
+        case _byte: return t2v!byte;
+        case _ushort: return t2v!ushort;
+        case _short: return t2v!short;
+        case _uint: return t2v!uint;
+        case _int: return t2v!int;
+        case _ulong: return t2v!ulong;
+        case _long: return t2v!long;
+        case _float: return t2v!float;
+        case _double: return t2v!double;
+        case _char: return t2v!char;
+        case _wchar: return t2v_2!wchar;
+        case _dchar: return t2v!dchar;
+        case _stream: return to!(ubyte[])(text);
     }
 }
 
@@ -413,8 +401,6 @@ ubyte[] text2value(char[] text, const SerNodeInfo * nodeInfo)
 void setNodeInfo(T)(SerNodeInfo * nodeInfo, PropDescriptor!T * descriptor)
 {
     scope(failure) nodeInfo.isDamaged = true;
-
-    // TODO: nodeInfo.value, try to use an union instead of an array 
 
     // simple, fixed-length (or convertible to), types
     static if (isSerSimpleType!T || isSerStructType!T)
@@ -1187,8 +1173,7 @@ public:
     {
         if (!hasMember!(T, "propCollectorGet"))
             throw new Exception("PropDescriptorCollector not mixed in root");
-            
-        // TODO-cSerializer: rewrite addProperty to allow serialization using rtti
+
         // problems: 
         // - still totally impossible to use a struct as root or sub object  
         
@@ -1233,14 +1218,12 @@ public:
      */
     void istToPropCollector(PropDescriptorCollection root)
     {
-        // TODO-cTest: test istToPropCollector()
         void restoreFrom(IstNode node, PropDescriptorCollection target)
         {
             foreach(child; node.children)
             {
                 bool done;  
-                IstNode childNode = cast(IstNode) child;  
-                for(auto i = 0; i < target.propCollectorCount; i++)
+                IstNode childNode = cast(IstNode) child;
                 if (void* t0 = target.propCollectorGetPtr(childNode.info.name)) 
                 {
                     PropDescriptor!int* t1 = cast(PropDescriptor!int*)t0;
@@ -1259,11 +1242,9 @@ public:
                             if (t3) restoreFrom(childNode, t3); 
                         }
                         done = true;
-                        break;
                     }
                 }
-                if (done) continue;
-                else
+                if (!done)
                 {
                     bool noop;
                     restoreFromEvent(childNode, noop);
@@ -1277,7 +1258,6 @@ public:
         SerializationFormat format = SerializationFormat.iztxt)
     if (is(T==class) || is(T == struct))   
     {
-        // TODO-cTest: test streamToPropCollector()
         streamToIst(inputStream, format);
         istToPropCollector(root); 
     }
@@ -1371,8 +1351,8 @@ public:
      */
     void istToObject(Serializable root)
     {
-        // TODO-cfeature: launch recursive IST building with addProperties
-        // without adding nodes but to associate existing nodes to a descriptor.
+        // TODO-cfeature: launch recursive IST checking with addProperties
+        // without adding nodes but in order to associate existing nodes to a descriptor.
     }
 
     /**
@@ -1507,8 +1487,7 @@ public:
     {    
         if (!descriptor) return;
         if (!descriptor.name.length) return;
-        
-        // TODO-cfeature: parameter that indicates if the IST has to be build or checked
+
         auto propNode = _parentNode.addNewChildren!IstNode;
         propNode.setDescriptor(descriptor);
         
@@ -2045,7 +2024,7 @@ version(unittest)
     class SubCollected: PropDescriptorCollection
     {
         mixin PropDescriptorCollector;
-        @SetGet char[] _someChars = "ohyess".dup;
+        @SetGet char[] _someChars = "awhyes".dup;
         this()
         {
             propCollectorGetFields;
@@ -2058,10 +2037,23 @@ version(unittest)
         @SetGet byte _b = 21;
         @SetGet SubCollected _sub;
         @SetGet byte _c = 31;
+        SubCollected _anothersub;
         this()
         {
-            _sub = new SubCollected;
+            _sub = construct!SubCollected;
+            _anothersub = construct!SubCollected;
             propCollectorGetFields;
+        }
+        ~this()
+        {
+            destruct(_anothersub);
+        }
+        void reset()
+        {
+            _a = 0; _b = 0; _c = 0;
+            _sub._someChars = "".dup;
+            destruct(_sub);_sub = null;
+            _anothersub._someChars = "".dup;
         }
     }
 
@@ -2071,9 +2063,25 @@ version(unittest)
         Serializer ser = construct!Serializer;
         MemoryStream str = construct!MemoryStream;
         scope(exit) destruct(c, ser, str);
-        
+
+        void objectNotFound(IstNode node, ref Object serializable)
+        {
+            if (node.info.name == "sub")
+                serializable = c._anothersub;
+        }
+        ser.onWantObject = &objectNotFound;
+
         ser.collectorToStream(c, str);
         str.saveToFile(r"test.txt");
+
+        c.reset;
+        str.position = 0;
+        ser.streamToPropCollector(str, c);
+
+        assert(c._a == 12);
+        assert(c._b == 21);
+        assert(c._c == 31);
+        assert(c._anothersub._someChars == "awhyes");
     }
     //----
 }
