@@ -24,3 +24,18 @@ ser.txt
 *.html
 *.js
 *.css
+# generated when unittesting a module under nix
+import/iz/classes
+import/iz/containers
+import/iz/enumset
+import/iz/logicver
+import/iz/memory
+import/iz/observer
+import/iz/properties
+import/iz/referencable
+import/iz/serializer
+import/iz/streams
+import/iz/strings
+import/iz/sugar
+import/iz/types
+
