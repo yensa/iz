@@ -414,8 +414,7 @@ mixin template PropDescriptorCollector(){
         }
         
         if (createIfMissing && !descr) 
-        {   
-            //TODO-cPropDescriptor: when the default _ctor is called, the rtti is not initialized.
+        {
             descr = new PropDescriptor!T;
             descr.name = name;
             descriptors ~= descr;
