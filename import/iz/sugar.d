@@ -198,7 +198,7 @@ auto mask(MaskKind kind = MaskKind.Byte, T)(const T value, size_t index) nothrow
 
 /*
 First version: less byte code but more latency do to memory access
-This version: no memory access but equivalent latency due to more byte code.
+This version: no memory access but similar latency due to more byte code.
 auto mask(MaskKind kind = MaskKind.Byte, T)(const T value, size_t index) nothrow
 {
     static immutable T _max = - 1; 
