@@ -58,12 +58,15 @@ enum RuntimeType : ubyte
 /**
  * A variable can be associated to its RuntimeTypeInfo
  * to get its type information at runtime.
+ *
+ * An instance should always be private and exposed as const(RuntimeTypeInfo)
+ * A particular requirement in PropDescriptor prevents to set the members as
+ * immutable (no default this in struct + declaration without ctor + later call to define).
  */
 struct RuntimeTypeInfo
 {
-    immutable RuntimeType type;
-    immutable bool array; 
-    //immutable RuntimeTypeInfo* [] members;
+    RuntimeType type;
+    bool array;
 }
 
 /**
@@ -120,3 +123,40 @@ unittest
     assert(c_rtti.type == RuntimeType._char);
 }
 
+/**
+ * Returns the dynamic class name of an Object or an interface.
+ * Params:
+ * assumeDemangled = must only be set to false if the class is declared in a unittest.
+ * t = either an interface or an class instance.
+ */
+string className(bool assumeDemangled = true, T)(T t)
+if (is(T == class) || is(T == interface))
+{
+    static if (is(T == class)) Object o = t;
+    else Object o = cast(Object) t;
+    import std.array;
+    static if (assumeDemangled)
+        return (cast(TypeInfo_Class)typeid(o)).name.split('.')[$-1];
+    else
+    {
+        import std.demangle;
+        return (cast(TypeInfo_Class)typeid(o)).name.demangle.split('.')[$-1];       
+    }    
+}
+
+version(unittest)
+{
+    interface I {}
+    class A{}
+    class B: I{}
+    unittest
+    {
+        class C{}
+        assert(className(new A) == "A");
+        assert(className(new B) == "B");
+        assert(className(cast(Object)new A) == "A");
+        assert(className(cast(Object)new B) == "B");
+        assert(className(cast(I) new B) == "B");
+        assert(className!(false)(new C) == "C");
+    }
+}

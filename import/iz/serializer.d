@@ -18,13 +18,13 @@ interface Serializable
      * during the deserialization phase for type-safety or to create an
      * new class instance.
      */
-    final string className()
+    /*final string className()
     {
         import std.conv, std.array;
         return to!string(this)
             .split('.')[1..$]
             .join;
-    }
+    }*/
     /**
      * Called by an Serializer during the de/serialization phase.
      * In the implementation, the Serializable declares its properties to the serializer.
@@ -148,13 +148,17 @@ private bool isSerSimpleType(T)()
 
 private static bool isSerStructType(T)()
 {
-    static if (!is(T==struct)) return false; 
+    bool result = false;
+    static if (!is(T==struct)) return result; 
     else
     { 
         foreach(TT; SerializableTypes)
             static if (isAssignable!(T,TT))
-                return true;
-        return false;
+            {
+                result = true;
+                break;
+            }
+        return result;
     }   
     assert(0, T.stringof ~ " is not tested by " ~ __FUNCTION__);
 }
@@ -247,7 +251,7 @@ struct SerNodeInfo
     bool    isLastChild;
 }
 
-/** 
+/**
  * Event triggered when a serializer needs a particular property descriptor.
  * Params:
  * node = The information the callee uses to determine the descriptor to return.
@@ -470,14 +474,29 @@ void setNodeInfo(T)(SerNodeInfo * nodeInfo, PropDescriptor!T * descriptor)
     else static if (isSerObjectType!T)
     {
         Serializable ser;
+        Object obj;
+        char[] value;
+       
+        // Serializable 
         static if (is(T == Object))
             ser =  cast(Serializable) descriptor.get();       
         else
             ser = descriptor.get();
+        if (ser !is null)
+        {
+            value = className(ser).dup;
+            nodeInfo.type = text2type[typeof(ser).stringof];            
+        } 
+        else // Object (PropCollector test)
+        {
+            obj = cast(Object) descriptor.get;
+            value = className(obj).dup;
+            nodeInfo.type = text2type[typeof(obj).stringof];  
+        }   
             
-        char[] value = ser.className.dup;
-        //
-        nodeInfo.type = text2type[typeof(ser).stringof];
+            
+            
+        
         nodeInfo.isArray = false;
         nodeInfo.descriptor = cast(Ptr) descriptor;
         nodeInfo.name = descriptor.name.dup;
@@ -1034,7 +1053,7 @@ class Serializer
             _serState = SerializationState.none;
         }
         
-        /* 
+        /**
          * Builds the IST from an Serializable and stores sequentially in a stream.
          * The process starts by a call to .declaraPropties() in the root then
          * the process is lead by the the subsequent declarations.
@@ -1115,9 +1134,8 @@ class Serializer
                 
             // TODO-cSerializer: rewrite addProperty to allow serialization using rtti
             // problems: 
-            // - the root have to be Serializable
-            // - totally impossible to use a struct as root or sub object     
-                
+            // - still totally impossible to use a struct as root or sub object  
+            
             _format = format;
             _stream = outputStream;
             _storeMode = StoreMode.sequential;
@@ -1129,6 +1147,14 @@ class Serializer
             //setRoot(root);
             _currSerializable = _rootSerializable;
             _currNode = _rootNode;
+            
+            PropDescriptor!Object rootDescr = PropDescriptor!Object(cast(Object*)&root, "root");
+            
+            assert( rootDescr.get == root);
+               
+            _currNode.setDescriptor(&rootDescr);
+            assert(_currNode.info.descriptor);
+            
             writeFormat(_format)(_currNode, _stream);
             //
             _parentNode = _rootNode;                           
@@ -1139,11 +1165,13 @@ class Serializer
                 
             foreach(immutable i; 0 .. root.propCollectorCount)
             {
+                // the descriptor type is wrong here...
                 alias DescType = PropDescriptor!int; 
                 DescType* descr = cast(DescType*)root.propCollectorGetPtr(i);
                 
                 writeln(descr.rtti.type);
                 
+                // ...but its rtti allows to cast it properly
                 with(RuntimeType) switch(descr.rtti.type)
                 {
                     default: break;
@@ -1154,8 +1182,8 @@ class Serializer
                     case _ubyte:
                         addProperty!ubyte(cast(PropDescriptor!ubyte*) descr);
                         writeln(descr.name);
-                        break;                        
-                } 
+                        break;                                          
+                }
             }
         }
  
@@ -1908,7 +1936,11 @@ version(unittest)
     }
     //----
     
-    // testing the RuntimeTypeInfo-based serialization
+    // testing the RuntimeTypeInfo-based serialization ----+
+    
+    class SubCollected
+    {
+    }
     class Collected
     {
         mixin PropDescriptorCollector;
@@ -1928,7 +1960,7 @@ version(unittest)
         scope(exit) destruct(c, ser, str);  
         
         ser.collectorToStream(c, str); 
-        str.saveToFile(r"test.txt");     
+        str.saveToFile(r"test.txt");    
     }
     //----
 }

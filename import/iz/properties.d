@@ -42,7 +42,7 @@ struct PropDescriptor(T)
         PropSetter _setter;
         PropGetter _getter;
         Object fDeclarator;
-        static RuntimeTypeInfo _rtti;
+        RuntimeTypeInfo _rtti;
 
         T* _setPtr;
         T* _getPtr;
@@ -90,11 +90,6 @@ struct PropDescriptor(T)
     {
         /// version number that can be used in case of breaking change.
         static immutable ubyte descriptorFormat = 0;
-        
-        static this()
-        {
-            _rtti = runtimeTypeInfo!T;    
-        }
         
 // constructors ---------------------------------------------------------------+
         /**
@@ -160,6 +155,7 @@ struct PropDescriptor(T)
         void define(PropSetter aSetter, PropGetter aGetter, string aName = "")
         {
             cleanup;
+            _rtti = runtimeTypeInfo!T; 
             setter(aSetter);
             getter(aGetter);
             if (aName != "") {name(aName);}
@@ -172,6 +168,7 @@ struct PropDescriptor(T)
         void define(PropSetter aSetter, T* aSourceData, string aName = "")
         {
             cleanup;
+            _rtti = runtimeTypeInfo!T; 
             setter(aSetter);
             setDirectSource(aSourceData);
             if (aName != "") {name(aName);}
@@ -183,6 +180,7 @@ struct PropDescriptor(T)
         void define(T* aData, string aName = "", Object aDeclarator = null)
         {
             cleanup;
+            _rtti = runtimeTypeInfo!T; 
             setDirectSource(aData);
             setDirectTarget(aData);
             if (aName != "") {name(aName);}
@@ -278,7 +276,7 @@ struct PropDescriptor(T)
         /**
          * Returns the RuntimeTypeInfo struct for the property type.
          */
-         @property static const(RuntimeTypeInfo) rtti(){return _rtti;}
+        @property const(RuntimeTypeInfo*) rtti(){return &_rtti;}
 // ----        
     
     }   
