@@ -948,19 +948,14 @@ class Serializer
 {
     private
     {
-        // the IST root
+        /// the IST root
         IstNode _rootNode;
-        // the current node, representing an Serializable or not
-        IstNode _currNode;
-        // the current parent node, always representing an Serializable
+        /// the current parent node, always representing a Serializable
         IstNode _parentNode;
-        // the last created node 
-        IstNode _previousNode;
-        
-        // the Serializable linked to _rootNode
+        /// the last created node 
+        IstNode _previousNode; 
+        /// the Serializable linked to _rootNode
         Serializable _rootSerializable;
-        // the Serializable linked to _parentNode
-        Serializable _currSerializable;
         
         WantDescriptorEvent _onWantDescriptor;
         WantObjectEvent _onWantObject;
@@ -980,7 +975,6 @@ class Serializer
         void setRoot(Serializable root)
         {
             _rootSerializable = root;
-            _currNode = _rootNode;
             _rootDescr.define(&_rootSerializable, "Root");
             _rootNode.setDescriptor(&_rootDescr);
         }
@@ -1045,11 +1039,9 @@ class Serializer
             _rootNode.deleteChildren;
             _previousNode = null;
             setRoot(root);
-            _currSerializable = _rootSerializable;
-            _currNode = _rootNode;
             //
             _parentNode = _rootNode;
-            _currSerializable.declareProperties(this);
+            _rootSerializable.declareProperties(this);
             _serState = SerializationState.none;
         }
         
@@ -1077,12 +1069,10 @@ class Serializer
             _rootNode.deleteChildren;
             _previousNode = null;
             setRoot(root);
-            _currSerializable = _rootSerializable;
-            _currNode = _rootNode;
-            writeFormat(_format)(_currNode, _stream);
+            writeFormat(_format)(_rootNode, _stream);
             //
             _parentNode = _rootNode;
-            _currSerializable.declareProperties(this);
+            _rootSerializable.declareProperties(this);
             //
             _mustWrite = false;
             _serState = SerializationState.none;
@@ -1130,7 +1120,7 @@ class Serializer
             PropDescriptorCollection collector;
             collector = cast(PropDescriptorCollection) objDescr.get();
             // write/Set object node
-            if (!_currNode) _parentNode = _rootNode;
+            if (!_parentNode) _parentNode = _rootNode;
             else _parentNode = _parentNode.addNewChildren!IstNode;
             _parentNode.setDescriptor(objDescr);
             if (_mustWrite)
@@ -1204,8 +1194,7 @@ class Serializer
             _mustWrite = true; 
             _rootNode.deleteChildren;
             _previousNode = null;
-            _currSerializable = _rootSerializable;
-            _currNode = null;
+            _parentNode = null;
             PropDescriptor!Object rootDescr = PropDescriptor!Object(cast(Object*)&root, "root");
             addObjectWithCollectedProp(&rootDescr);
             _serState = SerializationState.none;
@@ -1222,8 +1211,6 @@ class Serializer
             _mustWrite = false;
             _rootNode.deleteChildren;
             _previousNode = null;
-            _currSerializable = _rootSerializable;
-            _currNode = null;
             PropDescriptor!Object rootDescr = PropDescriptor!Object(cast(Object*)&root, "root");
             addObjectWithCollectedProp(&rootDescr);
             _serState = SerializationState.none;            
@@ -1247,28 +1234,28 @@ class Serializer
             {
                 foreach(child; node.children)
                 {
-                  IstNode valueNode = cast(IstNode) child;  
+                  IstNode childNode = cast(IstNode) child;  
                   for(auto i = 0; i < target.propCollectorCount; i++)
-                  if (void* t0 = target.propCollectorGetPtr(valueNode.info.name)) 
+                  if (void* t0 = target.propCollectorGetPtr(childNode.info.name)) 
                   {
                         PropDescriptor!int* t1 = cast(PropDescriptor!int*)t0;
-                        if (t1.rtti.array == valueNode.info.isArray && 
-                            t1.rtti.type == valueNode.info.type)
+                        if (t1.rtti.array == childNode.info.isArray && 
+                            t1.rtti.type == childNode.info.type)
                         {
-                            valueNode.info.descriptor = t1;
-                            nodeInfo2Declarator(valueNode.info);
-                            if (isSerObjectType(valueNode.info.type))
+                            childNode.info.descriptor = t1;
+                            nodeInfo2Declarator(childNode.info);
+                            if (isSerObjectType(childNode.info.type))
                             {
                                 auto t2 = cast(PropDescriptor!Object*) t1;
                                 // + onWantObject even if getter returns null
-                                restoreFrom(valueNode, cast(PropDescriptorCollection) t2.get); 
+                                restoreFrom(childNode, cast(PropDescriptorCollection) t2.get); 
                             }
                             break;
                         }
                         else
                         {
                             bool noop;
-                            restoreFromEvent(valueNode, noop);
+                            restoreFromEvent(childNode, noop);
                         }
                     }
                 }
@@ -1299,18 +1286,18 @@ class Serializer
             IstNode[] unorderNodes;
             IstNode[] parents;
             _rootNode.deleteChildren;
-            _currNode = _rootNode;
             _mustRead = false;
             _stream = inputStream;
             _format = format;
             
+            unorderNodes ~= _rootNode;
             while(inputStream.position < inputStream.size)
-            {
-                unorderNodes ~= _currNode;      
-                readFormat(_format)(_stream, _currNode);
-                _currNode = construct!IstNode;
+            {     
+                readFormat(_format)(_stream, unorderNodes[$-1]);
+                unorderNodes ~= construct!IstNode;
             }
-            destruct(_currNode);
+            destruct(unorderNodes[$-1]);
+            unorderNodes.length -= 1;
             
             if (unorderNodes.length > 1)
             foreach(i; 1 .. unorderNodes.length)
@@ -1354,13 +1341,10 @@ class Serializer
             _rootNode.deleteChildren;
             _previousNode = null;
             setRoot(root);
-            _currSerializable = _rootSerializable;
-            _currNode = _rootNode;
-            readFormat(_format)(_stream, _currNode);
+            readFormat(_format)(_stream, _rootNode);
             //
             _parentNode = _rootNode;
-            _currSerializable = _rootSerializable;
-            _currSerializable.declareProperties(this);   
+            _rootSerializable.declareProperties(this);   
             //   
             _mustRead = false;
             _serState = SerializationState.none;
@@ -1515,20 +1499,21 @@ class Serializer
             if (!descriptor.name.length) return;
             
             // TODO-cfeature: parameter that indicates if the IST has to be build or checked (istToObject)
-            _currNode = _parentNode.addNewChildren!IstNode;
-            _currNode.setDescriptor(descriptor);
+            auto propNode = _parentNode.addNewChildren!IstNode;
+            propNode.setDescriptor(descriptor);
             
             if (_mustWrite && _storeMode == StoreMode.sequential)
-                writeFormat(_format)(_currNode, _stream); 
+                writeFormat(_format)(propNode, _stream); 
                 
-            if (_mustRead) {
-                readFormat(_format)(_stream, _currNode);
-                if (descriptorMatchesNode!T(descriptor, _currNode)) 
-                    nodeInfo2Declarator(_currNode.info);
+            if (_mustRead) 
+            {
+                readFormat(_format)(_stream, propNode);
+                if (descriptorMatchesNode!T(descriptor, propNode)) 
+                    nodeInfo2Declarator(propNode.info);
                 else 
                 {
                     bool noop;
-                    restoreFromEvent(_currNode, noop);
+                    restoreFromEvent(propNode, noop);
                 }
             }
             
@@ -1537,41 +1522,36 @@ class Serializer
                 if (_previousNode)
                     _previousNode.info.isLastChild = true;
             
-                //auto oldSerializable = _currSerializable;
                 auto oldParentNode = _parentNode;
-                _parentNode = _currNode;
+                _parentNode = propNode;     
                 
-                
-                if (!descriptorMatchesNode!T(descriptor, _currNode) && _onWantDescriptor)
+                if (!descriptorMatchesNode!T(descriptor, propNode) && _onWantDescriptor)
                 {
                     bool stop = false;
                     Ptr descr = &descriptor;
-                    _onWantDescriptor(_currNode, descr, stop);
+                    _onWantDescriptor(propNode, descr, stop);
                     if (stop) return;
                 }
                 
-                
+                Serializable currentSerializable;
                 static if (is(T : Serializable))
-                    _currSerializable = descriptor.get();
+                    currentSerializable = descriptor.get();
                 else
                 {
                     auto obj = descriptor.get();
-                    if (obj) _currSerializable = cast(Serializable) obj;
+                    if (obj) currentSerializable = cast(Serializable) obj;
                 }
                    
-                if (!_currSerializable && _onWantObject)
+                if (!currentSerializable && _onWantObject)
                 {
-                    _onWantObject(_currNode, _currSerializable);
-                    if (!_currSerializable) return;
-                }   
-                   
-                    
-                _currSerializable.declareProperties(this);
+                    _onWantObject(propNode, currentSerializable);
+                    if (!currentSerializable) return;
+                }  
+                currentSerializable.declareProperties(this);
                 _parentNode = oldParentNode;
-                //_currSerializable = oldSerializable;
             }    
             
-            _previousNode = _currNode;      
+            _previousNode = propNode;      
         }
         
         /// state is set visible to an Serializable to let it know how the properties will be used (store: getter, restore: setter)
