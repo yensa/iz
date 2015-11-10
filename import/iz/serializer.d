@@ -35,7 +35,6 @@ interface Serializable
     void declareProperties(Serializer serializer);
 }
 
-
 /**
  * Makes a reference serializable.
  * The reference must be stored in the izReferenceMan.
@@ -121,7 +120,7 @@ static this()
         type2text[t] = SerializableTypes[i].stringof;
         text2type[SerializableTypes[i].stringof] = t;
         type2size[t] = SerializableTypes[i].sizeof;
-    }       
+    }
 }
 
 private bool isSerObjectType(T)()
@@ -149,7 +148,7 @@ private bool isSerSimpleType(T)()
 private static bool isSerStructType(T)()
 {
     bool result = false;
-    static if (!is(T==struct)) return result; 
+    static if (!is(T==struct)) return result;
     else
     { 
         foreach(TT; SerializableTypes)
@@ -159,7 +158,7 @@ private static bool isSerStructType(T)()
                 break;
             }
         return result;
-    }   
+    }
     assert(0, T.stringof ~ " is not tested by " ~ __FUNCTION__);
 }
 
@@ -167,7 +166,7 @@ private bool isSerArrayType(T)()
 {
     static if (!isArray!T) return false;
     else static if (is(T : Serializable)) return false;
-    else static if (isSerObjectType!(typeof(T.init[0]))) return false;    
+    else static if (isSerObjectType!(typeof(T.init[0]))) return false;
     else static if (staticIndexOf!(typeof(T.init[0]), SerializableTypes) == -1) return false;
     else return true;
 }
@@ -176,8 +175,8 @@ private bool isSerArrayType(T)()
 bool isSerializable(T)()
 {
     static if (isSerSimpleType!T) return true;
-    else static if (isSerStructType!T) return true;   
-    else static if (isSerArrayType!T) return true; 
+    else static if (isSerStructType!T) return true;
+    else static if (isSerArrayType!T) return true;
     else static if (is(T : Stream)) return true;
     else static if (isSerObjectType!T) return true;
     
@@ -228,7 +227,7 @@ private string getSerializableTypeString(T)()
 }
 // -----------------------------------------------------------------------------
 
-// Tree representation --------------------------------------------------------
+// Tree representation ---------------------------------------------------------
 
 /// Represents a serializable property without genericity.
 struct SerNodeInfo
@@ -268,7 +267,7 @@ alias WantDescriptorEvent = void delegate(IstNode node, ref Ptr matchingDescript
  * node = The information the callee uses to instantiate a Serializable.
  * serializable = the Object the callee has to instantiate. 
  */
-alias WantObjectEvent = void delegate(IstNode node, ref Serializable serializable);
+alias WantObjectEvent = void delegate(IstNode node, ref Object serializable);
 
 // add double quotes escape 
 private char[] add_dqe(char[] input)
@@ -276,7 +275,7 @@ private char[] add_dqe(char[] input)
     char[] result;
     foreach(i; 0 .. input.length) {
         if (input[i] != '"') result ~= input[i];
-        else result ~= "\\\"";                         
+        else result ~= "\\\"";
     }
     return result;
 }
@@ -314,30 +313,30 @@ void nodeInfo2Declarator(const SerNodeInfo * nodeInfo)
         (!nodeInfo.isArray) ? toDecl1!T : toDecl2!T;
     }
     //
-    final switch(nodeInfo.type)
+    with (SerializableType) final switch(nodeInfo.type)
     {
-        case SerializableType._invalid,SerializableType._izSerializable,SerializableType._Object: break;
-        case SerializableType._byte: toDecl!byte; break;
-        case SerializableType._ubyte: toDecl!ubyte; break;
-        case SerializableType._short: toDecl!short; break;
-        case SerializableType._ushort: toDecl!ushort; break;
-        case SerializableType._int: toDecl!int; break;
-        case SerializableType._uint: toDecl!uint; break;
-        case SerializableType._long: toDecl!long; break;
-        case SerializableType._ulong: toDecl!ulong; break;    
-        case SerializableType._float: toDecl!float; break;
-        case SerializableType._double: toDecl!double; break;
-        case SerializableType._char: toDecl!char; break;   
-        case SerializableType._wchar: toDecl!wchar; break;   
-        case SerializableType._dchar: toDecl!dchar; break;  
-        case SerializableType._stream:
+        case _invalid,SerializableType._izSerializable,SerializableType._Object: break;
+        case _byte: toDecl!byte; break;
+        case _ubyte: toDecl!ubyte; break;
+        case _short: toDecl!short; break;
+        case _ushort: toDecl!ushort; break;
+        case _int: toDecl!int; break;
+        case _uint: toDecl!uint; break;
+        case _long: toDecl!long; break;
+        case _ulong: toDecl!ulong; break;
+        case _float: toDecl!float; break;
+        case _double: toDecl!double; break;
+        case _char: toDecl!char; break;
+        case _wchar: toDecl!wchar; break;
+        case _dchar: toDecl!dchar; break;
+        case _stream:
             MemoryStream str = construct!MemoryStream;
             str.write(cast(ubyte*)nodeInfo.value.ptr, nodeInfo.value.length);
             str.position = 0;
             auto descr = cast(PropDescriptor!Stream *) nodeInfo.descriptor;
             descr.set(str);
-            destruct(str); 
-            break;                                                                                                                                  
+            destruct(str);
+            break;
     }
 }
 
@@ -348,24 +347,24 @@ char[] value2text(const SerNodeInfo * nodeInfo)
     char[] v2t_2(T)(){return to!string(cast(T[])nodeInfo.value[]).dup;}
     char[] v2t(T)(){if (!nodeInfo.isArray) return v2t_1!T; else return v2t_2!T;}
     //
-    final switch(nodeInfo.type)
+    with (SerializableType) final switch(nodeInfo.type)
     {
-        case SerializableType._invalid: return "invalid".dup;
-        case SerializableType._izSerializable, SerializableType._Object: return cast(char[])(nodeInfo.value);
-        case SerializableType._ubyte: return v2t!ubyte;
-        case SerializableType._byte: return v2t!byte;
-        case SerializableType._ushort: return v2t!ushort;
-        case SerializableType._short: return v2t!short;
-        case SerializableType._uint: return v2t!uint;
-        case SerializableType._int: return v2t!int;
-        case SerializableType._ulong: return v2t!ulong;
-        case SerializableType._long: return v2t!long;
-        case SerializableType._float: return v2t!float;
-        case SerializableType._double: return v2t!double;
-        case SerializableType._char: return v2t!char;
-        case SerializableType._wchar: return v2t!wchar;
-        case SerializableType._dchar: return v2t!dchar;
-        case SerializableType._stream: return to!(char[])(nodeInfo.value[]);
+        case _invalid: return "invalid".dup;
+        case _izSerializable, SerializableType._Object: return cast(char[])(nodeInfo.value);
+        case _ubyte: return v2t!ubyte;
+        case _byte: return v2t!byte;
+        case _ushort: return v2t!ushort;
+        case _short: return v2t!short;
+        case _uint: return v2t!uint;
+        case _int: return v2t!int;
+        case _ulong: return v2t!ulong;
+        case _long: return v2t!long;
+        case _float: return v2t!float;
+        case _double: return v2t!double;
+        case _char: return v2t!char;
+        case _wchar: return v2t!wchar;
+        case _dchar: return v2t!dchar;
+        case _stream: return to!(char[])(nodeInfo.value[]);
     }
 }
 
@@ -373,9 +372,9 @@ char[] value2text(const SerNodeInfo * nodeInfo)
 ubyte[] text2value(char[] text, const SerNodeInfo * nodeInfo)
 {
     ubyte[] t2v_1(T)(){
-        auto res = new ubyte[](type2size[nodeInfo.type]);  
+        auto res = new ubyte[](type2size[nodeInfo.type]);
         *cast(T*) res.ptr = to!T(text);
-        return res; 
+        return res;
     }
     ubyte[] t2v_2(T)(){
         auto v = to!(T[])(text);
@@ -391,7 +390,7 @@ ubyte[] text2value(char[] text, const SerNodeInfo * nodeInfo)
     {
         case SerializableType._invalid:
             return cast(ubyte[])"invalid".dup;
-        case SerializableType._izSerializable, SerializableType._Object: 
+        case SerializableType._izSerializable, SerializableType._Object:
             return cast(ubyte[])(text);
         case SerializableType._ubyte: return t2v!ubyte;
         case SerializableType._byte: return t2v!byte;
@@ -414,9 +413,9 @@ ubyte[] text2value(char[] text, const SerNodeInfo * nodeInfo)
 void setNodeInfo(T)(SerNodeInfo * nodeInfo, PropDescriptor!T * descriptor)
 {
     scope(failure) nodeInfo.isDamaged = true;
-    
+
     // TODO: nodeInfo.value, try to use an union instead of an array 
-    
+
     // simple, fixed-length (or convertible to), types
     static if (isSerSimpleType!T || isSerStructType!T)
     {
@@ -439,29 +438,14 @@ void setNodeInfo(T)(SerNodeInfo * nodeInfo, PropDescriptor!T * descriptor)
         //
         return;
     }
-    
+
     // arrays types
     else static if (isSerArrayType!T /*|| isSerArrayStructType!T*/)
     {
-        /*static if (isSerArrayStructType!T)
-        {
-            foreach(TT;SerializableTypes)
-                static if (isAssignable!(T,TT[]))
-                {
-                    nodeInfo.type = text2type[TT.stringof];
-                    TT[] value = to!(TT[])(descriptor.get());
-                    nodeInfo.value.length = value.length * type2size[nodeInfo.type];
-                    memmove(nodeInfo.value.ptr, cast(void*) value.ptr, nodeInfo.value.length);
-                    break;
-                }          
-        }
-        else*/
-        { 
-            nodeInfo.type = text2type[getElemStringOf!T];
-            T value = descriptor.get();
-            nodeInfo.value.length = value.length * type2size[nodeInfo.type];
-            moveMem (nodeInfo.value.ptr, cast(void*) value.ptr, nodeInfo.value.length);
-        }
+        nodeInfo.type = text2type[getElemStringOf!T];
+        T value = descriptor.get();
+        nodeInfo.value.length = value.length * type2size[nodeInfo.type];
+        moveMem (nodeInfo.value.ptr, cast(void*) value.ptr, nodeInfo.value.length);
         //
         nodeInfo.isArray = true;
         nodeInfo.descriptor = cast(Ptr) descriptor;
@@ -469,7 +453,7 @@ void setNodeInfo(T)(SerNodeInfo * nodeInfo, PropDescriptor!T * descriptor)
         //
         return;
     }
-   
+
     // Serializable or Object
     else static if (isSerObjectType!T)
     {
@@ -479,33 +463,31 @@ void setNodeInfo(T)(SerNodeInfo * nodeInfo, PropDescriptor!T * descriptor)
        
         // Serializable 
         static if (is(T == Object))
-            ser =  cast(Serializable) descriptor.get();       
+            ser =  cast(Serializable) descriptor.get();
         else
             ser = descriptor.get();
         if (ser !is null)
         {
             value = className(ser).dup;
-            nodeInfo.type = text2type[typeof(ser).stringof];            
+            nodeInfo.type = text2type[typeof(ser).stringof];
         } 
-        else // Object (PropCollector test)
+        // Maybe Object implementing PropDescriptorCollection 
+        else
         {
-            obj = cast(Object) descriptor.get;
+            obj = cast(Object) descriptor.get();
             value = className(obj).dup;
-            nodeInfo.type = text2type[typeof(obj).stringof];  
-        }   
-            
-            
-            
-        
+            nodeInfo.type = text2type[typeof(obj).stringof];
+        }
+
         nodeInfo.isArray = false;
         nodeInfo.descriptor = cast(Ptr) descriptor;
         nodeInfo.name = descriptor.name.dup;
         nodeInfo.value.length = value.length;
-        moveMem(nodeInfo.value.ptr, value.ptr, nodeInfo.value.length);      
+        moveMem(nodeInfo.value.ptr, value.ptr, nodeInfo.value.length);
         //
-        return;   
-    }   
-    
+        return;
+    }
+
     // stream
     else static if (is(T : Stream))
     {
@@ -517,7 +499,7 @@ void setNodeInfo(T)(SerNodeInfo * nodeInfo, PropDescriptor!T * descriptor)
         Stream value = descriptor.get();
         value.position = 0;
         nodeInfo.value.length = cast(uint) value.size;
-        value.read(nodeInfo.value.ptr, cast(uint) value.size); 
+        value.read(nodeInfo.value.ptr, cast(uint) value.size);
         destroy(value);  
         //
         return;   
@@ -547,7 +529,7 @@ class IstNode : TreeItem
         SerNodeInfo * info()
         {
             return &_info;
-        }   
+        }
         /**
          * Returns the identifier chain of the parents.
          */
@@ -588,7 +570,8 @@ private void writeJSON(IstNode istNode, Stream stream)
     auto name   = JSONValue(istNode.info.name.idup);
     auto isarray= JSONValue(cast(ubyte)istNode.info.isArray);
     auto value  = JSONValue(value2text(istNode.info).idup);
-    auto prop   = JSONValue(["level":level,"type":type,"name":name,"isarray":isarray,"value":value]);
+    auto prop   = JSONValue(["level":level,"type":type,"name":name,"isarray":isarray,
+        "value":value]);
     auto txt    = toJSON(&prop, false).dup;
     //
     stream.write(txt.ptr, txt.length);   
@@ -631,7 +614,7 @@ private void readJSON(Stream stream, IstNode istNode)
     auto prop = parseJSON(cache);
     
     JSONValue level = prop["level"];
-    if (level.type == JSON_TYPE.INTEGER) 
+    if (level.type == JSON_TYPE.INTEGER)
         istNode.info.level = cast(uint) level.integer;
     else 
         istNode.info.isDamaged = true;
@@ -640,25 +623,25 @@ private void readJSON(Stream stream, IstNode istNode)
     if (type.type == JSON_TYPE.INTEGER) 
         istNode.info.type = cast(SerializableType) type.integer;
     else 
-        istNode.info.isDamaged = true;       
+        istNode.info.isDamaged = true;
         
     JSONValue name = prop["name"];
-    if (name.type == JSON_TYPE.STRING) 
+    if (name.type == JSON_TYPE.STRING)
         istNode.info.name = name.str.dup;
     else 
-        istNode.info.isDamaged = true;   
+        istNode.info.isDamaged = true;
         
     immutable JSONValue isarray = prop["isarray"];
-    if (isarray.type == JSON_TYPE.INTEGER) 
+    if (isarray.type == JSON_TYPE.INTEGER)
         istNode.info.isArray = cast(bool) isarray.integer;
     else 
-        istNode.info.isDamaged = true;                    
+        istNode.info.isDamaged = true;
         
     JSONValue value = prop["value"];
     if (value.type == JSON_TYPE.STRING) 
         istNode.info.value = text2value(value.str.dup, istNode.info);
-    else 
-        istNode.info.isDamaged = true;                   
+    else
+        istNode.info.isDamaged = true;
     
 }
 // ----
@@ -676,7 +659,7 @@ private void writeText(IstNode istNode, Stream stream)
     stream.write(type.ptr, type.length);
     // array
     char[2] arr = "[]";
-    if (istNode.info.isArray) stream.write(arr.ptr, arr.length); 
+    if (istNode.info.isArray) stream.write(arr.ptr, arr.length);
     stream.write(&separator, separator.sizeof);
     // name
     char[] name = istNode.info.name.dup;
@@ -700,7 +683,7 @@ private void readText(Stream stream, IstNode istNode)
     char[] propText;
     char[2] eop;
     auto immutable initPos = stream.position;
-    while((eop != "\"\n") & (stream.position != stream.size)) 
+    while((eop != "\"\n") & (stream.position != stream.size))
     {
         stream.read(eop.ptr, 2);
         stream.position = stream.position -1;
@@ -710,7 +693,7 @@ private void readText(Stream stream, IstNode istNode)
     stream.position = initPos;
     stream.read(propText.ptr, propText.length);
     stream.position = endPos + 1;
-        
+
     // level
     i = 0;
     while (propText[i] == '\t') i++;
@@ -736,11 +719,11 @@ private void readText(Stream stream, IstNode istNode)
     identifier = identifier.init;
     while(propText[i] != ' ') 
         identifier ~= propText[i++];
-    istNode.info.name = identifier.idup; 
-    
+    istNode.info.name = identifier.idup;
+
     // name value separators
     i++;
-    while(propText[i] != ' ') i++; 
+    while(propText[i] != ' ') i++;
     i++;
     //std.stdio.writeln(propText[i]); 
     i++; 
@@ -751,13 +734,13 @@ private void readText(Stream stream, IstNode istNode)
     identifier = propText[i..$];
     identifier = identifier[1..$-1];
     istNode.info.value = text2value(identifier, istNode.info);
-}  
+}
 //----
 
 // Binary format --------------------------------------------------------------+
 version(BigEndian) private ubyte[] swapBE(const ref ubyte[] input, size_t div)
 {
-    if (div == 1) return input.dup;    
+    if (div == 1) return input.dup;
     auto result = new ubyte[](input.length);
     switch(div) {
         default: break;
@@ -780,9 +763,9 @@ version(BigEndian) private ubyte[] swapBE(const ref ubyte[] input, size_t div)
             result[i*8+5] = input[i*8+2];
             result[i*8+6] = input[i*8+1];
             result[i*8+7] = input[i*8+0];
-        } break;                           
+        } break;
     }
-    return result;   
+    return result;
 }
 
 private void writeBin(IstNode istNode, Stream stream)
@@ -797,11 +780,11 @@ private void writeBin(IstNode istNode, Stream stream)
     datalength = cast(uint) istNode.level;
     stream.write(&datalength, datalength.sizeof);
     // type
-    bin = cast(ubyte) istNode.info.type; 
+    bin = cast(ubyte) istNode.info.type;
     stream.write(&bin, bin.sizeof);
     // as array
     bin = istNode.info.isArray; 
-    stream.write(&bin, bin.sizeof);  
+    stream.write(&bin, bin.sizeof);
     // name length then name
     data = cast(ubyte[]) istNode.info.name;
     datalength = cast(uint) data.length;
@@ -812,18 +795,18 @@ private void writeBin(IstNode istNode, Stream stream)
     {
         datalength = cast(uint) istNode.info.value.length;
         stream.write(&datalength, datalength.sizeof);
-        stream.write(istNode.info.value.ptr, datalength);        
+        stream.write(istNode.info.value.ptr, datalength);
     }
     else
     {
         data = swapBE(istNode.info.value, type2size[istNode.info.type]);
         datalength = cast(uint) data.length;
         stream.write(&datalength, datalength.sizeof);
-        stream.write(data.ptr, datalength); 
+        stream.write(data.ptr, datalength);
     }
     //footer
     bin = 0xA0;
-    stream.write(&bin, bin.sizeof); 
+    stream.write(&bin, bin.sizeof);
 }  
 
 private void readBin(Stream stream, IstNode istNode)
@@ -845,19 +828,19 @@ private void readBin(Stream stream, IstNode istNode)
     stream.read(data.ptr, data.length);
     // level
     datalength = *cast(uint*) data.ptr;
-    istNode.info.level = datalength;                
+    istNode.info.level = datalength;
     // type and array
     istNode.info.type = cast(SerializableType) data[4];
     istNode.info.isArray = cast(bool) data[5];      
     // name length then name;
     datalength = *cast(uint*) (data.ptr + 6);
-    istNode.info.name = cast(string) data[10.. 10 + datalength].idup; 
+    istNode.info.name = cast(string) data[10.. 10 + datalength].idup;
     beg =  10 +  datalength;      
     // value length then value
     version(LittleEndian)
     {
         datalength = *cast(uint*) (data.ptr + beg);
-        istNode.info.value = data[beg + 4 .. beg + 4 + datalength];    
+        istNode.info.value = data[beg + 4 .. beg + 4 + datalength];
     }
     else
     {
@@ -873,30 +856,36 @@ private void readBin(Stream stream, IstNode istNode)
 /// Enumerates the possible state of an Serializer.
 enum SerializationState : ubyte
 {
-    /// the serializer is idle.
+    /// The serializer is idle.
     none,
-    /// the serializer is storing (from declarator to serializer).
+    /// The serializer is storing (from declarator to serializer).
     store,  
-    /// the serializer is restoring (from serializer to declarator).
+    /// The serializer is restoring (from serializer to declarator).
     restore     
 }
 
 /// Enumerates the possible storage mode.
 enum StoreMode : ubyte
 {
-    /// stores directly after declaration. order is granted. a single property descriptor can be used for several properties.
+    /**
+     * Stores directly after the declaration. order is granted.
+     * a single property descriptor can be used for several properties.
+     */
     sequential,
-    /// stores when eveything is declared. a single property descriptor cannot be used for several properties.  
-    bulk        
+    /**
+     * Stores when eveything has been declared. A single property descriptor
+     * cannot be used for several properties.
+     */
+    bulk
 }
 
 /// Enumerates the possible restoration mode.
 enum RestoreMode : ubyte
 {
-    /// restores following declaration. order is granted.
-    sequential, 
-    /// restores without declaration or according to a custom query.
-    random      
+    /// Restores following declaration. order is granted.
+    sequential,
+    /// Restores without declaration or according to a custom query.
+    random
 }
 
 /// Enumerates the possible serialization format
@@ -912,19 +901,21 @@ enum SerializationFormat : ubyte
 
 private SerializationWriter writeFormat(SerializationFormat format)
 {
-    with(SerializationFormat) final switch(format) {
+    with(SerializationFormat) final switch(format)
+    {
         case izbin: return &writeBin;
-        case iztxt: return &writeText;   
+        case iztxt: return &writeText;
         case json:  return &writeJSON;
     }
 }
 
 private SerializationReader readFormat(SerializationFormat format)
 {
-    with(SerializationFormat) final switch(format) {
+    with(SerializationFormat) final switch(format)
+    {
         case izbin: return &readBin;
         case iztxt: return &readText;
-        case json:  return &readJSON;   
+        case json:  return &readJSON;
     }
 }
 
@@ -932,656 +923,677 @@ private SerializationReader readFormat(SerializationFormat format)
 
 /**
  * Native serializer.
- * A Serializer is specialized to store and restore from any class heriting
- * from the interface Serializable. A Serializable arbitrarily exposes some
- * properties to serialize using the PropDescriptor format.
  *
- * The serializer uses an intermediate serialization tree (IST) which grants a 
- * certain flexibilty. 
- * As expected for a serializer, some objects trees can be stored or restored by 
- * a simple and single call ( *objectToStream()* and *streamToObject()* ) but the 
- * IST also allows to convert a data stream, to randomly find and restores 
- * some properties and to handle compatibility errors.
- * Even the IST can be build manually, without using the automatic mechanism.
+ * A Serializer is specialized to store and restore a structure of Objects.
+ * Two ways of serializing are available.
+ *
+ * The first is based on classes that implement the Serializable interface.
+ * A Serializable arbitrarily exposes some properties to serialize
+ * using the PropDescriptor format.
+ *
+ * The second is based on classes that implement the PropDescriptorCollection
+ * interface. Contrary to the first way the declarations are not arbritrary but
+ * instead they are based on a collection of descriptor build using compile-time
+ * reflection and anotations (see iz.properties PropDescriptorCollector).
+ *
+ * The serializer uses an intermediate serialization tree (IST) that ensure a 
+ * certain flexibilty aginst a traditional single-shot serialization.
+ * 
+ * As expected for a serializer, object trees can be stored or restored by
+ * a simple and single call (objectToStream() in pair with streamToObject() or
+ * collectorToStream() in pair with streamToCollector) but the IST also allows
+ * to convert a stream or to find and restores a specific property.
+ * 
+ * At last but not least, two events (onWantDescriptor and onWantObject)
+ * allows to handle the errors that could be encountered when restoring.
+ * They free the target object of any modification risk that would prevent an old
+ * stream to be restored in the new versions (for example if a prop is deleted).
  */
 class Serializer
 {
-    private
+
+private:
+
+    /// the IST root
+    IstNode _rootNode;
+    /// the current parent node, always representing a Serializable
+    IstNode _parentNode;
+    /// the last created node 
+    IstNode _previousNode; 
+    /// the Serializable linked to _rootNode
+    Serializable _rootSerializable;
+
+    WantDescriptorEvent _onWantDescriptor;
+    WantObjectEvent _onWantObject;
+
+    SerializationState _serState;
+    StoreMode _storeMode;
+    RestoreMode _restoreMode;
+    SerializationFormat _format;
+    
+    Stream _stream;
+    PropDescriptor!Serializable _rootDescr;
+
+    bool _mustWrite;
+    bool _mustRead;
+
+    // prepares the first IST node
+    void setRoot(Serializable root)
     {
-        /// the IST root
-        IstNode _rootNode;
-        /// the current parent node, always representing a Serializable
-        IstNode _parentNode;
-        /// the last created node 
-        IstNode _previousNode; 
-        /// the Serializable linked to _rootNode
-        Serializable _rootSerializable;
-        
-        WantDescriptorEvent _onWantDescriptor;
-        WantObjectEvent _onWantObject;
-        
-        SerializationState _serState;
-        StoreMode _storeMode;
-        RestoreMode _restoreMode;
-        SerializationFormat _format;
-        
-        Stream _stream;
-        PropDescriptor!Serializable _rootDescr;
-        
-        bool _mustWrite;
-        bool _mustRead;
-        
-        // prepares the first IST node
-        void setRoot(Serializable root)
-        {
-            _rootSerializable = root;
-            _rootDescr.define(&_rootSerializable, "Root");
-            _rootNode.setDescriptor(&_rootDescr);
-        }
-        
-        bool restoreFromEvent(IstNode node, out bool stop)
-        {
-            if (!_onWantDescriptor) 
-                return false;
-            bool done;
-            _onWantDescriptor(node, node.info.descriptor, stop);
-            done = (node.info.descriptor != null);
-            if (done) 
-            {
-                nodeInfo2Declarator(node.info);
-                return true;
-            }
-            else if (isSerObjectType(node.info.type))
-                return true;
+        _rootSerializable = root;
+        _rootDescr.define(&_rootSerializable, "Root");
+        _rootNode.setDescriptor(&_rootDescr);
+    }
+
+    bool restoreFromEvent(IstNode node, out bool stop)
+    {
+        if (!_onWantDescriptor) 
             return false;
-        }
-        
-        bool descriptorMatchesNode(T)(PropDescriptor!T* descr, IstNode node)
-        if (isSerializable!T)
-        {   
-            if (!descr) return false;
-            if (!node.info.name.length) return false;
-            if (descr.name != node.info.name) return false;
-            static if (isArray!T) if (!node.info.isArray) return false;
-            if (getSerializableTypeString!T != type2text[node.info.type]) return false;
+        bool done;
+        _onWantDescriptor(node, node.info.descriptor, stop);
+        done = (node.info.descriptor != null);
+        if (done) 
+        {
+            nodeInfo2Declarator(node.info);
             return true;
         }
+        else if (isSerObjectType(node.info.type))
+            return true;
+        return false;
     }
-    
-    public 
-    {  
-        ///
-        this()
-        {
-            _rootNode = construct!IstNode;
-        }
-        ~this()
-        {
-            _rootNode.deleteChildren;
-            destruct(_rootNode);
-        }         
-              
+
+    bool descriptorMatchesNode(T)(PropDescriptor!T* descr, IstNode node)
+    if (isSerializable!T)
+    {   
+        if (!descr) return false;
+        if (!node.info.name.length) return false;
+        if (descr.name != node.info.name) return false;
+        static if (isArray!T) if (!node.info.isArray) return false;
+        if (getSerializableTypeString!T != type2text[node.info.type]) return false;
+        return true;
+    }
+
+public:
+
+    ///
+    this()
+    {
+        _rootNode = construct!IstNode;
+    }
+    ///
+    ~this()
+    {
+        _rootNode.deleteChildren;
+        destruct(_rootNode);
+    }
+
 //---- serialization ----------------------------------------------------------+
-        
-        /** 
-         * Builds the IST from an Serializable.
-         * The process starts by a call to .declareProperties() in the root then
-         * the process is lead by the the subsequent declarations.
-         * Params:
-         * root = the Serializable from where the declarations start.
-         */
-        void objectToIst(Serializable root)
+
+    /** 
+     * Builds the IST from an Serializable.
+     * The process starts by a call to .declareProperties() in the root then
+     * the process is lead by the the subsequent declarations.
+     * Params:
+     * root = the Serializable from where the declarations start.
+     */
+    void objectToIst(Serializable root)
+    {
+        _storeMode = StoreMode.bulk;
+        _serState = SerializationState.store;
+        _mustWrite = false;
+        //
+        _rootNode.deleteChildren;
+        _previousNode = null;
+        setRoot(root);
+        //
+        _parentNode = _rootNode;
+        _rootSerializable.declareProperties(this);
+        _serState = SerializationState.none;
+    }
+
+    /**
+     * Builds the IST from an Serializable and stores sequentially in a stream.
+     *
+     * The process starts by a call to .declaraPropties() in the root then
+     * the process is lead by the the subsequent declarations.
+     * The data are written right after a descriptor declaration.
+     *
+     * Params:
+     * root = the Serializable from where the declarations starts.
+     * outputStream = the stream where the data are written.
+     * format = the format of the serialized data.
+     */
+    void objectToStream(Serializable root, Stream outputStream, 
+        SerializationFormat format = SerializationFormat.iztxt)
+    {
+        _format = format;
+        _stream = outputStream;
+        _storeMode = StoreMode.sequential;
+        _serState = SerializationState.store;
+        _mustWrite = true;
+        //
+        _rootNode.deleteChildren;
+        _previousNode = null;
+        setRoot(root);
+        writeFormat(_format)(_rootNode, _stream);
+        //
+        _parentNode = _rootNode;
+        _rootSerializable.declareProperties(this);
+        //
+        _mustWrite = false;
+        _serState = SerializationState.none;
+        _stream = null;
+    }
+
+    /** 
+     * Saves the IST to a stream. 
+     * The data are grabbed in bulk therefore the descriptor linked to each
+     * tree node cannot be re-used.
+     * Params:
+     * outputStream = the stream where te data are written.
+     * format = the format of the serialized data.
+     */
+    void istToStream(Stream outputStream, SerializationFormat format = SerializationFormat.iztxt)
+    {
+        _format = format;
+        _stream = outputStream;
+        _storeMode = StoreMode.bulk;
+        _mustWrite = true;
+        //
+        void writeNodesFrom(IstNode parent)
         {
-            _storeMode = StoreMode.bulk;
-            _serState = SerializationState.store;
-            _mustWrite = false;
-            //
-            _rootNode.deleteChildren;
-            _previousNode = null;
-            setRoot(root);
-            //
-            _parentNode = _rootNode;
-            _rootSerializable.declareProperties(this);
-            _serState = SerializationState.none;
-        }
-        
-        /**
-         * Builds the IST from an Serializable and stores sequentially in a stream.
-         *
-         * The process starts by a call to .declaraPropties() in the root then
-         * the process is lead by the the subsequent declarations.
-         * The data are written right after a descriptor declaration.
-         *
-         * Params:
-         * root = the Serializable from where the declarations starts.
-         * outputStream = the stream where the data are written.
-         * format = the format of the serialized data.
-         */
-        void objectToStream(Serializable root, Stream outputStream, 
-            SerializationFormat format = SerializationFormat.iztxt)
-        {
-            _format = format;
-            _stream = outputStream;
-            _storeMode = StoreMode.sequential;
-            _serState = SerializationState.store;
-            _mustWrite = true;
-            //
-            _rootNode.deleteChildren;
-            _previousNode = null;
-            setRoot(root);
-            writeFormat(_format)(_rootNode, _stream);
-            //
-            _parentNode = _rootNode;
-            _rootSerializable.declareProperties(this);
-            //
-            _mustWrite = false;
-            _serState = SerializationState.none;
-            _stream = null;
-        }
-        
-        /** 
-         * Saves the IST to a stream. 
-         * The data are grabbed in bulk therefore the descriptor linked to each
-         * tree node cannot be re-used.
-         * Params:
-         * outputStream = the stream where te data are written.
-         * format = the format of the serialized data.
-         */
-        void istToStream(Stream outputStream, SerializationFormat format = SerializationFormat.iztxt)
-        {
-            _format = format;
-            _stream = outputStream;
-            _storeMode = StoreMode.bulk;
-            _mustWrite = true;
-            //
-            void writeNodesFrom(IstNode parent)
+            writeFormat(_format)(parent, _stream); 
+            foreach(node; parent.children)
             {
-                writeFormat(_format)(parent, _stream); 
-                foreach(node; parent.children)
-                {
-                    auto child = cast(IstNode) node;           
-                    if (isSerObjectType(child.info.type))
-                        writeNodesFrom(child);
-                    else writeFormat(_format)(child, _stream); 
-                }
+                auto child = cast(IstNode) node;
+                if (isSerObjectType(child.info.type))
+                    writeNodesFrom(child);
+                else writeFormat(_format)(child, _stream); 
             }
-            writeNodesFrom(_rootNode);
-            //
-            _mustWrite = false;
-            _stream = null;
         }
-        
-    
-        /**
-         * 
-         */
-        void addObjectWithCollectedProp(PropDescriptor!Object* objDescr)        
+        writeNodesFrom(_rootNode);
+        //
+        _mustWrite = false;
+        _stream = null;
+    }
+
+    /**
+     * 
+     */
+    void addObjectWithCollectedProp(PropDescriptor!Object* objDescr)
+    {
+        PropDescriptorCollection collector;
+        collector = cast(PropDescriptorCollection) objDescr.get();
+        // write/Set object node
+        if (!_parentNode) _parentNode = _rootNode;
+        else _parentNode = _parentNode.addNewChildren!IstNode;
+        _parentNode.setDescriptor(objDescr);
+        if (_mustWrite)
+            writeFormat(_format)(_parentNode, _stream);
+        // write object memebers   
+        foreach(immutable i; 0 .. collector.propCollectorCount)
         {
-            PropDescriptorCollection collector;
-            collector = cast(PropDescriptorCollection) objDescr.get();
-            // write/Set object node
-            if (!_parentNode) _parentNode = _rootNode;
-            else _parentNode = _parentNode.addNewChildren!IstNode;
-            _parentNode.setDescriptor(objDescr);
-            if (_mustWrite)
-                writeFormat(_format)(_parentNode, _stream);                 
-            // write object memebers   
-            foreach(immutable i; 0 .. collector.propCollectorCount)
+            alias DescType = PropDescriptor!int; 
+            void* descr = collector.propCollectorGetPtr(i);
+            const(RuntimeTypeInfo*) rtti = collector.propCollectorGetType(i);
+            //
+            void addValueProp(T)()
             {
-                alias DescType = PropDescriptor!int; 
-                void* descr = collector.propCollectorGetPtr(i);
-                const(RuntimeTypeInfo*) rtti = collector.propCollectorGetType(i);
-                //
-                void addValueProp(T)()
-                {
-                    if (!rtti.array) addProperty!T(cast(PropDescriptor!T*) descr);
-                    else addProperty!(T[])(cast(PropDescriptor!(T[])*) descr);
-                }
-                with(RuntimeType) final switch(rtti.type)
-                {
-                    case _void, _struct, _real: assert(0);
-                    case _byte:   addValueProp!byte; break;
-                    case _ubyte:  addValueProp!ubyte; break;
-                    case _short:  addValueProp!short; break;
-                    case _ushort: addValueProp!ushort; break;
-                    case _int:    addValueProp!int; break;
-                    case _uint:   addValueProp!uint; break;
-                    case _long:   addValueProp!long; break;
-                    case _ulong:  addValueProp!ulong; break;
-                    case _float:  addValueProp!float; break;
-                    case _double: addValueProp!double; break;
-                    case _char:   addValueProp!char; break;
-                    case _wchar:  addValueProp!wchar; break;
-                    case _dchar:  addValueProp!dchar; break;
-                    case _object:
-                        auto _oldParentNode = _parentNode;
-                        addObjectWithCollectedProp(cast(PropDescriptor!Object*) descr);
-                        _parentNode = _oldParentNode;  
-                        break;                                        
-                }
+                if (!rtti.array) addProperty!T(cast(PropDescriptor!T*) descr);
+                else addProperty!(T[])(cast(PropDescriptor!(T[])*) descr);
             }
-        }    
-        
-        /**
-         * Builds the IST from a PropDescriptorCollection and stores sequentially in a stream.
-         *
-         * Each item in the structure to stream must also be a PropDescriptorCollection.
-         * Unlike the methods based on the Serializable interface the objects don't
-         * have to declare the values to store. Instead, every property descriptor found
-         * by the PropDescriptorCollector is turned into a declaration.
-         *
-         * Params:
-         * root = either a PropDescriptorCollection or an object that's been
-         *       mixed with the PropDescriptorCollector template.
-         * outputStream = the stream where the data are written.
-         * format = the format of the serialized data.
-         */
-        void collectorToStream(T)(T root, Stream outputStream, 
-            SerializationFormat format = SerializationFormat.iztxt)
-        if (is(T==class) || is(T == struct))
-        {
-            if (!hasMember!(T, "propCollectorGet"))
-                throw new Exception("PropDescriptorCollector not mixed in root");
-                
-            // TODO-cSerializer: rewrite addProperty to allow serialization using rtti
-            // problems: 
-            // - still totally impossible to use a struct as root or sub object  
+            with(RuntimeType) final switch(rtti.type)
+            {
+                case _void, _struct, _real: assert(0);
+                case _byte:   addValueProp!byte; break;
+                case _ubyte:  addValueProp!ubyte; break;
+                case _short:  addValueProp!short; break;
+                case _ushort: addValueProp!ushort; break;
+                case _int:    addValueProp!int; break;
+                case _uint:   addValueProp!uint; break;
+                case _long:   addValueProp!long; break;
+                case _ulong:  addValueProp!ulong; break;
+                case _float:  addValueProp!float; break;
+                case _double: addValueProp!double; break;
+                case _char:   addValueProp!char; break;
+                case _wchar:  addValueProp!wchar; break;
+                case _dchar:  addValueProp!dchar; break;
+                case _object:
+                    auto _oldParentNode = _parentNode;
+                    addObjectWithCollectedProp(cast(PropDescriptor!Object*) descr);
+                    _parentNode = _oldParentNode;  
+                    break;                                        
+            }
+        }
+    }    
+
+    /**
+     * Builds the IST from a PropDescriptorCollection and stores sequentially in a stream.
+     *
+     * Each item in the structure to stream must also be a PropDescriptorCollection.
+     * Unlike the methods based on the Serializable interface the objects don't
+     * have to declare the values to store. Instead, every property descriptor found
+     * by the PropDescriptorCollector is turned into a declaration.
+     *
+     * Params:
+     * root = either a PropDescriptorCollection or an object that's been
+     *       mixed with the PropDescriptorCollector template.
+     * outputStream = the stream where the data are written.
+     * format = the format of the serialized data.
+     */
+    void collectorToStream(T)(T root, Stream outputStream, 
+        SerializationFormat format = SerializationFormat.iztxt)
+    if (is(T==class) || is(T == struct))
+    {
+        if (!hasMember!(T, "propCollectorGet"))
+            throw new Exception("PropDescriptorCollector not mixed in root");
             
-            _format = format;
-            _stream = outputStream;
-            _storeMode = StoreMode.sequential;
-            _serState = SerializationState.store;
-            _mustWrite = true; 
-            _rootNode.deleteChildren;
-            _previousNode = null;
-            _parentNode = null;
-            PropDescriptor!Object rootDescr = PropDescriptor!Object(cast(Object*)&root, "root");
-            addObjectWithCollectedProp(&rootDescr);
-            _serState = SerializationState.none;
-            _mustWrite = false;
-        }
+        // TODO-cSerializer: rewrite addProperty to allow serialization using rtti
+        // problems: 
+        // - still totally impossible to use a struct as root or sub object  
         
-        /**
-         * Builds the IST from a PropDescriptorCollection.
-         */
-        void collectorToIst(T)(T root)
-        if (is(T==class) || is(T == struct))
-        {
-            _serState = SerializationState.store;
-            _mustWrite = false;
-            _rootNode.deleteChildren;
-            _previousNode = null;
-            PropDescriptor!Object rootDescr = PropDescriptor!Object(cast(Object*)&root, "root");
-            addObjectWithCollectedProp(&rootDescr);
-            _serState = SerializationState.none;            
-        }
- 
+        _format = format;
+        _stream = outputStream;
+        _storeMode = StoreMode.sequential;
+        _serState = SerializationState.store;
+        _mustWrite = true; 
+        _rootNode.deleteChildren;
+        _previousNode = null;
+        _parentNode = null;
+        PropDescriptor!Object rootDescr = PropDescriptor!Object(cast(Object*)&root, "root");
+        addObjectWithCollectedProp(&rootDescr);
+        _serState = SerializationState.none;
+        _mustWrite = false;
+    }
+
+    /**
+     * Builds the IST from a PropDescriptorCollection.
+     */
+    void collectorToIst(T)(T root)
+    if (is(T==class) || is(T == struct))
+    {
+        _serState = SerializationState.store;
+        _mustWrite = false;
+        _rootNode.deleteChildren;
+        _previousNode = null;
+        PropDescriptor!Object rootDescr = PropDescriptor!Object(cast(Object*)&root, "root");
+        addObjectWithCollectedProp(&rootDescr);
+        _serState = SerializationState.none;
+    }
+
 //------------------------------------------------------------------------------
 //---- deserialization --------------------------------------------------------+
-            
-            
-        /**
-         * Fully Restores the IST. Can be called after *streamToIst()*.
-         * The target must be structured  in a tree of PropDescriptorCollection. 
-         * For each ISTnode the function try to find the matching node in the
-         * property collection of the current object. If no possible then
-         * onWantDescriptor is called if assigned.
-         */
-        void istToPropCollector(PropDescriptorCollection root)
+
+    /**
+     * Fully Restores the IST. Can be called after *streamToIst()*.
+     * The root must be structured in a tree of PropDescriptorCollection. 
+     * For each IST node the function tries to find the matching node in the
+     * property collection of the current object. If not possible then the
+     * onWantDescriptor or the onWantObject events are called.
+     */
+    void istToPropCollector(PropDescriptorCollection root)
+    {
+        // TODO-cTest: test istToPropCollector()
+        void restoreFrom(IstNode node, PropDescriptorCollection target)
         {
-            // TODO-cTest: test istToPropCollector()
-            void restoreFrom(IstNode node, PropDescriptorCollection target)
+            foreach(child; node.children)
             {
-                foreach(child; node.children)
+                bool done;  
+                IstNode childNode = cast(IstNode) child;  
+                for(auto i = 0; i < target.propCollectorCount; i++)
+                if (void* t0 = target.propCollectorGetPtr(childNode.info.name)) 
                 {
-                  IstNode childNode = cast(IstNode) child;  
-                  for(auto i = 0; i < target.propCollectorCount; i++)
-                  if (void* t0 = target.propCollectorGetPtr(childNode.info.name)) 
-                  {
-                        PropDescriptor!int* t1 = cast(PropDescriptor!int*)t0;
-                        if (t1.rtti.array == childNode.info.isArray && 
-                            t1.rtti.type == childNode.info.type)
+                    PropDescriptor!int* t1 = cast(PropDescriptor!int*)t0;
+                    if (t1.rtti.array == childNode.info.isArray && 
+                    t1.rtti.type == childNode.info.type)
+                    {
+                        childNode.info.descriptor = t1;
+                        nodeInfo2Declarator(childNode.info);
+                        if (isSerObjectType(childNode.info.type))
                         {
-                            childNode.info.descriptor = t1;
-                            nodeInfo2Declarator(childNode.info);
-                            if (isSerObjectType(childNode.info.type))
-                            {
-                                auto t2 = cast(PropDescriptor!Object*) t1;
-                                // + onWantObject even if getter returns null
-                                restoreFrom(childNode, cast(PropDescriptorCollection) t2.get); 
-                            }
-                            break;
+                            auto t2 = cast(PropDescriptor!Object*) t1;
+                            Object o = t2.get();
+                            if (!o && _onWantObject)
+                                _onWantObject(childNode, o);
+                            auto t3 = cast(PropDescriptorCollection) o;
+                            if (t3) restoreFrom(childNode, t3); 
                         }
-                        else
-                        {
-                            bool noop;
-                            restoreFromEvent(childNode, noop);
-                        }
+                        done = true;
+                        break;
                     }
                 }
-            }
-            restoreFrom(_rootNode, root);
-        }   
-        
-        void streamToPropCollector(T)(Stream inputStream, T root, 
-            SerializationFormat format = SerializationFormat.iztxt)
-        if (is(T==class) || is(T == struct))   
-        {
-            // TODO-cTest: test streamToPropCollector()
-            streamToIst(inputStream, format);
-            istToPropCollector(root); 
-        }      
-            
-        /**
-         * Builds the IST from a stream.
-         * After the call the properties can only be restored manually 
-         * by using findNode() and restoreProperty(). 
-         * This function is also usefull to convert from a format to another.
-         * Params:
-         * inputStream = a stream containing the serialized data.
-         * format = the format of the serialized data.
-         */
-        void streamToIst(Stream inputStream, SerializationFormat format = SerializationFormat.iztxt)
-        {
-            IstNode[] unorderNodes;
-            IstNode[] parents;
-            _rootNode.deleteChildren;
-            _mustRead = false;
-            _stream = inputStream;
-            _format = format;
-            
-            unorderNodes ~= _rootNode;
-            while(inputStream.position < inputStream.size)
-            {     
-                readFormat(_format)(_stream, unorderNodes[$-1]);
-                unorderNodes ~= construct!IstNode;
-            }
-            destruct(unorderNodes[$-1]);
-            unorderNodes.length -= 1;
-            
-            if (unorderNodes.length > 1)
-            foreach(i; 1 .. unorderNodes.length)
-            {
-                unorderNodes[i-1].info.isLastChild = 
-                  unorderNodes[i].info.level < unorderNodes[i-1].info.level;       
-            }
-            
-            parents ~= _rootNode;
-            foreach(i; 1 .. unorderNodes.length)
-            {
-                auto node = unorderNodes[i];
-                parents[$-1].addChild(node);
-                
-                if (node.info.isLastChild)
-                    parents.length -= 1;
-                 
-                if (isSerObjectType(node.info.type))
-                    parents ~= node;
-            }  
-            //
-            _stream = null;  
-        }
-        
-        /** 
-         * Builds the IST from a stream and restores sequentially to a root.
-         * The process starts by a call to .declaraProperties() in the root.
-         * Params:
-         * inputStream = the stream containing the serialized data.
-         * root = the Serializable from where the declarations and the restoration starts.
-         * format = the format of the serialized data.
-         */
-        void streamToObject(Stream inputStream, Serializable root, SerializationFormat format = SerializationFormat.iztxt)
-        {
-            _serState = SerializationState.restore;
-            _restoreMode = RestoreMode.sequential;
-            _mustRead = true;
-            _stream = inputStream;
-            _format = format;
-            //
-            _rootNode.deleteChildren;
-            _previousNode = null;
-            setRoot(root);
-            readFormat(_format)(_stream, _rootNode);
-            //
-            _parentNode = _rootNode;
-            _rootSerializable.declareProperties(this);   
-            //   
-            _mustRead = false;
-            _serState = SerializationState.none;
-            _stream = null;  
-        }   
-        
-        /**
-         * Fully Restores the IST. Can be called after *streamToIst()*.
-         * The process starts by a call to .declareProperties() in the root.
-         * This allows to associate each IST node to a declarator. The IST
-         * Nodes that can't be associated to a declarator are restored using
-         * the onWantDescriptor event.
-         */
-        void istToObject(Serializable root)
-        {
-            // TODO-cfeature: launch recursive IST building with addProperties
-            // without adding nodes but to associate existing nodes to a descriptor.
-        }
-        
-        /**
-         * Fully Restores the IST. Can be called after *streamToIst()*.
-         * For each IST Node and if assigned, the onWantDesscriptor event is called.
-         */
-        void istToObject(){istToObject(_rootNode, true);}    
-        
-        /**
-         * Finds the tree node matching to a property names chain.
-         * Params:
-         * descriptorName = the property names chain which identifies the interesting node.
-         * Returns:
-         * A reference to the node which matches to the property if the call succeeds otherwise nulll.
-         */ 
-        IstNode findNode(in char[] descriptorName)
-        {
-        
-            //TODO-cfeature : optimize random access by caching in an AA, "à la JSON"
-            
-            if (_rootNode.info.name == descriptorName)
-                return _rootNode;
-            
-            IstNode scanNode(IstNode parent, in char[] namePipe)
-            {
-                IstNode result;
-                foreach(node; parent.children)
-                {
-                    auto child = cast(IstNode) node; 
-                    if (namePipe ~ "." ~ child.info.name == descriptorName)
-                        return child;
-                    if (child.childrenCount)
-                        result = scanNode(child, namePipe ~ "." ~ child.info.name);
-                    if (result)
-                        return result;
-                }
-                return result;
-            }
-            return scanNode(_rootNode, _rootNode.info.name);
-        }
-        
-        /**
-         * Restores the IST from an arbitrary tree node. 
-         * The process is lead by the nodeInfo associated to the node.
-         * If the descriptor is not defined then wantDescriptorEvent is called.
-         * It means that this method can be used to deserialize to an arbitrary descriptor,
-         * for example after a call to streamToIst().
-         * Params:
-         * node = the IST node from where the restoration begins. It can be determined by a call to findNode().
-         * recursive = when set to true the restoration is recursive.
-         */  
-        void istToObject(IstNode node, bool recursive = false)
-        {
-            bool restore(IstNode current)
-            {
-                bool result = true;
-                if (current.info.descriptor && 
-                    current.info.name ==  (cast(PropDescriptor!byte *)current.info.descriptor).name)
-                    nodeInfo2Declarator(current.info);
+                if (done) continue;
                 else
                 {
-                    bool stop;
-                    result = restoreFromEvent(current, stop);
-                    result &= !stop;
+                    bool noop;
+                    restoreFromEvent(childNode, noop);
                 }
-                return result;    
             }
-            
-            bool restoreLoop(IstNode current)
-            {
-                if (!restore(current)) return false;
-                foreach(child; current.children)
-                {
-                    auto childNode = cast(IstNode) child;
-                    if (!restore(childNode)) return false;
-                    if (isSerObjectType(childNode.info.type) & recursive)
-                        if (!restoreLoop(childNode)) return false;
-                }
-                return true;
-            }
-            
-            restoreLoop(node);
+        }
+        restoreFrom(_rootNode, root);
+    }
+
+    void streamToPropCollector(T)(Stream inputStream, T root, 
+        SerializationFormat format = SerializationFormat.iztxt)
+    if (is(T==class) || is(T == struct))   
+    {
+        // TODO-cTest: test streamToPropCollector()
+        streamToIst(inputStream, format);
+        istToPropCollector(root); 
+    }
+
+    /**
+     * Builds the IST from a stream.
+     * After the call the properties can only be restored manually 
+     * by using findNode() and restoreProperty(). 
+     * This function is also usefull to convert from a format to another.
+     * Params:
+     * inputStream = a stream containing the serialized data.
+     * format = the format of the serialized data.
+     */
+    void streamToIst(Stream inputStream, SerializationFormat format = SerializationFormat.iztxt)
+    {
+        IstNode[] unorderNodes;
+        IstNode[] parents;
+        _rootNode.deleteChildren;
+        _mustRead = false;
+        _stream = inputStream;
+        _format = format;
+        
+        unorderNodes ~= _rootNode;
+        while(inputStream.position < inputStream.size)
+        {     
+            readFormat(_format)(_stream, unorderNodes[$-1]);
+            unorderNodes ~= construct!IstNode;
+        }
+        destruct(unorderNodes[$-1]);
+        unorderNodes.length -= 1;
+        
+        if (unorderNodes.length > 1)
+        foreach(i; 1 .. unorderNodes.length)
+        {
+            unorderNodes[i-1].info.isLastChild = 
+              unorderNodes[i].info.level < unorderNodes[i-1].info.level;       
         }
         
-        /**
-         * Restores a single property from a tree node using the setter of a descriptor.
-         * Params:
-         * node = an IstNode. Can be determined by a call to findNode()
-         * aDescriptor = the PropDescriptor whose setter is used to restore the node data.
-         * If not specified then the onWantDescriptor event may be called.
-         */
-        void restoreProperty(T)(IstNode node, PropDescriptor!T * descriptor = null)
+        parents ~= _rootNode;
+        foreach(i; 1 .. unorderNodes.length)
         {
-            _serState = SerializationState.restore;
-            _restoreMode = RestoreMode.random;
+            auto node = unorderNodes[i];
+            parents[$-1].addChild(node);
             
-            if (descriptorMatchesNode!T(descriptor, node))
+            if (node.info.isLastChild)
+                parents.length -= 1;
+             
+            if (isSerObjectType(node.info.type))
+                parents ~= node;
+        }  
+        //
+        _stream = null;  
+    }
+
+    /** 
+     * Builds the IST from a stream and restores sequentially to a root.
+     * The process starts by a call to .declaraProperties() in the root.
+     * Params:
+     * inputStream = the stream containing the serialized data.
+     * root = the Serializable from where the declarations and the restoration starts.
+     * format = the format of the serialized data.
+     */
+    void streamToObject(Stream inputStream, Serializable root,
+        SerializationFormat format = SerializationFormat.iztxt)
+    {
+        _serState = SerializationState.restore;
+        _restoreMode = RestoreMode.sequential;
+        _mustRead = true;
+        _stream = inputStream;
+        _format = format;
+        //
+        _rootNode.deleteChildren;
+        _previousNode = null;
+        setRoot(root);
+        readFormat(_format)(_stream, _rootNode);
+        //
+        _parentNode = _rootNode;
+        _rootSerializable.declareProperties(this);
+        //   
+        _mustRead = false;
+        _serState = SerializationState.none;
+        _stream = null;  
+    }   
+
+    /**
+     * Fully Restores the IST. Can be called after *streamToIst()*.
+     * The process starts by a call to .declareProperties() in the root.
+     * This allows to associate each IST node to a declarator. The IST
+     * Nodes that can't be associated to a declarator are restored using
+     * the onWantDescriptor event.
+     */
+    void istToObject(Serializable root)
+    {
+        // TODO-cfeature: launch recursive IST building with addProperties
+        // without adding nodes but to associate existing nodes to a descriptor.
+    }
+
+    /**
+     * Fully Restores the IST. Can be called after *streamToIst()*.
+     * For each IST Node and if assigned, the onWantDesscriptor event is called.
+     */
+    void istToObject(){istToObject(_rootNode, true);}
+
+    /**
+     * Finds the tree node matching to a property names chain.
+     * Params:
+     * descriptorName = the property names chain which identifies the interesting node.
+     * Returns:
+     * A reference to the node which matches to the property if the call succeeds otherwise nulll.
+     */ 
+    IstNode findNode(in char[] descriptorName)
+    {
+        //TODO-cfeature : optimize random access by caching in an AA, "à la JSON"
+
+        if (_rootNode.info.name == descriptorName)
+            return _rootNode;
+
+        IstNode scanNode(IstNode parent, in char[] namePipe)
+        {
+            IstNode result;
+            foreach(node; parent.children)
             {
-                node.info.descriptor = descriptor;
-                nodeInfo2Declarator(node.info);
+                auto child = cast(IstNode) node; 
+                if (namePipe ~ "." ~ child.info.name == descriptorName)
+                    return child;
+                if (child.childrenCount)
+                    result = scanNode(child, namePipe ~ "." ~ child.info.name);
+                if (result)
+                    return result;
             }
-            else 
+            return result;
+        }
+        return scanNode(_rootNode, _rootNode.info.name);
+    }
+
+    /**
+     * Restores the IST from an arbitrary tree node. 
+     * The process is lead by the nodeInfo associated to the node.
+     * If the descriptor is not defined then wantDescriptorEvent is called.
+     * It means that this method can be used to deserialize to an arbitrary descriptor,
+     * for example after a call to streamToIst().
+     * Params:
+     * node = the IST node from where the restoration begins.
+     * It can be determined by a call to findNode().
+     * recursive = when set to true the restoration is recursive.
+     */  
+    void istToObject(IstNode node, bool recursive = false)
+    {
+        bool restore(IstNode current)
+        {
+            bool result = true;
+            if (current.info.descriptor && 
+                current.info.name ==  (cast(PropDescriptor!byte *)current.info.descriptor).name)
+                nodeInfo2Declarator(current.info);
+            else
             {
-                bool noop;
-                restoreFromEvent(node, noop);
-            }   
-        }        
+                bool stop;
+                result = restoreFromEvent(current, stop);
+                result &= !stop;
+            }
+            return result;    
+        }
+        
+        bool restoreLoop(IstNode current)
+        {
+            if (!restore(current)) return false;
+            foreach(child; current.children)
+            {
+                auto childNode = cast(IstNode) child;
+                if (!restore(childNode)) return false;
+                if (isSerObjectType(childNode.info.type) & recursive)
+                    if (!restoreLoop(childNode)) return false;
+            }
+            return true;
+        }
+        
+        restoreLoop(node);
+    }
+
+    /**
+     * Restores a single property from a tree node using the setter of a descriptor.
+     * Params:
+     * node = an IstNode. Can be determined by a call to findNode()
+     * aDescriptor = the PropDescriptor whose setter is used to restore the node data.
+     * If not specified then the onWantDescriptor event may be called.
+     */
+    void restoreProperty(T)(IstNode node, PropDescriptor!T * descriptor = null)
+    {
+        _serState = SerializationState.restore;
+        _restoreMode = RestoreMode.random;
+        
+        if (descriptorMatchesNode!T(descriptor, node))
+        {
+            node.info.descriptor = descriptor;
+            nodeInfo2Declarator(node.info);
+        }
+        else
+        {
+            bool noop;
+            restoreFromEvent(node, noop);
+        }
+    }
 
 //------------------------------------------------------------------------------
 //---- declaration from an Serializable ---------------------------------------+
-    
-        /*( the following methods are designed to be only used by an Serializable !)*/
-    
-        //mixin(genAllAdders);
+
+    /*( the following methods are designed to be only used by an Serializable !)*/
+
+    //mixin(genAllAdders);
+
+    /**
+     * Designed to be called by an Serializable when it needs to declare 
+     * a property in its declarePropeties() method.
+     *
+     * Allowed properties:
+     * - all the basic types: int, uint, char, ...
+     * - all the basic types as array: int[], uin[], char[], ...
+     * - the structs assignable from/to a basic type.
+     * - any Serializable or Object that's a Serializable (used to build the structure).
+     * - any iz.streams.Stream implementer.
+     *
+     * Some aliases exist for each basic type (addintProperty(), addcharProperty(), ...).
+     * the structs are represented as the type they convert to and are not used to build the IST.
+     */
+    void addProperty(T)(PropDescriptor!T * descriptor)
+    if (isSerializable!T)
+    {    
+        if (!descriptor) return;
+        if (!descriptor.name.length) return;
         
-        /**
-         * Designed to be called by an Serializable when it needs to declare 
-         * a property in its declarePropeties() method.
-         *
-         * Allowed properties:
-         * - all the basic types: int, uint, char, ...
-         * - all the basic types as array: int[], uin[], char[], ...
-         * - the structs assignable from/to a basic type (if they include a public alias this but not only)
-         * - the structs assignable from/to an array of basic type (this(char[]), opAssign(char[]), toString())
-         * - the Serializable (used to build the structure).
-         * - any class, if it implements Serializable. It's safer to pass some PropDescriptor!Serializable but PropDescriptor!Object is easyer.
-         *
-         * Some aliases exist for each basic type (addintProperty(), addcharProperty(), ...).
-         * the structs are represented as the type they convert to and are not used to build the IST.
-         */
-        void addProperty(T)(PropDescriptor!T * descriptor)
-        if (isSerializable!T)
-        {    
-            if (!descriptor) return;
-            if (!descriptor.name.length) return;
+        // TODO-cfeature: parameter that indicates if the IST has to be build or checked
+        auto propNode = _parentNode.addNewChildren!IstNode;
+        propNode.setDescriptor(descriptor);
+        
+        if (_mustWrite && _storeMode == StoreMode.sequential)
+            writeFormat(_format)(propNode, _stream); 
             
-            // TODO-cfeature: parameter that indicates if the IST has to be build or checked (istToObject)
-            auto propNode = _parentNode.addNewChildren!IstNode;
-            propNode.setDescriptor(descriptor);
-            
-            if (_mustWrite && _storeMode == StoreMode.sequential)
-                writeFormat(_format)(propNode, _stream); 
-                
-            if (_mustRead) 
+        if (_mustRead) 
+        {
+            readFormat(_format)(_stream, propNode);
+            if (descriptorMatchesNode!T(descriptor, propNode)) 
+                nodeInfo2Declarator(propNode.info);
+            else 
             {
-                readFormat(_format)(_stream, propNode);
-                if (descriptorMatchesNode!T(descriptor, propNode)) 
-                    nodeInfo2Declarator(propNode.info);
-                else 
-                {
-                    bool noop;
-                    restoreFromEvent(propNode, noop);
-                }
+                bool noop;
+                restoreFromEvent(propNode, noop);
             }
-            
-            static if (isSerObjectType!T)
-            {
-                if (_previousNode)
-                    _previousNode.info.isLastChild = true;
-            
-                auto oldParentNode = _parentNode;
-                _parentNode = propNode;     
-                
-                if (!descriptorMatchesNode!T(descriptor, propNode) && _onWantDescriptor)
-                {
-                    bool stop = false;
-                    Ptr descr = &descriptor;
-                    _onWantDescriptor(propNode, descr, stop);
-                    if (stop) return;
-                }
-                
-                Serializable currentSerializable;
-                static if (is(T : Serializable))
-                    currentSerializable = descriptor.get();
-                else
-                {
-                    auto obj = descriptor.get();
-                    if (obj) currentSerializable = cast(Serializable) obj;
-                }
-                   
-                if (!currentSerializable && _onWantObject)
-                {
-                    _onWantObject(propNode, currentSerializable);
-                    if (!currentSerializable) return;
-                }  
-                currentSerializable.declareProperties(this);
-                _parentNode = oldParentNode;
-            }    
-            
-            _previousNode = propNode;      
         }
         
-        /// state is set visible to an Serializable to let it know how the properties will be used (store: getter, restore: setter)
-        @property SerializationState state() {return _serState;}
+        static if (isSerObjectType!T)
+        {
+            if (_previousNode)
+                _previousNode.info.isLastChild = true;
         
-        /// storeMode is set visible to an Serializable to let it adjust the way to declare the properties. 
-        @property StoreMode storeMode() {return _storeMode;}
+            auto oldParentNode = _parentNode;
+            _parentNode = propNode;     
+            
+            if (!descriptorMatchesNode!T(descriptor, propNode) && _onWantDescriptor)
+            {
+                bool stop = false;
+                Ptr descr = &descriptor;
+                _onWantDescriptor(propNode, descr, stop);
+                if (stop) return;
+            }
+            
+            Serializable currentSerializable;
+            static if (is(T : Serializable))
+                currentSerializable = descriptor.get();
+            else
+            {
+                auto obj = descriptor.get();
+                if (obj) currentSerializable = cast(Serializable) obj;
+            }
+               
+            if (!currentSerializable && _onWantObject)
+            {
+                Object o;
+                _onWantObject(propNode, o);
+                if (o) currentSerializable = cast(Serializable)o;
+                if (!currentSerializable) return;
+            }  
+            currentSerializable.declareProperties(this);
+            _parentNode = oldParentNode;
+        }    
         
-        /// restoreMode is set visible to an Serializable to let it adjust the way to declare the properties. 
-        @property RestoreMode restoreMode() {return _restoreMode;}
-         
-        /// serializationFormat is set visible to an Serializable to let it adjust the way to declare the properties. 
-        @property SerializationFormat serializationFormat() {return _format;} 
-        
-        /// The IST can be modified, build, cleaned from the root node
-        @property IstNode serializationTree(){return _rootNode;}
-        
-        /// Event triggered when the serializer needs a particulat property descriptor.
-        @property WantDescriptorEvent onWantDescriptor(){return _onWantDescriptor;}
-        
-        /// ditto
-        @property void onWantDescriptor(WantDescriptorEvent value){_onWantDescriptor = value;}
-        
-        /// Event triggered when the serializer needs a particulat property descriptor.
-        @property WantObjectEvent onWantObject(){return _onWantObject;}
-        
-        /// ditto
-        @property void onWantObject(WantObjectEvent value){_onWantObject = value;}        
+        _previousNode = propNode;
+    }
+
+    /// Allows a Serializable to know how the properties will be used.
+    @property SerializationState state() {return _serState;}
+    
+    /// Allows a Serializable to adjust the way to declare the properties.
+    @property StoreMode storeMode() {return _storeMode;}
+    
+    /// Allows a Serializable to adjust the way to declare the properties.
+    @property RestoreMode restoreMode() {return _restoreMode;}
+
+    /// Allows a Serializable to adjust the way to declare the properties.
+    @property SerializationFormat serializationFormat() {return _format;} 
+
+    /// The IST can be modified, build, cleaned from the root node
+    @property IstNode serializationTree(){return _rootNode;}
+
+    /// Event called when the serializer misses a property descriptor.
+    @property WantDescriptorEvent onWantDescriptor(){return _onWantDescriptor;}
+
+    /// ditto
+    @property void onWantDescriptor(WantDescriptorEvent value){_onWantDescriptor = value;}
+
+    /// Event called when the serializer misses a PropDescriptor!Object
+    @property WantObjectEvent onWantObject(){return _onWantObject;}
+
+    /// ditto
+    @property void onWantObject(WantObjectEvent value){_onWantObject = value;}
 //------------------------------------------------------------------------------
-    } 
+
 }
 
 //----
@@ -1590,7 +1602,7 @@ private static string genAllAdders()
 {
     string result;
     foreach(t; SerializableTypes) if (!(is(t == struct)))
-        result ~= "alias add" ~ t.stringof ~ "Property =" ~ "addProperty!" ~ t.stringof ~";"; 
+        result ~= "alias add" ~ t.stringof ~ "Property =" ~ "addProperty!" ~ t.stringof ~";";
     return result;
 }
 
@@ -1604,7 +1616,7 @@ version(unittest)
         //
         value = [13];
         text = "13".dup;
-        inf.type = SerializableType._byte ;
+        inf.type = SerializableType._byte;
         inf.value = value ;
         inf.isArray = false;
         assert(value2text(&inf) == text);
@@ -1616,7 +1628,7 @@ version(unittest)
         inf.value = value ;
         inf.isArray = true;
         assert(value2text(&inf) == text);
-        assert(text2value(text, &inf) == value); 
+        assert(text2value(text, &inf) == value);
         //  
         void testType(T)(T t)
         {
@@ -1635,25 +1647,25 @@ version(unittest)
             static if (isArray!T) 
                 assert( cast(ubyte[])text2value(asText, &inf) == cast(ubyte[])value, T.stringof);
         }
-        
+
         struct ImpConv{uint _field; alias _field this;}
         auto ic = ImpConv(8);
-        
+
         testType('c');
         testType("azertyuiop".dup);
         testType!uint(ic); 
         testType(cast(byte)8);      testType(cast(byte[])[8,8]);
         testType(cast(ubyte)8);     testType(cast(ubyte[])[8,8]);
-        testType(cast(short)8);     testType(cast(short[])[8,8]); 
+        testType(cast(short)8);     testType(cast(short[])[8,8]);
         testType(cast(ushort)8);    testType(cast(ushort[])[8,8]);
-        testType(cast(int)8);       testType(cast(int[])[8,8]);     
-        testType(cast(uint)8);      testType(cast(uint[])[8,8]);    
-        testType(cast(long)8);      testType(cast(long[])[8,8]);    
+        testType(cast(int)8);       testType(cast(int[])[8,8]);
+        testType(cast(uint)8);      testType(cast(uint[])[8,8]);
+        testType(cast(long)8);      testType(cast(long[])[8,8]);
         testType(cast(ulong)8);     testType(cast(ulong[])[8,8]);
-        testType(cast(float).8f);   testType(cast(float[])[.8f,.8f]); 
+        testType(cast(float).8f);   testType(cast(float[])[.8f,.8f]);
         testType(cast(double).8);   testType(cast(double[])[.8,.8]);
         
-        writeln("Serializer passed the text-value conversions test");     
+        writeln("Serializer passed the text-value conversions test");
     }
 
     unittest 
@@ -1677,7 +1689,7 @@ version(unittest)
             fSerRef = construct!SerializableReference;
             fRefDescr.define(cast(Object*)&fSerRef, "theReference");
         }
-        
+
         ~this() {destruct(fSerRef);}
         
         void declareProperties(Serializer serializer)
@@ -1738,7 +1750,7 @@ version(unittest)
                 _aFloat = 0.0f;
                 _someChars = _someChars.init;
             }
-            
+
             mixin(genPropFromField!(typeof(_anIntArray), "anIntArray", "_anIntArray"));
             mixin(genPropFromField!(typeof(_aFloat), "aFloat", "_aFloat"));
             mixin(genPropFromField!(typeof(_someChars), "someChars", "_someChars")); 
@@ -1749,7 +1761,7 @@ version(unittest)
                 serializer.addProperty(propCollectorGet!(typeof(_someChars))("someChars"));
             }
     }
-    
+
     void testByFormat(SerializationFormat format)()
     {
         MemoryStream str  = construct!MemoryStream;
@@ -1757,7 +1769,7 @@ version(unittest)
         ClassB b = construct!ClassB;
         ClassA a = construct!ClassA;
         scope(exit) destruct(str, ser, b, a);
-        
+
         // basic sequential store/restore ---+
         ser.objectToStream(b,str,format);
         b.reset;
@@ -1770,7 +1782,7 @@ version(unittest)
         assert(b.aFloat == 0.123456f);
         assert(b.someChars == "azertyuiop");
         //----
-        
+
         // arbitrarily find a prop ---+
         assert(ser.findNode("Root.anIntArray"));
         assert(ser.findNode("Root.aFloat"));
@@ -1788,7 +1800,7 @@ version(unittest)
         ser.restoreProperty(node, &aFloatDescr);
         assert(outside == 0.123456f);
         //----
-        
+
         // nested declarations with super.declarations ---+
         str.clear;
         ser.objectToStream(a,str,format);
@@ -1814,7 +1826,7 @@ version(unittest)
         assert(a._aB2.aFloat ==  0.123456f);
         assert(a._aB2.someChars == "azertyuiop"); 
         //----
-        
+
         // store & restore a serializable reference ---+
         auto ref1 = construct!Referenced1;
         auto ref2 = construct!Referenced1;
@@ -1825,7 +1837,7 @@ version(unittest)
         assert( ReferenceMan.storeReference!Referenced1(&ref2, 0x55667788));
         assert( ReferenceMan.referenceID!Referenced1(&ref1) == 0x11223344);
         assert( ReferenceMan.referenceID!Referenced1(&ref2) == 0x55667788);
-        
+
         str.clear;
         usrr.fRef = &ref1;
         ser.objectToStream(usrr, str, format);
@@ -1840,7 +1852,7 @@ version(unittest)
         str.position = 0;
         ser.streamToObject(str, usrr, format);
         assert(*usrr.fRef is ref1);
-        
+
         str.clear;
         usrr.fRef = null;
         ser.objectToStream(usrr, str, format);
@@ -1848,9 +1860,9 @@ version(unittest)
         assert(*usrr.fRef is ref2);
         str.position = 0;
         ser.streamToObject(str, usrr, format);
-        assert(usrr.fRef is null);         
+        assert(usrr.fRef is null);
         //----
-          
+
         // auto store, stream to ist, restores manually ---+
         str.clear;  
         ser.objectToStream(b,str,format);
@@ -1860,21 +1872,24 @@ version(unittest)
         assert(b.someChars == "");
         str.position = 0;
         ser.streamToIst(str,format);
-        
+
         auto node_anIntArray = ser.findNode("Root.anIntArray");
-        if(node_anIntArray) ser.restoreProperty(node_anIntArray, b.propCollectorGet!(int[])("anIntArray"));
-        else assert(0);        
+        if(node_anIntArray) ser.restoreProperty(node_anIntArray,
+             b.propCollectorGet!(int[])("anIntArray"));
+        else assert(0);
         auto node_aFloat = ser.findNode("Root.aFloat");
-        if(node_aFloat) ser.restoreProperty(node_aFloat, b.propCollectorGet!float("aFloat"));
+        if(node_aFloat) ser.restoreProperty(node_aFloat,
+            b.propCollectorGet!float("aFloat"));
         else assert(0);  
         auto node_someChars = ser.findNode("Root.someChars");
-        if(node_someChars) ser.restoreProperty(node_someChars, b.propCollectorGet!(char[])("someChars"));
-        else assert(0);                  
+        if(node_someChars) ser.restoreProperty(node_someChars,
+            b.propCollectorGet!(char[])("someChars"));
+        else assert(0);
         assert(b.anIntArray == [0, 1, 2, 3]);
         assert(b.aFloat == 0.123456f);
-        assert(b.someChars == "azertyuiop");      
+        assert(b.someChars == "azertyuiop");
         //----
-            
+
         // decomposed de/serialization phases with event ---+ 
         void wantDescr(IstNode node, ref Ptr matchingDescriptor, out bool stop)
         {
@@ -1884,9 +1899,9 @@ version(unittest)
             else if (chain == "Root.aB1")
                 matchingDescriptor = a._aB1.propCollectorGetPtr(node.info.name);
             else if (chain == "Root.aB2")
-                matchingDescriptor = a._aB2.propCollectorGetPtr(node.info.name);                      
+                matchingDescriptor = a._aB2.propCollectorGetPtr(node.info.name);
         }
-          
+
         str.clear;
         ser.objectToIst(a);
         ser.istToStream(str,format);
@@ -1915,15 +1930,15 @@ version(unittest)
         assert(a._aB2.someChars == "azertyuiop");
         ser.onWantDescriptor = null;
         // ----
-        
+
         // struct serialized as basicType or ---+
-        
+
         import iz.enumset;
         enum A {a0,a1,a2}
         alias SetofA = EnumSet!(A,Set8);
-        
+
         class Bar: Serializable
-        {    
+        {
             private: 
                 SetofA set;
                 PropDescriptor!SetofA setDescr;
@@ -1938,7 +1953,7 @@ version(unittest)
                     serializer.addProperty(&setDescr);
                 }  
         }
-        
+
         str.clear;
         auto bar = construct!Bar;
         scope(exit) bar.destruct;
@@ -1950,9 +1965,9 @@ version(unittest)
         str.position = 0;
         ser.streamToObject(str, bar, format);
         assert( bar.set == SetofA(A.a1,A.a2), to!string(bar.set));
-        
+
         // ----
-    
+
         writeln("Serializer passed the ", to!string(format), " format test");
     }
 
@@ -1962,28 +1977,28 @@ version(unittest)
     {
         @GetSet private uint _a = 78;
         @GetSet private char[] _b = "foobar".dup;
-        
+
         mixin PropDescriptorCollector;
-        
+
         this()
         {
             propCollectorAll;
         }
-        
+
         void declareProperties(Serializer serializer)
         {
             serializer.addProperty(propCollectorGet!uint("a"));
             serializer.addProperty(propCollectorGet!(char[])("b"));
-        }   
+        }
     }
-    
+
     class ErrDeSer: Serializable
     {
         @GetSet private int _c;
         @GetSet private ubyte[] _d;
-        
+
         mixin PropDescriptorCollector;
-        
+
         this()
         {
             propCollectorAll;
@@ -1993,9 +2008,9 @@ version(unittest)
         {
             serializer.addProperty(propCollectorGet!int("c"));
             serializer.addProperty(propCollectorGet!(ubyte[])("d"));
-        }   
-    }    
-    
+        }
+    }
+
     unittest
     {
         ErrSer errser = construct!ErrSer;
@@ -2003,30 +2018,30 @@ version(unittest)
         Serializer ser = construct!Serializer;
         MemoryStream str = construct!MemoryStream;
         scope(exit) destruct(errser, ser, str, errdeser);
-        
+
         ser.objectToStream(errser, str);
         str.position = 0;
-        
+
         void error(IstNode node, ref Ptr matchingDescriptor, out bool stop)
         {
             if (node.info.name == "a")
             {/*will be restored in _c, same size, almost safe*/}
             if (node.info.name == "b")
             {matchingDescriptor = errdeser.propCollectorGet!(ubyte[])("d");}
-                
-            stop = false;   
-        }        
-        
+
+            stop = false;
+        }
+
         ser.onWantDescriptor = &error;
         ser.streamToObject(str, errdeser); 
         
         assert(errdeser._c == 78);
-        assert(cast(char[])errdeser._d == "foobar"); 
+        assert(cast(char[])errdeser._d == "foobar");
     }
     //----
-    
+
     // testing the RuntimeTypeInfo-based serialization ----+
-    
+
     class SubCollected: PropDescriptorCollection
     {
         mixin PropDescriptorCollector;
@@ -2034,7 +2049,7 @@ version(unittest)
         this()
         {
             propCollectorGetFields;
-        }        
+        }
     }
     class Collected: PropDescriptorCollection
     {
@@ -2049,16 +2064,16 @@ version(unittest)
             propCollectorGetFields;
         }
     }
-    
+
     unittest
     {
         Collected c = construct!Collected;
         Serializer ser = construct!Serializer;
         MemoryStream str = construct!MemoryStream;
-        scope(exit) destruct(c, ser, str);  
+        scope(exit) destruct(c, ser, str);
         
-        ser.collectorToStream(c, str); 
-        str.saveToFile(r"test.txt");   
+        ser.collectorToStream(c, str);
+        str.saveToFile(r"test.txt");
     }
     //----
 }
