@@ -362,11 +362,24 @@ mixin(genStandardPropDescriptors);
 
 
 /**
+ * Interfaces the PropDescriptorCollector methods.
+ * The methods don't have to be implemented by hand as it's automatically done 
+ * when the PropDescriptorCollector template is mixed in a class.
+ */ 
+interface PropDescriptorCollection
+{
+    size_t propCollectorCount();
+    void * propCollectorGetPtr(string name);
+    void * propCollectorGetPtr(size_t index);
+    const(RuntimeTypeInfo*) propCollectorGetType(size_t index);
+}
+
+/**
  * When mixed in a class, several analyzers can be used to automatically create
  * the PropDescriptors for the properties anotated with @Set and @Get
  * or the fields annotated with @SetGet.
  *
- * The analyzers are callable in non-static methods, in this(). 
+ * The analyzers are usually called in this(). 
  */
 mixin template PropDescriptorCollector(){
 
@@ -427,7 +440,17 @@ mixin template PropDescriptorCollector(){
     protected final void * propCollectorGetPtr(size_t index)
     {
         return descriptors[index];
-    }    
+    }   
+    
+    /**
+     * Returns a pointer to the RTTI for the nth descriptor.
+     * index must be with the 0 .. propCollectorCount range.
+     * This allows to cast properly the result of propCollectorGetPtr.
+     */
+    protected final const(RuntimeTypeInfo*) propCollectorGetType(size_t index)
+    {
+        return (cast(PropDescriptor!int*) descriptors[index]).rtti;
+    }     
     
     /**
      * Performs all the possible analysis.
@@ -630,6 +653,23 @@ version(unittest){
             return _field;
         }
     }  
+    
+    class Dog
+    {
+        mixin PropDescriptorCollector;
+        @SetGet Object _o;
+        this()
+        {
+            _o = new Object;
+            propCollectorGetFields;
+        }  
+    }
+    
+    unittest
+    {
+        Dog dog = new Dog;
+        assert(dog.propCollectorCount == 1);
+    }
 }
 
 unittest
