@@ -59,8 +59,8 @@ enum RuntimeType : ubyte
  * A variable can be associated to its RuntimeTypeInfo
  * to get its type information at runtime.
  *
- * An instance should always be private and exposed as const(RuntimeTypeInfo)
- * A particular requirement in PropDescriptor prevents to set the members as
+ * An instance should always be private and exposed as const(RuntimeTypeInfo) */
+ /* because A particular requirement in PropDescriptor prevents to set the members as
  * immutable (no default this in struct + declaration without ctor + later call to define).
  */
 struct RuntimeTypeInfo
