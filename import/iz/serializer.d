@@ -1,6 +1,6 @@
 module iz.serializer;
 
-import std.range: ElementType;
+import std.range;
 import std.stdio, std.typetuple, std.conv, std.traits;
 import iz.types, iz.memory, iz.properties, iz.containers, iz.streams, iz.referencable;
 
@@ -12,10 +12,10 @@ import iz.types, iz.memory, iz.properties, iz.containers, iz.streams, iz.referen
 interface Serializable
 {
     /**
-     * Called by an Serializer during the de/serialization phase.
-     * In the implementation, the Serializable declares its properties to the serializer.
+     * Called by a Serializer during the de/serialization phase.
+     * This method allows the Serializable to declare its properties to the serializer.
      * Params:
-     * serializer = the serializer. The implementer calls serializer.addProperty()
+     * serializer = The serializer. The implementer calls serializer.addProperty()
      * to declare arbitrarily some PropDescriptors (run-time decision).
      */
     void declareProperties(Serializer serializer);
@@ -62,7 +62,7 @@ class SerializableReference: Serializable
         mixin(genPropFromField!(char[], "type", "_tp"));
         mixin(genPropFromField!(ulong,  "id",   "_id"));
         
-        /// declares the data needed to retrieve the reference associated to this class
+        /// Declares the data needed to retrieve the reference associated to this class
         void declareProperties(Serializer serializer)
         {
             serializer.addProperty(propCollectorGet!(char[])("type"));
@@ -155,7 +155,8 @@ private bool isSerArrayType(T)()
     static if (!isArray!T) return false;
     else static if (is(T : Serializable)) return false;
     else static if (isSerObjectType!(typeof(T.init[0]))) return false;
-    else static if (staticIndexOf!(typeof(T.init[0]), SerializableTypes) == -1) return false;
+    else static if (staticIndexOf!(typeof(T.init[0]), SerializableTypes) == -1)
+        return false;
     else return true;
 }
 
@@ -239,15 +240,14 @@ struct SerNodeInfo
 }
 
 /**
- * Event triggered when a serializer needs a particular property descriptor.
+ * Event triggered when a serializer misses a property descriptor.
  * Params:
  * node = The information the callee uses to determine the descriptor to return.
- * matchingDescriptor = The callee can set or modify a pointer to the PropDescriptor 
- * matching to the info. It can be set to null to prevent restoration.
+ * descriptor = What the serializer want. If set to null then node is not restored.
  * stop = the callee can set this value to true in order to stop the restoration 
  * process. According to the serialization context, this value can be noop.
  */
-alias WantDescriptorEvent = void delegate(IstNode node, ref Ptr matchingDescriptor, out bool stop);
+alias WantDescriptorEvent = void delegate(IstNode node, ref Ptr descriptor, out bool stop);
 
 /**
  * Event triggered when a serializer failed to get an object to deserialize.
@@ -760,39 +760,34 @@ private void writeBin(IstNode istNode, Stream stream)
     ubyte[] data;
     uint datalength;
     //header
-    bin = 0x99;
-    stream.write(&bin, bin.sizeof);
+    stream.writeUbyte(0x99);
     // level
-    datalength = cast(uint) istNode.level;
-    stream.write(&datalength, datalength.sizeof);
+    stream.writeUint(cast(uint) istNode.level);
     // type
-    bin = cast(ubyte) istNode.info.type;
-    stream.write(&bin, bin.sizeof);
+    stream.writeUbyte(cast(ubyte) istNode.info.type);
     // as array
-    bin = istNode.info.isArray; 
-    stream.write(&bin, bin.sizeof);
+    stream.writeBool(istNode.info.isArray);
     // name length then name
     data = cast(ubyte[]) istNode.info.name;
     datalength = cast(uint) data.length;
-    stream.write(&datalength, datalength.sizeof);
+    stream.writeUint(datalength);
     stream.write(data.ptr, datalength);
     // value length then value
     version(LittleEndian)
     {
         datalength = cast(uint) istNode.info.value.length;
-        stream.write(&datalength, datalength.sizeof);
+        stream.writeUint(datalength);
         stream.write(istNode.info.value.ptr, datalength);
     }
     else
     {
         data = swapBE(istNode.info.value, type2size[istNode.info.type]);
         datalength = cast(uint) data.length;
-        stream.write(&datalength, datalength.sizeof);
+        stream.writeUint(datalength);
         stream.write(data.ptr, datalength);
     }
     //footer
-    bin = 0xA0;
-    stream.write(&bin, bin.sizeof);
+    stream.writeUbyte(0xA0);
 }  
 
 private void readBin(Stream stream, IstNode istNode)
@@ -885,6 +880,9 @@ enum SerializationFormat : ubyte
     json
 }
 
+/// The serialization format used when not specified.
+alias defaultFormat = SerializationFormat.iztxt;
+
 private SerializationWriter writeFormat(SerializationFormat format)
 {
     with(SerializationFormat) final switch(format)
@@ -905,7 +903,7 @@ private SerializationReader readFormat(SerializationFormat format)
     }
 }
 
-//TODO-cfeature: Serializer error handling.
+//TODO-cfeature: Serializer error handling (using isDamaged + format readers errors).
 
 /**
  * Native serializer.
@@ -1050,7 +1048,7 @@ public:
      * format = the format of the serialized data.
      */
     void objectToStream(Serializable root, Stream outputStream, 
-        SerializationFormat format = SerializationFormat.iztxt)
+        SerializationFormat format = defaultFormat)
     {
         _format = format;
         _stream = outputStream;
@@ -1076,10 +1074,10 @@ public:
      * The data are grabbed in bulk therefore the descriptor linked to each
      * tree node cannot be re-used.
      * Params:
-     * outputStream = the stream where te data are written.
-     * format = the format of the serialized data.
+     * outputStream = The stream where te data are written.
+     * format = The format of the serialized data.
      */
-    void istToStream(Stream outputStream, SerializationFormat format = SerializationFormat.iztxt)
+    void istToStream(Stream outputStream, SerializationFormat format = defaultFormat)
     {
         _format = format;
         _stream = outputStream;
@@ -1154,29 +1152,23 @@ public:
     }    
 
     /**
-     * Builds the IST from a PropDescriptorCollection and stores sequentially in a stream.
+     * Builds the IST from a PropDescriptorCollection and stores in a Stream,
+     * sequentially, after each single property found in the collection.
      *
-     * Each item in the structure to stream must also be a PropDescriptorCollection.
+     * Each item in the structure must also be a PropDescriptorCollection.
      * Unlike the methods based on the Serializable interface the objects don't
-     * have to declare the values to store. Instead, every property descriptor found
-     * by the PropDescriptorCollector is turned into a declaration.
+     * have to declare the values to store. Instead, every property descriptor
+     * found by the PropDescriptorCollector is turned into a declaration.
      *
      * Params:
-     * root = either a PropDescriptorCollection or an object that's been
+     * root = Either a PropDescriptorCollection or an object that's been
      *       mixed with the PropDescriptorCollector template.
-     * outputStream = the stream where the data are written.
-     * format = the format of the serialized data.
+     * outputStream = The stream where the data are written.
+     * format = The format of the serialized data.
      */
-    void collectorToStream(T)(T root, Stream outputStream, 
-        SerializationFormat format = SerializationFormat.iztxt)
-    if (is(T==class) || is(T == struct))
+    void collectorToStream(Object root, Stream outputStream,
+        SerializationFormat format = defaultFormat)
     {
-        if (!hasMember!(T, "propCollectorGet"))
-            throw new Exception("PropDescriptorCollector not mixed in root");
-
-        // problems: 
-        // - still totally impossible to use a struct as root or sub object  
-        
         _format = format;
         _stream = outputStream;
         _storeMode = StoreMode.sequential;
@@ -1189,6 +1181,7 @@ public:
         addObjectWithCollectedProp(&rootDescr);
         _serState = SerializationState.none;
         _mustWrite = false;
+        _stream = null;
     }
 
     /**
@@ -1198,6 +1191,7 @@ public:
     if (is(T==class) || is(T == struct))
     {
         _serState = SerializationState.store;
+        _storeMode = StoreMode.bulk;
         _mustWrite = false;
         _rootNode.deleteChildren;
         _previousNode = null;
@@ -1254,8 +1248,11 @@ public:
         restoreFrom(_rootNode, root);
     }
 
+    /**
+     *
+     */
     void streamToPropCollector(T)(Stream inputStream, T root, 
-        SerializationFormat format = SerializationFormat.iztxt)
+        SerializationFormat format = defaultFormat)
     if (is(T==class) || is(T == struct))   
     {
         streamToIst(inputStream, format);
@@ -1268,10 +1265,10 @@ public:
      * by using findNode() and restoreProperty(). 
      * This function is also usefull to convert from a format to another.
      * Params:
-     * inputStream = a stream containing the serialized data.
-     * format = the format of the serialized data.
+     * inputStream = The stream containing the serialized data.
+     * format = The format of the serialized data.
      */
-    void streamToIst(Stream inputStream, SerializationFormat format = SerializationFormat.iztxt)
+    void streamToIst(Stream inputStream, SerializationFormat format = defaultFormat)
     {
         IstNode[] unorderNodes;
         IstNode[] parents;
@@ -1316,9 +1313,9 @@ public:
      * Builds the IST from a stream and restores sequentially to a root.
      * The process starts by a call to .declaraProperties() in the root.
      * Params:
-     * inputStream = the stream containing the serialized data.
-     * root = the Serializable from where the declarations and the restoration starts.
-     * format = the format of the serialized data.
+     * inputStream = The stream that contains the serialized data.
+     * root = The Serializable from where the declaration or the restoration starts.
+     * format = The format of the serialized data.
      */
     void streamToObject(Stream inputStream, Serializable root,
         SerializationFormat format = SerializationFormat.iztxt)
@@ -1364,9 +1361,9 @@ public:
     /**
      * Finds the tree node matching to a property names chain.
      * Params:
-     * descriptorName = the property names chain which identifies the interesting node.
+     * descriptorName = The property names chain which identifies the node.
      * Returns:
-     * A reference to the node which matches to the property if the call succeeds otherwise nulll.
+     * A reference to the node that matches the property or nulll.
      */ 
     IstNode findNode(in char[] descriptorName)
     {
@@ -1400,17 +1397,17 @@ public:
      * It means that this method can be used to deserialize to an arbitrary descriptor,
      * for example after a call to streamToIst().
      * Params:
-     * node = the IST node from where the restoration begins.
+     * node = The IST node from where the restoration begins.
      * It can be determined by a call to findNode().
-     * recursive = when set to true the restoration is recursive.
+     * recursive = When set to true the restoration is recursive.
      */  
     void istToObject(IstNode node, bool recursive = false)
     {
         bool restore(IstNode current)
         {
             bool result = true;
-            if (current.info.descriptor && 
-                current.info.name ==  (cast(PropDescriptor!byte *)current.info.descriptor).name)
+            if (current.info.descriptor && current.info.name ==
+                (cast(PropDescriptor!byte*)current.info.descriptor).name)
                 nodeInfo2Declarator(current.info);
             else
             {
@@ -1440,8 +1437,8 @@ public:
     /**
      * Restores a single property from a tree node using the setter of a descriptor.
      * Params:
-     * node = an IstNode. Can be determined by a call to findNode()
-     * aDescriptor = the PropDescriptor whose setter is used to restore the node data.
+     * node = An IstNode. Can be determined by a call to findNode()
+     * descriptor = The PropDescriptor whose setter is used to restore the node data.
      * If not specified then the onWantDescriptor event may be called.
      */
     void restoreProperty(T)(IstNode node, PropDescriptor!T * descriptor = null)
@@ -1464,23 +1461,19 @@ public:
 //------------------------------------------------------------------------------
 //---- declaration from an Serializable ---------------------------------------+
 
-    /*( the following methods are designed to be only used by an Serializable !)*/
-
-    //mixin(genAllAdders);
+    /* the following methods are designed to be only used by an Serializable !*/
 
     /**
      * Designed to be called by an Serializable when it needs to declare 
      * a property in its declarePropeties() method.
      *
-     * Allowed properties:
-     * - all the basic types: int, uint, char, ...
-     * - all the basic types as array: int[], uin[], char[], ...
-     * - the structs assignable from/to a basic type.
-     * - any Serializable or Object that's a Serializable (used to build the structure).
-     * - any iz.streams.Stream implementer.
+     * The property types that can be serialized include all the types from
+     * iz.types.BasicTypes (except real) as value or as single dimenssion array,
+     * Objects that implement the Serializable interface, Stream and in certain
+     * cases structs (only if they can be assigned from/to a basic type).
      *
-     * Some aliases exist for each basic type (addintProperty(), addcharProperty(), ...).
-     * the structs are represented as the type they convert to and are not used to build the IST.
+     * For each basic type that's serializable an lais of addProperty exists:
+     * addByteProperty(), addShortProperty(), etc.
      */
     void addProperty(T)(PropDescriptor!T * descriptor)
     if (isSerializable!T)
@@ -1527,21 +1520,20 @@ public:
                 currentSerializable = descriptor.get();
             else
             {
-                auto obj = descriptor.get();
-                if (obj) currentSerializable = cast(Serializable) obj;
+                Object o = descriptor.get();
+                if (o) currentSerializable = cast(Serializable) o;
             }
                
             if (!currentSerializable && _onWantObject)
             {
-                Object o;
-                _onWantObject(propNode, o);
-                if (o) currentSerializable = cast(Serializable)o;
+                Object obj;
+                _onWantObject(propNode, obj);
+                if (obj) currentSerializable = cast(Serializable) obj;
                 if (!currentSerializable) return;
             }  
             currentSerializable.declareProperties(this);
             _parentNode = oldParentNode;
-        }    
-        
+        }
         _previousNode = propNode;
     }
 
@@ -1571,17 +1563,25 @@ public:
 
     /// ditto
     @property void onWantObject(WantObjectEvent value){_onWantObject = value;}
+
+    mixin(genAllAddProps);
 //------------------------------------------------------------------------------
 
 }
 
 //----
 
-private static string genAllAdders()
+private static string genAllAddProps()
 {
     string result;
-    foreach(t; SerializableTypes) if (!(is(t == struct)))
-        result ~= "alias add" ~ t.stringof ~ "Property =" ~ "addProperty!" ~ t.stringof ~";";
+    char[] type;
+    import std.ascii;
+    foreach(T; SerializableTypes) if (!(is(T == struct)))
+    {
+        type = T.stringof.dup;
+        type[0] = toUpper(type[0]);
+        result ~= "alias add" ~ type ~ "Property = addProperty!" ~ T.stringof ~";";
+    }
     return result;
 }
 
@@ -1622,9 +1622,9 @@ version(unittest)
             asText = to!string(value).dup;
             assert(value2text(&inf) == asText, T.stringof);
             static if (!isArray!T) 
-                assert( * cast(T*)(text2value(asText, &inf)).ptr == value, T.stringof);
+                assert(*cast(T*)(text2value(asText, &inf)).ptr == value, T.stringof);
             static if (isArray!T) 
-                assert( cast(ubyte[])text2value(asText, &inf) == cast(ubyte[])value, T.stringof);
+                assert(cast(ubyte[])text2value(asText, &inf)==cast(ubyte[])value, T.stringof);
         }
 
         struct ImpConv{uint _field; alias _field this;}

@@ -161,13 +161,17 @@ interface FilePersist8
 /// Generates all the typed write() and read() of an Stream implementation.
 string genReadWriteVar()
 {
+    import std.ascii: toUpper;
     string result;
+    char[] type;
     foreach(T; BasicTypes)
     {
+        type = T.stringof.dup;
+        type[0] = toUpper(type[0]);
         result ~= "alias readVariable!" ~ T.stringof ~ " read" ~
-            T.stringof ~ ';' ~ '\r' ~ '\n';
+            type ~ ';' ~ '\r' ~ '\n';
         result ~= "alias writeVariable!" ~ T.stringof ~ " write" ~
-            T.stringof ~ ';' ~ '\r' ~ '\n';
+            type ~ ';' ~ '\r' ~ '\n';
     }
     return result;
 }
@@ -178,41 +182,41 @@ string genReadWriteVar()
 interface Stream
 {
     /**
-     * Reads count bytes in aBuffer.
-     * Returns the count of bytes effectively read.
+     * Reads count bytes in buffer.
+     * Returns the count of bytes that's been read.
      */
     size_t read(Ptr buffer, size_t count);
     /**
-     * Read T.sizeof bytes in aValue.
-     * Returns the count of bytes effectively read (either T.sizeof or 0).
+     * Reads T.sizeof bytes in value.
+     * Returns the count of bytes that's been read.
      * T must verify isFixedSize.
-     * A typed reader is generated for each type in FixedSizeTypes
-     * and named readint, readchar, etc.
+     * Typed readers are generated for each type in iz.types.BasicTypes
+     * and they are named readInt, readChar, etc.
      */
     final size_t readVariable(T)(T* value)
     {
         return read(&value, T.sizeof);
     }     
     /**
-     * Writes aCount bytes to aBuffer.
-     * Returns the count of bytes effectively written.
+     * Writes count bytes to buffer.
+     * Returns the count of bytes that's been written.
      */
     size_t write(Ptr buffer, size_t count);
     /**
-     * Writes T.sizeof bytes to the pointer aValue.
-     * Returns the count of bytes effectively written (either T.sizeof or 0).
-     * T must verify isConstantSize.
-     * A typed writer is generated for each type in FixedSizeTypes
-     * and named writeint, writechar, etc.
+     * Writes value.
+     * Returns the count of bytes that's been written (either T.sizeof or 0).
+     * T must verify isFixedSize.
+     * Typed writers are generated for each type in iz.types.BasicTypes
+     * and they are named writeInt, writeChar, etc.
      */
-    final size_t writeVariable(T)(T* value)
+    final size_t writeVariable(T)(T value)
     {
         return write(&value, T.sizeof);
     }
     /**
-     * Sets the position to anOffset if anOrigin = 0,
-     * to Position + anOffset if anOrigin = 1 or
-     * to Size + anOffset if anOrigin = 2.
+     * Sets the position to offset if mode = SeekMode.skBeg,
+     * to .position + anOffset if mode = SeekMode.skCur,
+     * to .size + anOffset if mode = SeekMode.skEnd.
      */
     ulong seek(ulong offset, SeekMode mode);
     /// ditto
@@ -226,7 +230,7 @@ interface Stream
     /// ditto
     @property void size(uint value);
     /**
-     * Sets or gets the position in the stream.
+     * Sets or gets the stream position.
      */
     @property ulong position();
     /// ditto
@@ -237,7 +241,7 @@ interface Stream
      * Resets the stream size to 0.
      */
     void clear();
-    /// support for the concatenation operator.
+    /// Support for the concatenation operator.
     final void opOpAssign(string op)(Stream rhs)
     {
         static if(op == "~")
@@ -266,6 +270,8 @@ interface Stream
         }
         else static assert(0, "Stream.opOpAssign not implemented for " ~ op);
     }
+
+    mixin(genReadWriteVar);
 }
 
 /**
@@ -525,8 +531,6 @@ class SystemStream: Stream, StreamPersist
     }
     public
     {
-        mixin(genReadWriteVar);
-        
         /// see the Stream interface.
         size_t read(Ptr buffer, size_t count)
         {
@@ -840,8 +844,6 @@ class MemoryStream: Stream, StreamPersist, FilePersist8
     }
     public
     {
-        mixin(genReadWriteVar);
-        
         ///
         this()
         {
@@ -1273,8 +1275,8 @@ version(unittest)
             for (int i = 0; i < len; i++)
             {
                 int r0,r1;
-                str.readint(&r0);
-                strcpy.readint(&r1);
+                str.readInt(&r0);
+                strcpy.readInt(&r1);
                 assert(r0 == r1);
             }
             strcpy.position = 0;
