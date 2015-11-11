@@ -36,6 +36,8 @@ struct PropDescriptor(T)
         alias PropGetter = T delegate();      
         /// alternative setter prototype.
         alias PropSetterConst = void delegate(const T value);
+
+        ulong referenceID;
     }
     private
     {
@@ -470,7 +472,11 @@ mixin template PropDescriptorCollector(){
         import std.algorithm : canFind;
         import std.traits: isCallable;
         foreach(member; __traits(allMembers, typeof(this)))
-        static if (canFind("_fF", member[0]) && (!isCallable!(__traits(getMember, typeof(this), member))))
+
+        static if (canFind("_fF", member[0]) && (!isCallable!(__traits(getMember, typeof(this), member))
+            || (isDelegate!(__traits(getMember, typeof(this), member)))
+            || (isFunctionPointer!(__traits(getMember, typeof(this), member)))
+        ))
         {
             static if (is(typeof(__traits(getMember, this, member))))
             foreach(attribute; __traits(getAttributes, __traits(getMember, this, member)))
@@ -544,6 +550,7 @@ mixin template PropDescriptorCollector(){
         foreach(overload; __traits(getOverloads, typeof(this), member)) 
         foreach(attribute; __traits(getAttributes, overload))
         {
+            //TODO-cSafety: dont take delegate or function pointer but only plain function/methods
             static if (is(attribute == Get) && isCallable!overload)
             {
                 alias DescriptorType = PropDescriptor!(ReturnType!overload);
@@ -553,6 +560,7 @@ mixin template PropDescriptorCollector(){
                 //   
                 version(none) writeln(attribute.stringof, " < ", member);
             }
+            //TODO-cSafety: dont take delegate or function pointer but only plain function/methods
             else static if (is(attribute == Set) && isCallable!overload)
             {
                 alias DescriptorType = PropDescriptor!(Parameters!overload);
@@ -668,6 +676,33 @@ version(unittest){
     {
         Dog dog = new Dog;
         assert(dog.propCollectorCount == 1);
+    }
+
+    alias Delegate = void delegate(uint a);
+    class Cat
+    {
+        mixin PropDescriptorCollector;
+        @SetGet Delegate _meaow;
+        this(){propCollectorGetFields;}
+    }
+
+    class Fly
+    {
+        mixin PropDescriptorCollector;
+        @GetSet string _bzzz(){return "bzzz";}
+        this(){propCollectorGetFields;}
+    }
+
+    unittest
+    {
+        Cat cat = new Cat;
+        assert(cat.propCollectorCount == 1);
+        auto descr = cast(PropDescriptor!uint*) cat.propCollectorGetPtr(0);
+        assert(descr);
+        assert(descr.rtti.type == RuntimeType._delegate);
+
+        Fly fly = new Fly;
+        assert(fly.propCollectorCount == 0);
     }
 }
 

@@ -44,6 +44,11 @@ unittest
     assert(isFixedSize!Bar);
 }
 
+/// Common type for all the delagate kinds.
+alias GenericDelegate = void delegate();
+
+alias GenericFunction = void function();
+
 /// Enumerates the values a RuntimeTypeInfo.type can have.
 enum RuntimeType : ubyte
 {
@@ -52,7 +57,8 @@ enum RuntimeType : ubyte
     _float  = 0x10, _double, _real,
     _char   = 0x20, _wchar, _dchar,
     _object = 0x30,
-    _struct = 0x40,    
+    _struct = 0x40,
+    _delegate = 0x50, _function,
 }
 
 /**
@@ -101,6 +107,9 @@ auto runtimeTypeInfo(T)()
         
         else static if (is(TT == class)) type = _object;
         else static if (is(TT == struct))type = _struct;
+
+        else static if (is(TT == delegate))type = _delegate;
+        else static if (is(TT == function))type = _function;
     }     
     return RuntimeTypeInfo(type, array);   
 }
