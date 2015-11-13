@@ -1,7 +1,7 @@
 module iz.streams;
 
 import core.exception;
-import std.string, std.range;
+import std.string, std.range, std.traits;
 import std.digest.md, std.conv: to;
 import iz.types, iz.memory;
 
@@ -195,7 +195,7 @@ interface Stream
      */
     final size_t readVariable(T)(T* value)
     {
-        return read(&value, T.sizeof);
+        return read(value, T.sizeof);
     }     
     /**
      * Writes count bytes to buffer.
@@ -483,8 +483,8 @@ unittest
  *
  * A failure can be verified by testing the range for empty after the call.
  * Params:
- * target = a Stream instance.
- * r = an input range.
+ * target = A Stream instance.
+ * r = An input range.
  */
 void writeRange(R)(Stream target, R r)
 if (isInputRange!R)
@@ -517,6 +517,69 @@ unittest
         rng2.popFront;
     }
 } 
+
+
+/**
+ * Writes a single dimension array to a stream.
+ *
+ * By default writes the array length as a ulong and then always the array content.
+ * While writeRange() already allow to write an array, there is no clue about
+ * its length. Additionally this function is more efficient.
+ * Params:
+ * WriteLength = When set to true (the default), the array length is written.
+ * str = The Stream where data are written.
+ * t = The array to write.
+ */
+void writeArray(bool WriteLength = true, T)(Stream str, auto ref T t)
+if (isArray!T && !hasLength!(typeof(T.init[0])))
+{
+    static if (WriteLength) str.writeUlong(t.length);
+    str.write(t.ptr, t.length * typeof(T.init[0]).sizeof);
+}
+
+/**
+ * Reads a single dimension array
+ *
+ * By default reads the array length as a ulong and then always the array content.
+ * Params:
+ * ReadLength = When set to true (the default), the array length is read.
+ * Otherwise the data are read according to the current array length.
+ * str = The Stream where data are read.
+ * t = The array to write.
+ */
+void readArray(bool ReadLength = true, T)(Stream str, auto ref T t)
+if (isArray!T && !hasLength!(typeof(T.init[0])))
+{
+    ulong len = void;
+    static if (ReadLength)
+    {
+        str.readUlong(&len);
+        t.length = len;
+    }
+    str.read(t.ptr, t.length * typeof(T.init[0]).sizeof);
+}
+
+unittest
+{
+    auto src = "0123456789".dup;
+    MemoryStream str = construct!MemoryStream;
+    str.writeArray(src);
+    assert(str.size == ulong.sizeof + src.length);
+    str.position = 0;
+    src = "azertyuiop".dup;
+    str.readArray(src);
+    assert(src == "0123456789");
+
+    str.clear;
+    str.writeArray!false(src);
+    assert(str.size == src.length);
+    str.position = 0;
+    src = "az".dup;
+    str.readArray!false(src);
+    assert(src == "01");
+
+    destruct(str);
+}
 
 /**
  * Unspecialized stream class. Descendants are all some
