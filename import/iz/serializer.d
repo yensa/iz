@@ -600,15 +600,16 @@ alias SerializationReader = void function(Stream stream, IstNode istNode);
 private void writeJSON(IstNode istNode, Stream stream)
 {
     import std.json;
+    version(assert) bool pretty = true; else bool pretty = false;
     //    
     auto level  = JSONValue(istNode.level);
     auto type   = JSONValue(istNode.info.type);
     auto name   = JSONValue(istNode.info.name.idup);
     auto isarray= JSONValue(cast(ubyte)istNode.info.isArray);
     auto value  = JSONValue(value2text(istNode.info).idup);
-    auto prop   = JSONValue(["level":level,"type":type,"name":name,"isarray":isarray,
-        "value":value]);
-    auto txt    = toJSON(&prop, false).dup;
+    auto prop   = JSONValue(["level": level, "type": type, "name": name,
+        "isarray": isarray, "value": value]);
+    auto txt = toJSON(&prop, pretty).dup;
     //
     stream.write(txt.ptr, txt.length);   
 }
@@ -616,7 +617,6 @@ private void writeJSON(IstNode istNode, Stream stream)
 private void readJSON(Stream stream, IstNode istNode)
 {
     import std.json;
-    //
     // cache property
     size_t cnt, len;
     char c;
@@ -644,63 +644,57 @@ private void readJSON(Stream stream, IstNode istNode)
     char[] cache;
     cache.length = len;
     stream.read(cache.ptr, cache.length);
-    //writeln("cache:");
-    //writeln(cache);
     //
-    auto prop = parseJSON(cache);
+    JSONValue prop = parseJSON(cache);
     
-    JSONValue level = prop["level"];
-    if (level.type == JSON_TYPE.INTEGER)
+    const(JSONValue)* level = "level" in prop;
+    if (level && level.type == JSON_TYPE.INTEGER)
         istNode.info.level = cast(uint) level.integer;
     else 
         istNode.info.isDamaged = true;
         
-    JSONValue type = prop["type"];
-    if (type.type == JSON_TYPE.INTEGER) 
+    const(JSONValue)* type = "type" in prop;
+    if (type && type.type == JSON_TYPE.INTEGER)
         istNode.info.type = cast(SerializableType) type.integer;
     else 
         istNode.info.isDamaged = true;
         
-    JSONValue name = prop["name"];
-    if (name.type == JSON_TYPE.STRING)
+    const(JSONValue)* name = "name" in prop;
+    if (name && name.type == JSON_TYPE.STRING)
         istNode.info.name = name.str.dup;
     else 
         istNode.info.isDamaged = true;
         
-    immutable JSONValue isarray = prop["isarray"];
-    if (isarray.type == JSON_TYPE.INTEGER)
+    const(JSONValue)* isarray = "isarray" in prop;
+    if (isarray && isarray.type == JSON_TYPE.INTEGER)
         istNode.info.isArray = cast(bool) isarray.integer;
     else 
         istNode.info.isDamaged = true;
         
-    JSONValue value = prop["value"];
-    if (value.type == JSON_TYPE.STRING) 
+    const(JSONValue)* value = "value" in prop;
+    if (value && value.type == JSON_TYPE.STRING)
         istNode.info.value = text2value(value.str.dup, istNode.info);
     else
         istNode.info.isDamaged = true;
-    
 }
 // ----
 
 // Text format ----------------------------------------------------------------+
 private void writeText(IstNode istNode, Stream stream)
 {
-    char separator = ' ';
     // indentation
-    char tabulation = '\t';
-    foreach(i; 0 .. istNode.level)
-        stream.write(&tabulation, tabulation.sizeof);
+    foreach(i; 0 .. istNode.level) stream.writeChar('\t');
     // type
     char[] type = type2text[istNode.info.type].dup;
     stream.write(type.ptr, type.length);
     // array
     char[2] arr = "[]";
     if (istNode.info.isArray) stream.write(arr.ptr, arr.length);
-    stream.write(&separator, separator.sizeof);
+    stream.writeChar(' ');
     // name
     char[] name = istNode.info.name.dup;
     stream.write(name.ptr, name.length);
-    stream.write(&separator, separator.sizeof);
+    stream.writeChar(' ');
     // name value separators
     char[] name_value = " = \"".dup;
     stream.write(name_value.ptr, name_value.length);
@@ -739,12 +733,8 @@ private void readText(Stream stream, IstNode istNode)
     identifier = identifier.init;
     while(propText[i] != ' ') 
         identifier ~= propText[i++];
-    char[2] arr;
-    if (identifier.length > 2) 
-    {
-        arr = identifier[$-2 .. $];
-        istNode.info.isArray = (arr == "[]");
-    }
+    if (identifier.length > 2)
+        istNode.info.isArray = (identifier[$-2 .. $] == "[]");
     if (istNode.info.isArray) 
         identifier = identifier[0 .. $-2];
     if (identifier in text2type) 
@@ -971,7 +961,7 @@ private SerializationReader readFormat(SerializationFormat format)
  * reflection and anotations (see iz.properties PropDescriptorCollector).
  *
  * The serializer uses an intermediate serialization tree (IST) that ensure a 
- * certain flexibilty aginst a traditional single-shot serialization.
+ * certain flexibilty against a traditional single-shot serialization.
  * 
  * As expected for a serializer, object trees can be stored or restored by
  * a simple and single call (objectToStream() in pair with streamToObject() or
@@ -1706,8 +1696,8 @@ version(unittest)
 
     unittest 
     {
-        //foreach(fmt;EnumMembers!SerializationFormat)
-         //   testByFormat!fmt();
+        foreach(fmt;EnumMembers!SerializationFormat)
+            testByFormat!fmt();
         //testByFormat!(SerializationFormat.iztxt)();
         //testByFormat!(SerializationFormat.izbin)();
         //testByFormat!(SerializationFormat.json)();
@@ -2076,7 +2066,7 @@ version(unittest)
     }
     //----
 
-    // testing the RuntimeTypeInfo-based serialization ----+
+    // test the RuntimeTypeInfo-based serialization ----+
 
     class SubCollected: PropDescriptorCollection
     {
@@ -2119,7 +2109,6 @@ version(unittest)
         void reset()
         {
             _a = 0; _b = 0; _c = 0;
-            _sub._someChars = "".dup;
             destruct(_sub);_sub = null;
             _anothersub._someChars = "".dup;
             _d = null;
@@ -2156,6 +2145,27 @@ version(unittest)
         c._d(123);
         assert(c.dgTest == "awyesss");
     }
+    //----
+
+
+    // source errors ---+
+    unittest
+    {
+        Serializer ser = construct!Serializer;
+        MemoryStream str = construct!MemoryStream;
+        Object obj = construct!Object;
+        scope(exit) destruct(ser, str, obj);
+        string source = "Object root  = \"Collected\"
+	                     ubyte a  = \"12\"
+	                     byte b  = \"21\"
+	                     Object sub  = \"SubCollected\"
+		                 char[] someChars  = \"awhyes\"
+	                     byte c  = \"31\"
+	                     GenericDelegate d  = \"71717171\"";
+
+
+    }
+
     //----
 }
 
