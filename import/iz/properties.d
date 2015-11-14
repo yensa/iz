@@ -341,6 +341,13 @@ struct SetGet;
 /// ditto
 alias GetSet = SetGet;
 
+//TODO-cfeature: Hide a published property using @HideSet & @HideGet attributes
+
+/// designed to disable a @Set in an descendant class
+struct @HideSet
+/// designed to disable a @Get in an descendant class
+struct @HideGet
+
 /**
  * When mixed in an agregate this generates a property. 
  * This property is detectable by a PropDescriptorCollector.
@@ -558,7 +565,7 @@ mixin template PropDescriptorCollector(){
         foreach(overload; __traits(getOverloads, typeof(this), member)) 
         foreach(attribute; __traits(getAttributes, overload))
         {
-            //TODO-cSafety: dont take delegate or function pointer but only plain function/methods
+            //TODO-cSafety: dont take delegate or function pointers but only plain function/methods
             static if (is(attribute == Get) && isCallable!overload)
             {
                 alias DescriptorType = PropDescriptor!(ReturnType!overload);
@@ -568,7 +575,7 @@ mixin template PropDescriptorCollector(){
                 //   
                 version(none) writeln(attribute.stringof, " < ", member);
             }
-            //TODO-cSafety: dont take delegate or function pointer but only plain function/methods
+            //TODO-cSafety: dont take delegate or function pointers but only plain function/methods
             else static if (is(attribute == Set) && isCallable!overload)
             {
                 alias DescriptorType = PropDescriptor!(Parameters!overload);

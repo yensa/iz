@@ -319,15 +319,26 @@ public:
     /// Returns true if value is available as an unique Component name.
     bool nameAvailable(in char[] value)
     {
-        //TODO-cComponent: nameAvailable()
+        if (_owner !is null)
+        {
+            foreach(o; _owner._owned)
+                if (o.name == value) return false;
+        }
         return true;
     }
 
-    /// Returns a suggestion for an unique Component name according to base.
+    /// Suggests an unique Component name according to base.
     char[] getUniqueName(in char[] base)
     {
-        //TODO-cComponent: getUniqueName()
-        return null;
+        size_t i;
+        char[] result = base.dup;
+        while (!nameAvailable(result))
+        {
+            result = base ~ '_' ~ to!(char[])(i++);
+            if (i == size_t.max)
+                return result.init;
+        }
+        return result;
     }
 
     /**
@@ -383,10 +394,19 @@ unittest
     assert(owned1.name == "component1");
     assert(owned1.qualifiedName == "root.component1");
 
+    Component owned11 = construct!Component(owned1);
+    owned11.name = "component1".dup;
+    assert(owned11.owner is owned1);
+    assert(owned11.name == "component1");
+    assert(owned11.qualifiedName == "root.component1.component1");
+
+    Component owned12 = construct!Component(owned1);
+    owned12.name = "component1".dup;
+    assert(owned12.name == "component1_0", owned12.name);
+
     root.destruct;
-    // owned1 is dangling but that's expected.
+    // owned1, owned11 & owned12 are dangling but that's expected.
     // Component instances are designed to be created and declared inside
-    // other Component. Escaped refs can be set to null using Observer
-    // system.
+    // other Components. Escaped refs can be set to null using the Observer system.
 }
 
