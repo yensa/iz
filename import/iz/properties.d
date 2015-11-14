@@ -2,11 +2,11 @@ module iz.properties;
 
 import std.traits;
 import iz.memory, iz.types, iz.containers;
-        
+
 /**
  * Describes the accessibility of a property.
  */
-enum PropAccess 
+enum PropAccess
 {
     /// denotes an error.
     none, 
@@ -17,7 +17,7 @@ enum PropAccess
     /// read & write.
     rw    
 }   
-    
+
 /**
  * Describes the property of type T of an Object. Its members includes:
  * <li> a setter: either as an PropSetter method or as pointer to the field.</li>
@@ -74,14 +74,14 @@ struct PropDescriptor(T)
                 _access = PropAccess.rw;
             else _access = PropAccess.none;
         }
-        
+
         /// pseudo setter internally used when a T is directly written.
         void internalSetter(T value)
         {
             const T current = getter()();
             if (value != current) *_setPtr = value;
         }
-        
+
         /// pseudo getter internally used when a T is directly read
         T internalGetter()
         {
@@ -92,7 +92,7 @@ struct PropDescriptor(T)
     {
         /// version number that can be used in case of breaking change.
         static immutable ubyte descriptorFormat = 0;
-        
+
 // constructors ---------------------------------------------------------------+
         /**
          * Constructs a property descriptor from an PropSetter and an PropGetter method.
@@ -107,7 +107,7 @@ struct PropDescriptor(T)
         {
             define(aSetter, aGetter, aName);
         }
-        
+
         /**
          * Constructs a property descriptor from an PropSetterConst and an PropGetter method.
          */  
@@ -121,7 +121,7 @@ struct PropDescriptor(T)
         {
             define(cast(PropSetter)aSetter, aGetter,aName);
         }
-        
+
         /**
          * Constructs a property descriptor from an PropSetter method and a direct variable.
          */
@@ -135,7 +135,7 @@ struct PropDescriptor(T)
         {
             define(aSetter, aSourceData, aName);
         }
-        
+
         /**
          * Constructs a property descriptor from a single variable used as source/target
          */
@@ -150,20 +150,20 @@ struct PropDescriptor(T)
         }
 // ---- 
 // define all the members -----------------------------------------------------+
-    
+
         /**
          * Defines a property descriptor from an PropSetter and an PropGetter.
          */
         void define(PropSetter aSetter, PropGetter aGetter, string aName = "")
         {
             cleanup;
-            _rtti = runtimeTypeInfo!T; 
+            _rtti = runtimeTypeInfo!T;
             setter(aSetter);
             getter(aGetter);
             if (aName != "") {name(aName);}
             fDeclarator = cast(Object) aSetter.ptr;
         }
-        
+
         /**
          * Defines a property descriptor from an PropSetter method and a direct variable.
          */
@@ -190,7 +190,7 @@ struct PropDescriptor(T)
         }
 // ----
 // setter ---------------------------------------------------------------------+
-        
+
         /**
          * Sets the property setter using a standard method.
          */
@@ -201,7 +201,7 @@ struct PropDescriptor(T)
             updateAccess;
         }
         /// ditto
-        @property PropSetter setter(){return _setter;}    
+        @property PropSetter setter(){return _setter;}
         /**
          * Sets the property setter using a pointer to a variable
          */
@@ -218,7 +218,7 @@ struct PropDescriptor(T)
 
 // ---- 
 // getter ---------------------------------------------------------------------+
-    
+
         /** 
          * Sets the property getter using a standard method.
          */
@@ -229,7 +229,7 @@ struct PropDescriptor(T)
             updateAccess;
         }
         /// ditto
-        @property PropGetter getter(){return _getter;}    
+        @property PropGetter getter(){return _getter;}
         /** 
          * Sets the property getter using a pointer to a variable
          */
@@ -246,7 +246,7 @@ struct PropDescriptor(T)
 
 // ----     
 // misc -----------------------------------------------------------------------+
-        
+
         /** 
          * Information about the prop accessibility
          */
@@ -288,11 +288,11 @@ struct PropDescriptor(T)
         /// ditto
         @property referenceID(string value){_referenceID = value;}
 // ----        
-    
-    }   
+
+    }
 }
 
-version(unittest) 
+version(unittest)
 {
     import std.stdio;
     class A
@@ -344,9 +344,9 @@ alias GetSet = SetGet;
 //TODO-cfeature: Hide a published property using @HideSet & @HideGet attributes
 
 /// designed to disable a @Set in an descendant class
-struct @HideSet
+struct HideSet;
 /// designed to disable a @Get in an descendant class
-struct @HideGet
+struct HideGet;
 
 /**
  * When mixed in an agregate this generates a property. 
@@ -405,12 +405,12 @@ mixin template PropDescriptorCollector(){
      * propCollectorGet() can be used to correctly cast an item.
      */
     private void * [] descriptors;
-    
+
     /**
      * Returns the count of descriptor the analyzers have created.
      */
     public final size_t propCollectorCount(){return descriptors.length;}
-    
+
     /** 
      * Returns a pointer to a descriptor according to its name.
      * Params:
@@ -429,7 +429,7 @@ mixin template PropDescriptorCollector(){
             if (maybe.name != name) continue;
             descr = maybe; break; 
         }
-        
+
         if (createIfMissing && !descr) 
         {
             descr = new PropDescriptor!T;
@@ -448,7 +448,7 @@ mixin template PropDescriptorCollector(){
     {
         return propCollectorGet!size_t(name);
     }
-    
+
     /**
      * Returns a pointer an indexed descriptor.
      * index must be with the 0 .. propCollectorCount range.
@@ -457,7 +457,7 @@ mixin template PropDescriptorCollector(){
     {
         return descriptors[index];
     }   
-    
+
     /**
      * Returns a pointer to the RTTI for the nth descriptor.
      * index must be with the 0 .. propCollectorCount range.
@@ -466,8 +466,8 @@ mixin template PropDescriptorCollector(){
     protected final const(RuntimeTypeInfo*) propCollectorGetType(size_t index)
     {
         return (cast(PropDescriptor!int*) descriptors[index]).rtti;
-    }     
-    
+    }
+
     /**
      * Performs all the possible analysis.
      */
@@ -476,7 +476,7 @@ mixin template PropDescriptorCollector(){
         propCollectorGetFields;
         propCollectorGetPairs;
     }
-    
+
     /**
      * Creates the properties descriptors for each field marked with @SetGet
      * and whose identifier starts with one of the following prefix: underscore, f, F.
@@ -500,12 +500,12 @@ mixin template PropDescriptorCollector(){
                 alias propType = typeof(__traits(getMember, this, member));
                 auto propPtr = &__traits(getMember, this, member);
                 auto propName = member[1..$];
-                auto descriptor = propCollectorGet!propType(propName, true); 
+                auto descriptor = propCollectorGet!propType(propName, true);
                 descriptor.define(propPtr, propName);
                 //
                 version(none) writeln(attribute.stringof, " : ", member);
-            }       
-        }    
+            }
+        }
     }
     
     /**
@@ -521,10 +521,10 @@ mixin template PropDescriptorCollector(){
         auto virtualTable = typeid(this).vtbl;
 
         foreach(member; __traits(allMembers, typeof(this))) 
-        foreach(overload; __traits(getOverloads, typeof(this), member)) 
+        foreach(overload; __traits(getOverloads, typeof(this), member))
         foreach(attribute; __traits(getAttributes, overload))
         {
-            static if (is(attribute == Get) && isCallable!overload && 
+            static if (is(attribute == Get) && isCallable!overload &&
                 __traits(isVirtualMethod, overload))
             {
                 alias DescriptorType = PropDescriptor!(ReturnType!overload);
@@ -539,21 +539,21 @@ mixin template PropDescriptorCollector(){
                 //
                 version(none) writeln(attribute.stringof, " < ", member);
             }
-            else static if (is(attribute == Set) && isCallable!overload && 
+            else static if (is(attribute == Set) && isCallable!overload &&
                 __traits(isVirtualMethod, overload))
             {
                 alias DescriptorType = PropDescriptor!(Parameters!overload);
                 auto descriptor = propCollectorGet!(Parameters!overload)(member, true);
                 auto virtualIndex = __traits(getVirtualIndex, overload);
-                assert(virtualIndex > -1);                        
+                assert(virtualIndex > -1);
                 // setup the setter   
                 Delegate dg;
                 dg.ptr = cast(void*)this;
                 dg.funcptr = virtualTable[virtualIndex];
-                descriptor.setter = *cast(DescriptorType.PropSetter *) &dg;     
+                descriptor.setter = *cast(DescriptorType.PropSetter *) &dg;
                 //    
                 version(none) writeln(attribute.stringof, " > ", member);
-            }                
+            }
         }
     }
     else
@@ -562,7 +562,7 @@ mixin template PropDescriptorCollector(){
         auto virtualTable = typeid(this).vtbl;
 
         foreach(member; __traits(allMembers, typeof(this))) 
-        foreach(overload; __traits(getOverloads, typeof(this), member)) 
+        foreach(overload; __traits(getOverloads, typeof(this), member))
         foreach(attribute; __traits(getAttributes, overload))
         {
             //TODO-cSafety: dont take delegate or function pointers but only plain function/methods
@@ -579,16 +579,15 @@ mixin template PropDescriptorCollector(){
             else static if (is(attribute == Set) && isCallable!overload)
             {
                 alias DescriptorType = PropDescriptor!(Parameters!overload);
-                auto descriptor = propCollectorGet!(Parameters!overload)(member, true);   
+                auto descriptor = propCollectorGet!(Parameters!overload)(member, true);
                 auto dg = &overload;
                 descriptor.setter(dg);
                 //
-                version(none) writeln(attribute.stringof, " > ", member);            
-            }              
+                version(none) writeln(attribute.stringof, " > ", member);
+            }
         }
-    } 
-    }   
-    
+    }
+    }
 }
 
 version(unittest){
@@ -599,21 +598,21 @@ version(unittest){
             propCollectorGetPairs;
             propCollectorGetFields;
         }
-        
+
         @SetGet private uint _anUint;
         @SetGet private static char[] _manyChars;
         private uint _a, _b;
         private char[] _c;
-        
+
         @Get uint propA(){return _a;}
         @Set void propA(uint aValue){_a = aValue;}
-        
+
         @Get uint propB(){return _b;} 
         @Set void propB(uint aValue){_b = aValue;}
         
         @Get char[] propC(){return _c;} 
         @Set void propC(char[] aValue){_c = aValue;}
-        
+
         void use()
         {
             assert(propA == 0);
@@ -643,10 +642,10 @@ version(unittest){
             manyCharsDescriptor.setter()("BimBamBom".dup);
             assert(_manyChars == "BimBamBom");
             _manyChars = "BomBamBim".dup;  
-            assert(manyCharsDescriptor.getter()() == "BomBamBim");          
+            assert(manyCharsDescriptor.getter()() == "BomBamBim");
         }
     }
-    
+
     class Bar
     {
         size_t _field;
@@ -684,9 +683,9 @@ version(unittest){
         {
             _o = new Object;
             propCollectorGetFields;
-        }  
+        }
     }
-    
+
     unittest
     {
         Dog dog = new Dog;
@@ -865,7 +864,7 @@ class PropertyBinder(T)
          * Note that the items whose life-time is managed should not be modified.
          */
         @property List!(PropDescriptor!T *) items()
-        {return _items;}    
+        {return _items;}
     }
 }   
 
