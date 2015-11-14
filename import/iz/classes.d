@@ -3,8 +3,11 @@
  */
 module iz.classes;
 
-import std.traits;
-import iz.types, iz.memory, iz.containers, iz.streams, iz.properties, iz.serializer;
+import
+    std.traits, std.string, std.range, std.algorithm;
+import
+    iz.types, iz.memory, iz.containers, iz.streams, iz.properties,
+    iz.serializer, iz.referencable, iz.observer;
 
 /**
  * The SerializableList is a serializable object list.
@@ -196,5 +199,194 @@ version(unittest)
         
         std.stdio.writeln("SerializableList passed the tests");
     }
+}
+
+
+enum ComponentNotification
+{
+    /**
+     * The Component parameter of the notifySubject() is now owned.
+     * The owner that also matches to the caller can be retieved using
+     * the .owner() property on the parameter.
+     */
+    added,
+    /**
+     * The Component parameter of the notifySubject() is about to be destroyed,
+     * after what any reference to the it that's been escaped is will be danling.
+     * The parameter may match the emitter itself or one of its owned Component.
+     */
+    free,
+    /**
+     * The Component parameter of the notifySubject() is about to be serialized.
+     */
+    serialize,
+    /**
+     * The Component parameter of the notifySubject() is about to be deserialized.
+     */
+    deserialize,
+}
+
+/**
+ * Defines the interface a class that wants to observe a Component has to implement.
+ * There is a single method: subjectNotification(ComponentNotification n, Component c)
+ */
+alias ComponentObserver = EnumBasedObserver!(ComponentNotification, Component);
+// matching emitter
+private alias ComponentSubject = CustomSubject!(ComponentNotification, Component);
+
+/**
+ * Component is a high-level class that proposes an automatic memory
+ * managment model based on ownership. It also implements the facilities to
+ * turn an instance as a referencable and as a serializable class.
+ *
+ * Ownership:
+ *
+ *
+ * Referencable:
+ *
+ *
+ * Serializable:
+ *
+ *
+ */
+class Component: PropDescriptorCollection
+{
+
+private:
+
+    Component _owner;
+    DynamicList!Component _owned;
+    ComponentSubject _compSubj;
+
+    final void addOwned(Component o)
+    {
+        if (!o) return;
+        _owned.add(o);
+        foreach(obs; _compSubj.observers)
+            obs.subjectNotification(ComponentNotification.added, this);
+    }
+
+protected:
+
+    mixin PropDescriptorCollector;
+    char[] _name;
+
+public:
+
+    @disable this();
+
+    /**
+     * Constructs a new instance whose life-time will be managed.
+     * by owner.
+     */
+    this(Component owner)
+    {
+        propCollectorAll;
+        _compSubj = construct!ComponentSubject;
+        _owned = construct!(DynamicList!Component);
+        _owner = cast(Component) owner;
+        if (_owner) owner.addOwned(this);
+    }
+
+    /**
+     * Destructs this and all the owned instances.
+     */
+    ~this()
+    {
+        foreach_reverse(o; _owned)
+        {
+            // observers can invalidate any escaped reference to a owned
+            foreach(obs; _compSubj.observers)
+                obs.subjectNotification(ComponentNotification.free, o);
+            destruct(o);
+        }
+        // observers can invalidate any escaped reference to this instance
+        foreach(obs; _compSubj.observers)
+            obs.subjectNotification(ComponentNotification.free, this);
+        //
+        destruct(_compSubj);
+        destruct(_owned);
+    }
+
+    /// Returns this instance onwer.
+    const(Component) owner() {return _owner;}
+
+    /// Returns the subject allowing some ComponentObserver to observe this instance.
+    ComponentSubject componentSubject() {return _compSubj;}
+
+    // name things ------------------------------------------------------------+
+
+    /// Returns true if value is available as an unique Component name.
+    bool nameAvailable(in char[] value)
+    {
+        //TODO-cComponent: nameAvailable()
+        return true;
+    }
+
+    /// Returns a suggestion for an unique Component name according to base.
+    char[] getUniqueName(in char[] base)
+    {
+        //TODO-cComponent: getUniqueName()
+        return null;
+    }
+
+    /**
+     * Defines the name of this Component.
+     *
+     * The name must be an unique value in the Component tree owned by the owner.
+     * This value is a collected property.
+     * This value is stored as an ID in the ReferenceMan with the void type.
+     */
+    @Set name(char[] value)
+    {
+        if (_name == value) return;
+        ReferenceMan.removeReference!void(cast(void*)this);
+        if (nameAvailable(value)) _name = value.dup;
+        else _name = getUniqueName(value);
+        ReferenceMan.storeReference!void(cast(void*)this, qualifiedName);
+    }
+    /// ditto
+    @Get char[] name() {return _name;}
+
+    /**
+     * Returns the fully qualified name of this component within the owner
+     * Component tree.
+     */
+    char[] qualifiedName()
+    {
+        char[][] result;
+        result ~= _name;
+        Component c = _owner;
+        while (c)
+        {
+            result ~= c.name;
+            c = c._owner;
+        }
+        return result.retro.join(".");
+    }
+    // ----
+}
+
+unittest
+{
+
+    Component root = null;
+    root = construct!Component(root);
+    root.name = "root".dup;
+    assert(root.owner is null);
+    assert(root.name == "root");
+    assert(root.qualifiedName == "root");
+
+    Component owned1 = construct!Component(root);
+    owned1.name = "component1".dup;
+    assert(owned1.owner is root);
+    assert(owned1.name == "component1");
+    assert(owned1.qualifiedName == "root.component1");
+
+    root.destruct;
+    // owned1 is dangling but that's expected.
+    // Component instances are designed to be created and declared inside
+    // other Component. Escaped refs can be set to null using Observer
+    // system.
 }
 

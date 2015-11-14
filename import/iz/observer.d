@@ -78,6 +78,11 @@ if (is(OT == interface) || is(OT == class))
             if (auto obs = cast(OT) observer)
                 _observers.remove(obs);
         }
+
+        DynamicList!OT observers()
+        {
+            return _observers;
+        }
     }
 }
 
@@ -447,6 +452,11 @@ if (is(E == enum))
             if (!obs)
                 return;
             _observers.remove(obs);
+        }
+        ///
+        DynamicList!ObserverType observers()
+        {
+            return _observers;
         }
     }
 } 
