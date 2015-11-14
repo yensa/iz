@@ -168,10 +168,8 @@ string genReadWriteVar()
     {
         type = T.stringof.dup;
         type[0] = toUpper(type[0]);
-        result ~= "alias readVariable!" ~ T.stringof ~ " read" ~
-            type ~ ';' ~ '\r' ~ '\n';
-        result ~= "alias writeVariable!" ~ T.stringof ~ " write" ~
-            type ~ ';' ~ '\r' ~ '\n';
+        result ~= "alias read" ~ type ~ "= readVariable!" ~ T.stringof ~  ';';
+        result ~= "alias write" ~ type ~ "= writeVariable!" ~ T.stringof ~  ';';
     }
     return result;
 }

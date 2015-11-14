@@ -36,8 +36,6 @@ struct PropDescriptor(T)
         alias PropGetter = T delegate();      
         /// alternative setter prototype.
         alias PropSetterConst = void delegate(const T value);
-
-        ulong referenceID;
     }
     private
     {
@@ -45,6 +43,8 @@ struct PropDescriptor(T)
         PropGetter _getter;
         Object fDeclarator;
         RuntimeTypeInfo _rtti;
+
+        string _referenceID;
 
         T* _setPtr;
         T* _getPtr;
@@ -279,6 +279,14 @@ struct PropDescriptor(T)
          * Returns the RuntimeTypeInfo struct for the property type.
          */
         @property const(RuntimeTypeInfo*) rtti(){return &_rtti;}
+        /**
+         * Defines the reference matching to the property value.
+         * This is only used as a helper when the property value is
+         * a fat pointer (e.g a delegate) and to serialiaze.
+         */
+        @property string referenceID(){return _referenceID;}
+        /// ditto
+        @property referenceID(string value){_referenceID = value;}
 // ----        
     
     }   

@@ -8,7 +8,7 @@ alias Ptr = void*;
 
 
 /** 
- * FixedSizeTypes elements verify isBasicType().
+ * BasicTypes elements verify isBasicType().
  */
 alias BasicTypes = AliasSeq!( 
     bool, byte, ubyte, short, ushort, int, uint, long, ulong, 
@@ -44,9 +44,10 @@ unittest
     assert(isFixedSize!Bar);
 }
 
-/// Common type for all the delagate kinds.
+/// Common type for all the delagate kinds, when seen as a struct (ptr & funcptr).
 alias GenericDelegate = void delegate();
 
+/// Common type for all the function kinds.
 alias GenericFunction = void function();
 
 /// Enumerates the values a RuntimeTypeInfo.type can have.
@@ -65,7 +66,8 @@ enum RuntimeType : ubyte
  * A variable can be associated to its RuntimeTypeInfo
  * to get its type information at runtime.
  *
- * An instance should always be private and exposed as const(RuntimeTypeInfo) */
+ * A pointer to an instance should always be private
+ * and exposed as const(RuntimeTypeInfo*) */
  /* because A particular requirement in PropDescriptor prevents to set the members as
  * immutable (no default this in struct + declaration without ctor + later call to define) = ouch
  */
@@ -136,7 +138,7 @@ unittest
  * Returns the dynamic class name of an Object or an interface.
  * Params:
  * assumeDemangled = must only be set to false if the class is declared in a unittest.
- * t = either an interface or an class instance.
+ * t = either an interface or a class instance.
  */
 string className(bool assumeDemangled = true, T)(T t)
 if (is(T == class) || is(T == interface))

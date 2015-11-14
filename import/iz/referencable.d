@@ -20,7 +20,7 @@ unittest
 interface Referenced
 {
     /// the ID, as set when added as reference.
-    ulong refID();
+    string refID();
     /// the type, as registered in the ReferenceMan ( typeString!typeof(this) )
     string refType();
 }
@@ -28,7 +28,7 @@ interface Referenced
 /**
  * Associates an pointer (a reference) to an unique ID (ulong).
  */
-private alias itemsById = void*[ulong];
+private alias itemsById = void*[char[]];
 
 /**
  * itemsById for a type (identified by a string).
@@ -76,7 +76,7 @@ static class ReferenceMan
          */
         static bool isReferenced(RT)(RT* aReference)
         {
-            return (referenceID!RT(aReference) != 0UL);
+            return (referenceID!RT(aReference) != "");
         }
         
         /**
@@ -97,44 +97,46 @@ static class ReferenceMan
          */
         static void storeType(RT)()
         {
-            fStore[typeString!RT][0] = null;
+            fStore[typeString!RT][""] = null;
         }
 
         /** 
          * Proposes an unique ID for a particular reference.
-         * This is a convenience function which will not return the same values for each software cession.
-         * A better user solution is to use the hash of an identifier chain (e.g the hash of "wizard.lefthand.magicwand")
+         * This is a convenience function which will not return the same values
+         * for each software cession.
          * Params:
          * RT = a referencable type. Optional, likely to be infered.
          * aReference = a pointer to a RT.
          * Returns:
-         * the unique ulong value used to identify the reference.
+         * the unique string used to identify the reference.
          */
-        static ulong getIDProposal(RT)(RT* aReference)
+        static string getIDProposal(RT)(RT* aReference)
         {
             // already stored ? returns current ID
             ulong ID = referenceID(aReference);
-            if (ID != 0) return ID;
+            if (ID != "") return ID;
 
-            // not stored ? return 1
+            // not stored ? returns 1
             if (!isTypeStored)
             {
                 storeType!RT;
-                return 1UL;
+                return "entry_1";
             }
 
             // try to get an available ID in the existing range
             for(ulong i = 0; i < fStore[typeString!RT].length; i++)
             {
+                import std.string: format;
                 if (fStore[typeString!RT][i] == null)
-                    return i-1;
+                    return format("entry_%d", i);
             }
 
             // otherwise returns the next ID after the current range.
             for(ulong i = 0; i < ulong.max; i++)
             {
+                import std.string: format;
                 if (i > fStore[typeString!RT].length)
-                    return i-1;
+                    return format("entry_%d", i);
             }
 
             assert(0, "ReferenceMan is full for this type");
@@ -149,9 +151,9 @@ static class ReferenceMan
          * Return:
          * true if the reference is added otherwise false.
          */
-        static bool storeReference(RT)(RT* aReference, ulong anID)
+        static bool storeReference(RT)(RT* aReference, in char[] anID)
         {
-            if (anID == 0) return false;
+            if (anID == "") return false;
             // what's already there ?
             auto curr = reference!RT(anID);
             if (curr == aReference) return true;
@@ -167,7 +169,7 @@ static class ReferenceMan
          * Tries to remove a reference identified by its ID.
          * Return: returns the reference if it's found otherwise returns null.
          */
-        static RT* removeReference(RT)(ulong anID)
+        static RT* removeReference(RT)(in char[] anID)
         {
             auto result = reference!RT(anID);
             if (result) fStore[typeString!RT][anID] = null;
@@ -198,15 +200,15 @@ static class ReferenceMan
          * Returns an ulong different from 0 if the variable is referenced.
          * Returns 0 if the variable is not referenced.
          */
-        static ulong referenceID(RT)(RT* aReference)
+        static const(char)[] referenceID(RT)(RT* aReference)
         {
-            if (!isTypeStored!RT) return 0UL;
+            if (!isTypeStored!RT) return "";
             foreach (k; fStore[typeString!RT].keys)
             {
                 if (fStore[typeString!RT][k] == aReference)
                     return k;
             }
-            return 0UL;
+            return "";
         }
 
         /**
@@ -217,9 +219,9 @@ static class ReferenceMan
          * Returns:
          * Returns null if the operation fails otherwise a pointer to a RT.
          */
-        static RT* reference(RT)(ulong anID)
+        static RT* reference(RT)(in char[] anID)
         {
-            if (anID == 0) return null;
+            if (anID == "") return null;
             if (!isTypeStored!RT) return null;
             return cast(RT*) fStore[typeString!RT].get(anID, null);
         }
@@ -259,21 +261,21 @@ unittest
     assert( !ReferenceMan.isReferenced(&f2) );
     assert( !ReferenceMan.isReferenced(&f3) );
 
-    assert( ReferenceMan.referenceID(&f1) == 0);
-    assert( ReferenceMan.referenceID(&f2) == 0);
-    assert( ReferenceMan.referenceID(&f3) == 0);
+    assert( ReferenceMan.referenceID(&f1) == "");
+    assert( ReferenceMan.referenceID(&f2) == "");
+    assert( ReferenceMan.referenceID(&f3) == "");
 
-    ReferenceMan.storeReference( &f1, 10UL );
-    ReferenceMan.storeReference( &f2, 15UL );
-    ReferenceMan.storeReference( &f3, 20UL );
+    ReferenceMan.storeReference( &f1, "a.f1" );
+    ReferenceMan.storeReference( &f2, "a.f2" );
+    ReferenceMan.storeReference( &f3, "a.f3" );
 
-    assert( ReferenceMan.reference!Foo(10UL) == &f1);
-    assert( ReferenceMan.reference!Foo(15UL) == &f2);
-    assert( ReferenceMan.reference!Foo(20UL) == &f3);
+    assert( ReferenceMan.reference!Foo("a.f1") == &f1);
+    assert( ReferenceMan.reference!Foo("a.f2") == &f2);
+    assert( ReferenceMan.reference!Foo("a.f3") == &f3);
 
-    assert( ReferenceMan.referenceID(&f1) == 10UL);
-    assert( ReferenceMan.referenceID(&f2) == 15UL);
-    assert( ReferenceMan.referenceID(&f3) == 20UL);
+    assert( ReferenceMan.referenceID(&f1) == "a.f1");
+    assert( ReferenceMan.referenceID(&f2) == "a.f2");
+    assert( ReferenceMan.referenceID(&f3) == "a.f3");
 
     assert( ReferenceMan.isReferenced(&f1) );
     assert( ReferenceMan.isReferenced(&f2) );
@@ -281,20 +283,20 @@ unittest
 
     ReferenceMan.removeReference(&f1);
     ReferenceMan.removeReference(&f2);
-    ReferenceMan.removeReference!Foo(20UL);
+    ReferenceMan.removeReference!Foo("a.f3");
 
     assert( !ReferenceMan.isReferenced(&f1) );
     assert( !ReferenceMan.isReferenced(&f2) );
     assert( !ReferenceMan.isReferenced(&f3) );
 
-    ReferenceMan.removeReference!Foo(10UL);
+    ReferenceMan.removeReference!Foo("a.f1");
     ReferenceMan.removeReference(&f2);
-    ReferenceMan.removeReference!Foo(20UL);
+    ReferenceMan.removeReference!Foo("a.f3");
     
     ReferenceMan.reset;
     assert( !ReferenceMan.isTypeStored!Foo );
     
-    ReferenceMan.storeReference( &f1, 10UL );
+    ReferenceMan.storeReference( &f1, "a.f1" );
     assert( ReferenceMan.isTypeStored!Foo );
     
 

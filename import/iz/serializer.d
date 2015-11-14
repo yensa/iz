@@ -32,7 +32,7 @@ class SerializableReference: Serializable
     private
     {
         char[] _tp;
-        ulong  _id;
+        char[]  _id;
         mixin PropDescriptorCollector;
     }
     public
@@ -47,7 +47,7 @@ class SerializableReference: Serializable
         void storeReference(RT)(RT* aReferenced)
         {
             _tp = (typeString!RT).dup;
-            _id = ReferenceMan.referenceID!RT(aReferenced);
+            _id = ReferenceMan.referenceID!RT(aReferenced).dup;
         }
 
         /**
@@ -60,13 +60,13 @@ class SerializableReference: Serializable
         }
 
         mixin(genPropFromField!(char[], "type", "_tp"));
-        mixin(genPropFromField!(ulong,  "id",   "_id"));
+        mixin(genPropFromField!(char[],  "id", "_id"));
         
         /// Declares the data needed to retrieve the reference associated to this class
         void declareProperties(Serializer serializer)
         {
             serializer.addProperty(propCollectorGet!(char[])("type"));
-            serializer.addProperty(propCollectorGet!(ulong)("id"));
+            serializer.addProperty(propCollectorGet!(char[])("id"));
         }
     }
 }
@@ -128,7 +128,7 @@ private bool isSerObjectType(T)()
 
 private bool isSerObjectType(SerializableType type)
 {
-    return (type == SerializableType._serializable) | (type == SerializableType._object);
+    with(SerializableType) return (type == _serializable || type == _object);
 }
 
 private bool isSerSimpleType(T)()
@@ -303,7 +303,7 @@ private char[] del_dqe(char[] input)
 }    
 
 /// Restores the raw value contained in a SerNodeInfo using the associated setter.
-void nodeInfo2Declarator(const SerNodeInfo * nodeInfo)
+void nodeInfo2Declarator(const SerNodeInfo* nodeInfo)
 {
     void toDecl1(T)()  {
         auto descr = cast(PropDescriptor!T *) nodeInfo.descriptor;
@@ -342,18 +342,15 @@ void nodeInfo2Declarator(const SerNodeInfo * nodeInfo)
             destruct(str);
             break;
         case _delegate:
-            import iz.referencable;
-            import iz.sugar;
-            ulong refId = *cast(ulong*) nodeInfo.value.ptr;
+            char[] refId = cast(char[]) nodeInfo.value[];
+            writeln(refId);
             void* refToDg = ReferenceMan.reference!(void)(refId);
             auto dg = *cast(GenericDelegate*) refToDg;
             auto descr = cast(PropDescriptor!GenericDelegate*) nodeInfo.descriptor;
             descr.set(dg);
             break;
         case _function:
-            import iz.referencable;
-            import iz.sugar;
-            ulong refId = *cast(ulong*) nodeInfo.value.ptr;
+            char[] refId = cast(char[]) nodeInfo.value[];
             void* refToDg = ReferenceMan.reference!(void)(refId);
             auto dg = *cast(GenericFunction*) refToDg;
             auto descr = cast(PropDescriptor!GenericFunction*) nodeInfo.descriptor;
@@ -363,7 +360,7 @@ void nodeInfo2Declarator(const SerNodeInfo * nodeInfo)
 }
 
 /// Converts the raw data contained in a SerNodeInfo to its string representation.
-char[] value2text(const SerNodeInfo * nodeInfo)
+char[] value2text(const SerNodeInfo* nodeInfo)
 {
     char[] v2t_1(T)(){return to!string(*cast(T*)nodeInfo.value.ptr).dup;}
     char[] v2t_2(T)(){return to!string(cast(T[])nodeInfo.value[]).dup;}
@@ -373,27 +370,27 @@ char[] value2text(const SerNodeInfo * nodeInfo)
     {
         case _invalid: return "invalid".dup;
         case _serializable, _object: return cast(char[])(nodeInfo.value);
-        case _ubyte: return v2t!ubyte;
-        case _byte: return v2t!byte;
-        case _ushort: return v2t!ushort;
-        case _short: return v2t!short;
-        case _uint: return v2t!uint;
-        case _int: return v2t!int;
-        case _ulong: return v2t!ulong;
-        case _long: return v2t!long;
-        case _float: return v2t!float;
-        case _double: return v2t!double;
-        case _char: return v2t!char;
-        case _wchar: return v2t!wchar;
-        case _dchar: return v2t!dchar;
-        case _stream: return to!(char[])(nodeInfo.value[]);
-        case _delegate:return v2t_1!ulong;
-        case _function:return v2t_1!ulong;
+        case _ubyte:    return v2t!ubyte;
+        case _byte:     return v2t!byte;
+        case _ushort:   return v2t!ushort;
+        case _short:    return v2t!short;
+        case _uint:     return v2t!uint;
+        case _int:      return v2t!int;
+        case _ulong:    return v2t!ulong;
+        case _long:     return v2t!long;
+        case _float:    return v2t!float;
+        case _double:   return v2t!double;
+        case _char:     return v2t!char;
+        case _wchar:    return v2t!wchar;
+        case _dchar:    return v2t!dchar;
+        case _stream:   return to!(char[])(nodeInfo.value[]);
+        case _delegate: return v2t_2!char;
+        case _function: return v2t_2!char;
     }
 }
 
 /// Converts the literal representation to a ubyte array according to type.
-ubyte[] text2value(char[] text, const SerNodeInfo * nodeInfo)
+ubyte[] text2value(char[] text, const SerNodeInfo* nodeInfo)
 {
     ubyte[] t2v_1(T)(){
         auto res = new ubyte[](type2size[nodeInfo.type]);
@@ -412,31 +409,27 @@ ubyte[] text2value(char[] text, const SerNodeInfo * nodeInfo)
     //    
     with(SerializableType) final switch(nodeInfo.type)
     {
-        case _invalid:
-            return cast(ubyte[])"invalid".dup;
-        case _serializable, _object:
-            return cast(ubyte[])(text);
-        case _ubyte: return t2v!ubyte;
-        case _byte: return t2v!byte;
-        case _ushort: return t2v!ushort;
-        case _short: return t2v!short;
-        case _uint: return t2v!uint;
-        case _int: return t2v!int;
-        case _ulong: return t2v!ulong;
-        case _long: return t2v!long;
-        case _float: return t2v!float;
-        case _double: return t2v!double;
-        case _char: return t2v!char;
-        case _wchar: return t2v_2!wchar;
-        case _dchar: return t2v!dchar;
-        case _stream: return to!(ubyte[])(text);
-        case _delegate: return t2v_1!ulong;
-        case _function: return t2v_1!ulong;
+        case _invalid:  return cast(ubyte[])"invalid".dup;
+        case _ubyte:    return t2v!ubyte;
+        case _byte:     return t2v!byte;
+        case _ushort:   return t2v!ushort;
+        case _short:    return t2v!short;
+        case _uint:     return t2v!uint;
+        case _int:      return t2v!int;
+        case _ulong:    return t2v!ulong;
+        case _long:     return t2v!long;
+        case _float:    return t2v!float;
+        case _double:   return t2v!double;
+        case _char:     return t2v!char;
+        case _wchar:    return t2v_2!wchar;
+        case _dchar:    return t2v!dchar;
+        case _serializable, _object, _stream, _delegate, _function:
+                        return cast(ubyte[]) text;
     }
 }
 
 /// Fills an SerNodeInfo according to an PropDescriptor
-void setNodeInfo(T)(SerNodeInfo * nodeInfo, PropDescriptor!T * descriptor)
+void setNodeInfo(T)(SerNodeInfo* nodeInfo, PropDescriptor!T* descriptor)
 {
     scope(failure) nodeInfo.isDamaged = true;
 
@@ -537,8 +530,7 @@ void setNodeInfo(T)(SerNodeInfo * nodeInfo, PropDescriptor!T * descriptor)
         nodeInfo.descriptor = cast(Ptr) descriptor;
         nodeInfo.name = descriptor.name.dup;
         //
-        nodeInfo.value.length = ulong.sizeof;
-        *cast(ulong*) nodeInfo.value.ptr = descriptor.referenceID;
+        nodeInfo.value = cast(ubyte[]) descriptor.referenceID;
     }
 }
 
@@ -553,7 +545,7 @@ class IstNode : TreeItem
          * Sets the infomations describing the property associated
          * to this IST node.
          */
-        void setDescriptor(T)(PropDescriptor!T * descriptor)
+        void setDescriptor(T)(PropDescriptor!T* descriptor)
         {
             if (descriptor)
                 setNodeInfo!T(&_info, descriptor);
@@ -562,7 +554,7 @@ class IstNode : TreeItem
          * Returns a pointer to the information describing the property
          * associated to this IST node.
          */
-        SerNodeInfo * info()
+        SerNodeInfo* info()
         {
             return &_info;
         }
@@ -1487,7 +1479,7 @@ public:
      * descriptor = The PropDescriptor whose setter is used to restore the node data.
      * If not specified then the onWantDescriptor event may be called.
      */
-    void restoreProperty(T)(IstNode node, PropDescriptor!T * descriptor = null)
+    void restoreProperty(T)(IstNode node, PropDescriptor!T* descriptor = null)
     {
         _serState = SerializationState.restore;
         _restoreMode = RestoreMode.random;
@@ -1859,10 +1851,10 @@ version(unittest)
         auto usrr = construct!ReferencedUser;
         scope(exit) destruct(ref1, ref2, usrr);
         
-        assert( ReferenceMan.storeReference!Referenced1(&ref1, 0x11223344));
-        assert( ReferenceMan.storeReference!Referenced1(&ref2, 0x55667788));
-        assert( ReferenceMan.referenceID!Referenced1(&ref1) == 0x11223344);
-        assert( ReferenceMan.referenceID!Referenced1(&ref2) == 0x55667788);
+        assert( ReferenceMan.storeReference!Referenced1(&ref1, "referenced.ref1"));
+        assert( ReferenceMan.storeReference!Referenced1(&ref2, "referenced.ref2"));
+        assert( ReferenceMan.referenceID!Referenced1(&ref1) == "referenced.ref1");
+        assert( ReferenceMan.referenceID!Referenced1(&ref2) == "referenced.ref2");
 
         str.clear;
         usrr.fRef = &ref1;
@@ -1957,7 +1949,7 @@ version(unittest)
         ser.onWantDescriptor = null;
         // ----
 
-        // struct serialized as basicType or ---+
+        // struct serialized as basicType ---+
 
         import iz.enumset;
         enum A {a0,a1,a2}
@@ -2097,9 +2089,11 @@ version(unittest)
             _d = staticRef;
 
             auto dDescr = propCollectorGet!GenericDelegate("d");
-            dDescr.referenceID = 71717171UL;
-            ReferenceMan.storeReference(cast(void*)&staticRef, 71717171UL);
-            writeln(ReferenceMan.reference!(void)(71717171UL));
+
+            ReferenceMan.storeReference(cast(void*)&staticRef, "collected.at.dtarget");
+            dDescr.referenceID = "collected.at.dtarget";
+
+
         }
         ~this()
         {
@@ -2146,7 +2140,6 @@ version(unittest)
         assert(c.dgTest == "awyesss");
     }
     //----
-
 
     // source errors ---+
     unittest
