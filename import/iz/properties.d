@@ -474,10 +474,10 @@ mixin template PropDescriptorCollector()
     /**
      * Performs all the possible analysis.
      */
-    protected final void propCollectorAll()
+    protected final void propCollectorAll(T = typeof(this))()
     {
-        propCollectorGetFields;
-        propCollectorGetPairs;
+        propCollectorGetFields!T;
+        propCollectorGetPairs!T;
     }
 
     /**
@@ -485,15 +485,15 @@ mixin template PropDescriptorCollector()
      * and whose identifier starts with one of the following prefix: underscore, f, F.
      * The resulting property descriptors names don't include the prefix.
      */
-    protected final void propCollectorGetFields()
+    protected void propCollectorGetFields(T = typeof(this))()
     {
         import std.algorithm : canFind;
         import std.traits: isCallable;
-        foreach(member; __traits(allMembers, typeof(this)))
+        foreach(member; __traits(allMembers, T))
 
-        static if (canFind("_fF", member[0]) && (!isCallable!(__traits(getMember, typeof(this), member))
-            || (isDelegate!(__traits(getMember, typeof(this), member)))
-            || (isFunctionPointer!(__traits(getMember, typeof(this), member)))
+        static if (canFind("_fF", member[0]) && (!isCallable!(__traits(getMember, T, member))
+            || (isDelegate!(__traits(getMember, T, member)))
+            || (isFunctionPointer!(__traits(getMember, T, member)))
         ))
         {
             static if (is(typeof(__traits(getMember, this, member))))
@@ -516,7 +516,7 @@ mixin template PropDescriptorCollector()
      * annotated with @Set/@Get.
      * In a class hierarchy, an overriden accessor replaces the ancestor's one. 
      */
-    protected final void propCollectorGetPairs()
+    protected void propCollectorGetPairs(T = typeof(this))()
     {
     version(none)
     {
@@ -561,8 +561,8 @@ mixin template PropDescriptorCollector()
     }
     else
     {
-        foreach(member; __traits(allMembers, typeof(this))) 
-        foreach(overload; __traits(getOverloads, typeof(this), member))
+        foreach(member; __traits(allMembers, T))
+        foreach(overload; __traits(getOverloads, T, member))
         foreach(attribute; __traits(getAttributes, overload))
         {
             static if (is(attribute == Get) && isCallable!overload)
@@ -739,6 +739,28 @@ version(unittest)
         // test that delegates as fields are not detected as set/get pairs
         Bee bee = new Bee;
         assert(bee.propCollectorCount == 0);
+    }
+
+    class B0
+    {
+        mixin PropDescriptorCollector;
+        this(){propCollectorAll;}
+        @SetGet int _a;
+    }
+
+    class B1: B0
+    {
+        //this(){propCollectorAll!(typeof(this));}
+        @Set void b(int value){}
+        @Get int b(){return 0;}
+        @SetGet int _c;
+    }
+
+    unittest
+    {
+        //TODO-cbugfix: Once PropCollector injected it cant find any new properties in derivated classes
+        auto b1 = new B1;
+        //assert(b1.propCollectorCount == 3);
     }
 }
 
