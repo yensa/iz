@@ -438,6 +438,7 @@ mixin template PropDescriptorCollector()
 // oror Base: because it looks like the interface makes the members
 // detectable even if not yet implemented.
 
+    import iz.types, std.traits;
     alias ToT = typeof(this);
     // descendant already implement the interface
     enum BaseHas = is(BaseClassesTuple!ToT[0] : PropDescriptorCollection);
@@ -511,9 +512,9 @@ mixin template PropDescriptorCollector()
     protected void propCollectorGetFields(T)()
     {
         import std.algorithm : canFind;
-        import std.traits: isCallable;
+        mixin ScopedReachability;
         foreach(member; __traits(allMembers, T))
-
+        static if (isMemberReachable!(T, member))
         static if (canFind("_fF", member[0]) && (!isCallable!(__traits(getMember, T, member))
             || (isDelegate!(__traits(getMember, T, member)))
             || (isFunctionPointer!(__traits(getMember, T, member)))
@@ -541,7 +542,9 @@ mixin template PropDescriptorCollector()
      */
     protected void propCollectorGetPairs(T)()
     {
+        mixin ScopedReachability;
         foreach(member; __traits(allMembers, T))
+        static if (isMemberReachable!(T, member))
         foreach(overload; __traits(getOverloads, T, member))
         foreach(attribute; __traits(getAttributes, overload))
         {
@@ -571,6 +574,12 @@ mixin template PropDescriptorCollector()
 
 version(unittest)
 {
+    unittest
+    {
+        mixin ScopedReachability;
+        assert(isMemberReachable!(Foo, "_anUint"));
+    }
+
     class Foo
     {
         mixin PropDescriptorCollector;
@@ -646,6 +655,7 @@ version(unittest)
             return _field;
         }
     }
+
     class Baz : Bar
     {
         @Set override void field(size_t aValue)

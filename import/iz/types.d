@@ -171,3 +171,22 @@ version(unittest)
         assert(className!(false)(new C) == "C");
     }
 }
+
+/**
+ * Indicates if the member of a struct or class is accessible for compile time
+ * introspection. The template has to be mixed in the scope where the other
+ * __traits() operations are performed.
+ * The problem solved by this mixin is that a simple function template that uses
+ * __traits(getProtection) does not faithfully represent the member accessibility
+ * if the function is declared in another module.
+ * Another problem is that __traits(getProtection) does not well represent the
+ * accessibility of the private members (own members or friends class /struct).
+ */
+mixin template ScopedReachability()
+{
+    bool isMemberReachable(T, string member)()
+    if (is(T==class) || is(T==struct))
+    {
+        return __traits(compiles, __traits(getMember, T, member));
+    }
+}
