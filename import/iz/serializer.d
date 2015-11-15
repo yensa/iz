@@ -1758,7 +1758,7 @@ version(unittest)
             char[] _someChars;
         public:
             this() {
-                propCollectorAll;
+                propCollectorAll!ClassB;
                 _anIntArray = [0, 1, 2, 3];
                 _aFloat = 0.123456f;
                 _someChars = "azertyuiop".dup;
@@ -1913,11 +1913,11 @@ version(unittest)
         {
             immutable string chain = node.parentIdentifiers;
             if (chain == "Root")
-                matchingDescriptor = a.propCollectorGetPtr(node.info.name);
+                matchingDescriptor = a.propCollectorGetPtrByName(node.info.name);
             else if (chain == "Root.aB1")
-                matchingDescriptor = a._aB1.propCollectorGetPtr(node.info.name);
+                matchingDescriptor = a._aB1.propCollectorGetPtrByName(node.info.name);
             else if (chain == "Root.aB2")
-                matchingDescriptor = a._aB2.propCollectorGetPtr(node.info.name);
+                matchingDescriptor = a._aB2.propCollectorGetPtrByName(node.info.name);
         }
 
         str.clear;
@@ -2000,7 +2000,7 @@ version(unittest)
 
         this()
         {
-            propCollectorAll;
+            propCollectorAll!ErrSer;
         }
 
         void declareProperties(Serializer serializer)
@@ -2019,7 +2019,7 @@ version(unittest)
 
         this()
         {
-            propCollectorAll;
+            propCollectorAll!ErrDeSer;
         }
         
         void declareProperties(Serializer serializer)
@@ -2066,7 +2066,7 @@ version(unittest)
         @SetGet char[] _someChars = "awhyes".dup;
         this()
         {
-            propCollectorGetFields;
+            propCollectorGetFields!SubCollected;
         }
     }
     class Collected: PropDescriptorCollection
@@ -2084,7 +2084,7 @@ version(unittest)
         {
             _sub = construct!SubCollected;
             _anothersub = construct!SubCollected;
-            propCollectorGetFields;
+            propCollectorGetFields!Collected;
             staticRef = &dtarget;
             _d = staticRef;
 
