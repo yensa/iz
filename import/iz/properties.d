@@ -9,13 +9,13 @@ import iz.memory, iz.types, iz.containers;
 enum PropAccess
 {
     /// denotes an error.
-    none, 
+    none,
     /// read-only.
-    ro,   
+    ro,
     /// write-only.
-    wo,   
+    wo,
     /// read & write.
-    rw    
+    rw
 }   
 
 /**
@@ -33,7 +33,7 @@ struct PropDescriptor(T)
         /// setter proptotype
         alias PropSetter = void delegate(T value);
         /// getter prototype
-        alias PropGetter = T delegate();      
+        alias PropGetter = T delegate();
         /// alternative setter prototype.
         alias PropSetterConst = void delegate(const T value);
     }
@@ -52,7 +52,7 @@ struct PropDescriptor(T)
         PropAccess _access;
 
         string fName;
-        
+
         void cleanup()
         {
             _setPtr = null;
@@ -175,14 +175,14 @@ struct PropDescriptor(T)
             setDirectSource(aSourceData);
             if (aName != "") {name(aName);}
             fDeclarator = cast(Object) aSetter.ptr;
-        }       
+        }
         /**
          * Defines a property descriptor from a single variable used as source/target
          */
         void define(T* aData, string aName = "", Object aDeclarator = null)
         {
             cleanup;
-            _rtti = runtimeTypeInfo!T; 
+            _rtti = runtimeTypeInfo!T;
             setDirectSource(aData);
             setDirectTarget(aData);
             if (aName != "") {name(aName);}
@@ -253,7 +253,7 @@ struct PropDescriptor(T)
         @property const(PropAccess) access()
         {
             return _access;
-        }   
+        }
         /** 
          * Defines a string used to identify the prop
          */
@@ -303,7 +303,7 @@ version(unittest)
     }
     struct Si{uint f,r,e;}
     class B
-    {       
+    {
         private Si fi;
         @property Si i(){return fi;}
         @property void i(const Si aValue){fi = aValue;}
@@ -311,24 +311,24 @@ version(unittest)
     class propdescrtest
     {
         unittest
-        {   
+        {
             auto a = construct!A;
             auto descrAi = PropDescriptor!int(&a.i,&a.i,"I");
             descrAi.setter()(5);
             assert(a.i == 5);
             assert(a.i == descrAi.getter()());
             assert(descrAi.declarator is a);
-            
+
             auto refval = Si(1,2,333);
             auto b = construct!B;
             auto descrBi = PropDescriptor!Si(&b.i,&b.i,"I");
             descrBi.setter()(refval);
             assert(b.i.e == 333);
             assert(b.i.e == descrBi.getter()().e);
-        
+
             destruct(a,b);
             writeln("PropDescriptor(T) passed the tests");
-        }   
+        }
     }
 }
 
@@ -359,18 +359,20 @@ struct HideGet;
 string genPropFromField(T, string propName, string propField)()
 {
     return
-    "@Set @property void " ~ propName ~ "(" ~ T.stringof ~ " aValue)" ~
+    "@Set void " ~ propName ~ "(" ~ T.stringof ~ " aValue)" ~
     "{ " ~ propField ~ " = aValue;} " ~
-    "@Get @property " ~ T.stringof ~ " " ~ propName ~
+    "@Get " ~ T.stringof ~ " " ~ propName ~
     "(){ return " ~ propField ~ ";}" ;
 }
 
-private char[] genStandardPropDescriptors()
+private string genStandardPropDescriptors()
 {
-    char[] result;
+    string result;
     foreach(T; BasicTypes)
-        result ~= ("public alias " ~ T.stringof ~ "prop = PropDescriptor!(" ~ 
-            T.stringof ~ ")" ~ ";\r\n").dup;
+    {
+        result ~= ("public alias " ~ T.stringof ~ "Prop = PropDescriptor!(" ~
+            T.stringof ~ ")" ~ "; ");
+    }
     return result;
 }
 
@@ -382,7 +384,7 @@ mixin(genStandardPropDescriptors);
  * Interfaces the PropDescriptorCollector methods.
  * The methods don't have to be implemented by hand as it's automatically done 
  * when the PropDescriptorCollector template is mixed in a class.
- */ 
+ */
 interface PropDescriptorCollection
 {
     size_t propCollectorCount();
@@ -398,7 +400,8 @@ interface PropDescriptorCollection
  *
  * The analyzers are usually called in this(). 
  */
-mixin template PropDescriptorCollector(){
+mixin template PropDescriptorCollector()
+{
 
     /**
      * Contains the list of izPropDesrcriptors created by the analyzers.
@@ -430,7 +433,7 @@ mixin template PropDescriptorCollector(){
             descr = maybe; break; 
         }
 
-        if (createIfMissing && !descr) 
+        if (createIfMissing && !descr)
         {
             descr = new PropDescriptor!T;
             descr.name = name;
@@ -456,7 +459,7 @@ mixin template PropDescriptorCollector(){
     protected final void * propCollectorGetPtr(size_t index)
     {
         return descriptors[index];
-    }   
+    }
 
     /**
      * Returns a pointer to the RTTI for the nth descriptor.
@@ -558,30 +561,27 @@ mixin template PropDescriptorCollector(){
     }
     else
     {
-        struct Delegate {void* ptr, funcptr;}
-        auto virtualTable = typeid(this).vtbl;
-
         foreach(member; __traits(allMembers, typeof(this))) 
         foreach(overload; __traits(getOverloads, typeof(this), member))
         foreach(attribute; __traits(getAttributes, overload))
         {
-            //TODO-cSafety: dont take delegate or function pointers but only plain function/methods
             static if (is(attribute == Get) && isCallable!overload)
             {
-                alias DescriptorType = PropDescriptor!(ReturnType!overload);
-                auto descriptor = propCollectorGet!(ReturnType!overload)(member, true);
+                alias Type = ReturnType!overload;
+                alias DescriptorType = PropDescriptor!Type;
+                auto descriptor = propCollectorGet!(Type)(member, true);
                 auto dg = &overload;
-                descriptor.getter(dg);
+                descriptor.define(descriptor.setter, dg, member);
                 //   
                 version(none) writeln(attribute.stringof, " < ", member);
             }
-            //TODO-cSafety: dont take delegate or function pointers but only plain function/methods
             else static if (is(attribute == Set) && isCallable!overload)
             {
-                alias DescriptorType = PropDescriptor!(Parameters!overload);
+                alias Type = Parameters!overload;
+                alias DescriptorType = PropDescriptor!Type;
                 auto descriptor = propCollectorGet!(Parameters!overload)(member, true);
                 auto dg = &overload;
-                descriptor.setter(dg);
+                descriptor.define(dg, descriptor.getter, member);
                 //
                 version(none) writeln(attribute.stringof, " > ", member);
             }
@@ -590,11 +590,13 @@ mixin template PropDescriptorCollector(){
     }
 }
 
-version(unittest){
+version(unittest)
+{
     class Foo
     {
         mixin PropDescriptorCollector;
-        this(A...)(A a){
+        this(A...)(A a)
+        {
             propCollectorGetPairs;
             propCollectorGetFields;
         }
@@ -619,24 +621,24 @@ version(unittest){
             auto aDescriptor = propCollectorGet!uint("propA");
             aDescriptor.setter()(123456789);
             assert(propA == 123456789);
-            
+
             assert(propB == 0);
             auto bDescriptor = propCollectorGet!uint("propB");
             bDescriptor.setter()(987654321);
             assert(propB == 987654321);
-            
+
             assert(!propC.length);
             auto cDescriptor = propCollectorGet!(char[])("propC");
             cDescriptor.setter()("Too Strange To Be Good".dup);
             assert(propC == "Too Strange To Be Good");
             propC = "Too Good To Be Strange".dup;
             assert( propCollectorGet!(char[])("propC").getter()() == "Too Good To Be Strange");
-            
+
             assert(_anUint == 0);
             auto anUintDescriptor = propCollectorGet!uint("anUint");
             anUintDescriptor.setter()(123456789);
             assert(_anUint == 123456789);
-            
+
             assert(_manyChars == null);
             auto manyCharsDescriptor = propCollectorGet!(char[])("manyChars");
             manyCharsDescriptor.setter()("BimBamBom".dup);
@@ -655,26 +657,30 @@ version(unittest){
         {
             propCollectorGetPairs;
         }
-        @Set void field(size_t aValue){
+        @Set void field(size_t aValue)
+        {
             info ~= "Bar";
         }
-        @Get size_t field(){
+        @Get size_t field()
+        {
             info = "less derived";
             return _field;
         }
     }
     class Baz : Bar
     {
-        @Set override void field(size_t aValue){
+        @Set override void field(size_t aValue)
+        {
             super.field(aValue);
             info ~= "Baz";
         }
-        @Get override size_t field(){
+        @Get override size_t field()
+        {
             info = "most derived";
             return _field;
         }
-    }  
-    
+    }
+
     class Dog
     {
         mixin PropDescriptorCollector;
@@ -709,14 +715,30 @@ version(unittest){
 
     unittest
     {
+        // test that a delegate is detected as a field
         Cat cat = new Cat;
         assert(cat.propCollectorCount == 1);
         auto descr = cast(PropDescriptor!uint*) cat.propCollectorGetPtr(0);
         assert(descr);
         assert(descr.rtti.type == RuntimeType._delegate);
-
+        // test that a plain function is not detected as field
         Fly fly = new Fly;
         assert(fly.propCollectorCount == 0);
+    }
+
+    class Bee
+    {
+        mixin PropDescriptorCollector;
+        this(){propCollectorGetPairs;}
+        @Set void delegate(uint) setter;
+        @Get int delegate() getter;
+    }
+
+    unittest
+    {
+        // test that delegates as fields are not detected as set/get pairs
+        Bee bee = new Bee;
+        assert(bee.propCollectorCount == 0);
     }
 }
 
@@ -725,7 +747,7 @@ unittest
     auto foo = construct!Foo;
     foo.use;
     foo.destruct;
-    
+
     auto baz = construct!Baz;
     auto prop = baz.propCollectorGet!size_t("field");
     prop.set(0);
@@ -734,7 +756,7 @@ unittest
     auto a = prop.get;
     assert(baz.info == "most derived");
     baz.destruct;
-    
+
     writeln("PropDescriptorCollector passed the tests");
 }
 
@@ -749,124 +771,126 @@ unittest
  */
 class PropertyBinder(T)
 {
-    private
-    {
-        DynamicList!(PropDescriptor!T *) _itemsToDestruct;
-        DynamicList!(PropDescriptor!T *) _items;
-        PropDescriptor!T *_source;
-    }
-    public
-    {
-        ///
-        this()
-        {
-            _items = construct!(DynamicList!(PropDescriptor!T *));
-            _itemsToDestruct = construct!(DynamicList!(PropDescriptor!T *));
-        }
-        ~this()
-        {
-            for(auto i = 0; i < _itemsToDestruct.count; i++)
-            {
-                auto descr = _itemsToDestruct[i];
-                if (descr) destruct(descr);
-            }
-            _items.destruct;
-            _itemsToDestruct.destruct;
-        }
-        /**
-         * Adds a property to the list.
-         * If the binder is not local then aProp should neither be a local descriptor,
-         * otherwise the descritpor reference will become invalid.
-         *
-         * Params:
-         * aProp = an PropDescriptor of type T.
-         * isSource = optional boolean indicating if the descriptor is used as the master property.  
-         */
-        ptrdiff_t addBinding(ref PropDescriptor!T aProp, bool isSource = false)
-        {
-            if (isSource) _source = &aProp;
-            return _items.add(&aProp);
-        }
 
-        /**
-         * Adds a new property to the list.
-         * The life-time of the new descriptor is handled internally.
-         *
-         * Returns: 
-         * an new PropDescriptor of type T.
-         */
-        PropDescriptor!T * newBinding()
-        {
-            auto result = construct!(PropDescriptor!T);
-            _items.add(result);
-            _itemsToDestruct.add(result);
-            return result;
-        }
+private:
 
-        /**
-         * Removes the aIndex-nth property from the list.
-         * The item is freed if it has been allocated by _newBinding_.
-         * _source_ might be invalidated if it matches the item.
-         *
-         * Params:
-         * anIndex = the index of the descriptor to remove.
-         */
-        void removeBinding(size_t anIndex)
-        {
-            auto itm = _items.extract(anIndex);
-            if (_source && itm == _source) _source = null;
-            if (_itemsToDestruct.remove(itm)) destruct(itm);
-        }
-        
-        /**
-         * Triggers the setter of each property.
-         * This method is usually called at the end of a setter method 
-         * (in the _master_/_source_ setter).
-         *
-         * Params:
-         * aValue = a value of type T to send to each slave of the list.
-         */ 
-        void change(T aValue)
-        {
-            foreach(item; _items)
-            {
-                if (item.access == PropAccess.none) continue;
-                if (item.access == PropAccess.ro) continue;
-                item.setter()(aValue);
-            }
-        }
-        
-        /**
-         * Call _change()_ using the value of _source_.
-         */
-        void updateFromSource()
-        {
-            if (!_source) return;
-            change(_source.getter()());
-        }
-        
-        /**
-         * Sets the property used as source in _updateFromSource().
-         * Params:
-         * aSource = the property to be used as source.
-         */
-        @property void source(ref PropDescriptor!T aSource)
-        {_source = &aSource;}
-        
-        /**
-         * Returns the property used as source in _updateFromSource().
-         */        
-        @property PropDescriptor!T * source()
-        {return _source;}
-        
-        /**
-         * Provides an access to the property descriptors for additional _izList_ operations.
-         * Note that the items whose life-time is managed should not be modified.
-         */
-        @property List!(PropDescriptor!T *) items()
-        {return _items;}
+    DynamicList!(PropDescriptor!T*) _itemsToDestruct;
+    DynamicList!(PropDescriptor!T*) _items;
+    PropDescriptor!T *_source;
+
+public:
+
+    ///
+    this()
+    {
+        _items = construct!(DynamicList!(PropDescriptor!T*));
+        _itemsToDestruct = construct!(DynamicList!(PropDescriptor!T*));
     }
-}   
+
+    ~this()
+    {
+        for(auto i = 0; i < _itemsToDestruct.count; i++)
+        {
+            auto descr = _itemsToDestruct[i];
+            if (descr) destruct(descr);
+        }
+        _items.destruct;
+        _itemsToDestruct.destruct;
+    }
+
+    /**
+     * Adds a property to the list.
+     * If the binder is not local then aProp should neither be a local descriptor,
+     * otherwise the descritpor reference will become invalid.
+     *
+     * Params:
+     * aProp = an PropDescriptor of type T.
+     * isSource = optional boolean indicating if the descriptor is used as the master property.
+     */
+    ptrdiff_t addBinding(ref PropDescriptor!T aProp, bool isSource = false)
+    {
+        if (isSource) _source = &aProp;
+        return _items.add(&aProp);
+    }
+
+    /**
+     * Adds a new property to the list.
+     * The life-time of the new descriptor is handled internally.
+     *
+     * Returns:
+     * an new PropDescriptor of type T.
+     */
+    PropDescriptor!T * newBinding()
+    {
+        auto result = construct!(PropDescriptor!T);
+        _items.add(result);
+        _itemsToDestruct.add(result);
+        return result;
+    }
+
+    /**
+     * Removes the aIndex-nth property from the list.
+     * The item is freed if it has been allocated by newBinding.
+     * source might be invalidated if it matches the item.
+     *
+     * Params:
+     * anIndex = the index of the descriptor to remove.
+     */
+    void removeBinding(size_t anIndex)
+    {
+        auto itm = _items.extract(anIndex);
+        if (_source && itm == _source) _source = null;
+        if (_itemsToDestruct.remove(itm)) destruct(itm);
+    }
+
+    /**
+     * Triggers the setter of each property.
+     * This method is usually called at the end of a setter method
+     * (in the master/source setter).
+     *
+     * Params:
+     * aValue = a value of type T to send to each slave of the list.
+     */
+    void change(T aValue)
+    {
+        foreach(item; _items)
+        {
+            if (item.access == PropAccess.none) continue;
+            if (item.access == PropAccess.ro) continue;
+            item.setter()(aValue);
+        }
+    }
+
+    /**
+     * Calls change() using the value of source.
+     */
+    void updateFromSource()
+    {
+        if (!_source) return;
+        change(_source.getter()());
+    }
+
+    /**
+     * Sets the property used as source in updateFromSource().
+     * Params:
+     * aSource = the property to be used as source.
+     */
+    @property void source(ref PropDescriptor!T aSource)
+    {_source = &aSource;}
+
+    /**
+     * Returns the property used as source in _updateFromSource().
+     */
+    @property PropDescriptor!T * source()
+    {return _source;}
+
+    /**
+     * Provides an access to the property descriptors for additional List operations.
+     * Note that the items whose life-time is managed should not be modified.
+     */
+    @property List!(PropDescriptor!T *) items()
+    {return _items;}
+}
 
 version(unittest)
 private class PropertyBinderTester
@@ -913,12 +937,12 @@ private class PropertyBinderTester
                 }
                 float B(){return fB;}
 
-                void addABinding(ref intprop aProp)
+                void addABinding(ref intProp aProp)
                 {
                     fASlaves.addBinding(aProp);
                 }
 
-                void addBBinding(ref floatprop aProp)
+                void addBBinding(ref floatProp aProp)
                 {
                     fBSlaves.addBinding(aProp);
                 }
@@ -953,18 +977,18 @@ private class PropertyBinderTester
         auto a2 = construct!FooSync;
         auto a3 = construct!Bar;
 
-        auto prp1 = intprop(&a1.A,&a1.A);
+        auto prp1 = intProp(&a1.A,&a1.A);
         a0.addABinding(prp1);
 
-        auto prp2 = intprop(&a2.A,&a2.A);
+        auto prp2 = intProp(&a2.A,&a2.A);
         a0.addABinding(prp2);
 
-        intprop prp3 = intprop(&a3.A);
+        intProp prp3 = intProp(&a3.A);
         a0.addABinding(prp3);
 
-        auto prpf1 = floatprop(&a1.B,&a1.B);
-        auto prpf2 = floatprop(&a2.B,&a2.B);
-        auto prpf3 = floatprop(&a3.B);
+        auto prpf1 = floatProp(&a1.B,&a1.B);
+        auto prpf2 = floatProp(&a2.B,&a2.B);
+        auto prpf3 = floatProp(&a3.B);
         a0.addBBinding(prpf1);
         a0.addBBinding(prpf2);
         a0.addBBinding(prpf3);
@@ -992,9 +1016,9 @@ private class PropertyBinderTester
         auto m1 = construct!Foo;
         auto m2 = construct!Foo;
 
-        intprop mprp0 = intprop(&m0.A, &m0.A);
-        intprop mprp1 = intprop(&m1.A, &m1.A);
-        intprop mprp2 = intprop(&m2.A, &m2.A);
+        intProp mprp0 = intProp(&m0.A, &m0.A);
+        intProp mprp1 = intProp(&m1.A, &m1.A);
+        intProp mprp2 = intProp(&m2.A, &m2.A);
 
         m0.addABinding(mprp1);
         m0.addABinding(mprp2);

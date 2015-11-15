@@ -201,7 +201,7 @@ version(unittest)
     }
 }
 
-
+/// Enumerates the possible notifications sent to a ComponentObserver
 enum ComponentNotification
 {
     /**
@@ -212,7 +212,7 @@ enum ComponentNotification
     added,
     /**
      * The Component parameter of the notifySubject() is about to be destroyed,
-     * after what any reference to the it that's been escaped is will be danling.
+     * after what anyof its reference that's been escaped will be danling.
      * The parameter may match the emitter itself or one of its owned Component.
      */
     free,
@@ -236,18 +236,28 @@ private alias ComponentSubject = CustomSubject!(ComponentNotification, Component
 
 /**
  * Component is a high-level class that proposes an automatic memory
- * managment model based on ownership. It also implements the facilities to
- * turn an instance as a referencable and as a serializable class.
+ * managment model based on ownership. It also verify the requirements that
+ * make an instance referencable and serializable.
  *
  * Ownership:
- *
+ * A Component can be created with iz.memory.construct. As constructor parameter
+ * another Component can be specified. It's responsible for freeing this "owned"
+ * instance. Components that's not owned have to be freed manually. A reference
+ * to an owned object can be escaped. To be notified of its destruction, it's
+ * possible to observe the component or its owner by adding an observer to the
+ * componentSubject.
  *
  * Referencable:
- *
+ * Each Component instance that's properly named is automatically registered
+ * in the ReferenceMan, as a void reference. This allow some powerfull features
+ * such as the Object property editor or the Serializer to inspect, store, retrieve
+ * a Component between two sessions.
  *
  * Serializable:
- *
- *
+ * A Component implements the PropDescriptorCollection interface. Each field annotated
+ * by @SetGet and each setter/getter pair annotated with @Set and @Get is automatically
+ * collected and is usable directly by a PropertyBinder, by a Serializer or
+ * by any other system based on the PropDescriptor system.
  */
 class Component: PropDescriptorCollection
 {
@@ -273,19 +283,24 @@ protected:
 
 public:
 
-    @disable this();
-
-    /**
-     * Constructs a new instance whose life-time will be managed.
-     * by owner.
-     */
-    this(Component owner)
+    this()
     {
         propCollectorAll;
         _compSubj = construct!ComponentSubject;
         _owned = construct!(DynamicList!Component);
-        _owner = cast(Component) owner;
-        if (_owner) owner.addOwned(this);
+    }
+
+    /**
+     * Constructs a new instance whose life-time will be managed.
+     * by its owner.
+     */
+    static auto create(C)(ref C c, Component owner)
+    if (is(C : Component))
+    {
+        c = construct!C;
+        c._owner = owner;
+        if (owner) owner.addOwned(c);
+        return c;
     }
 
     /**
@@ -293,6 +308,7 @@ public:
      */
     ~this()
     {
+        ReferenceMan.removeReference!void(cast(void*)this);
         foreach_reverse(o; _owned)
         {
             // observers can invalidate any escaped reference to a owned
@@ -309,17 +325,17 @@ public:
     }
 
     /// Returns this instance onwer.
-    const(Component) owner() {return _owner;}
+    final const(Component) owner() {return _owner;}
 
     /// Returns the subject allowing some ComponentObserver to observe this instance.
-    ComponentSubject componentSubject() {return _compSubj;}
+    final ComponentSubject componentSubject() {return _compSubj;}
 
     // name things ------------------------------------------------------------+
 
     /// Returns true if value is available as an unique Component name.
-    bool nameAvailable(in char[] value)
+    final bool nameAvailable(in char[] value)
     {
-        if (_owner !is null)
+        if (_owner !is null && _owner._owned.first)
         {
             foreach(o; _owner._owned)
                 if (o.name == value) return false;
@@ -328,7 +344,7 @@ public:
     }
 
     /// Suggests an unique Component name according to base.
-    char[] getUniqueName(in char[] base)
+    final char[] getUniqueName(in char[] base)
     {
         size_t i;
         char[] result = base.dup;
@@ -348,7 +364,7 @@ public:
      * This value is a collected property.
      * This value is stored as an ID in the ReferenceMan with the void type.
      */
-    @Set name(char[] value)
+    final @Set name(char[] value)
     {
         if (_name == value) return;
         ReferenceMan.removeReference!void(cast(void*)this);
@@ -357,13 +373,13 @@ public:
         ReferenceMan.storeReference!void(cast(void*)this, qualifiedName);
     }
     /// ditto
-    @Get char[] name() {return _name;}
+    final @Get char[] name() {return _name;}
 
     /**
      * Returns the fully qualified name of this component within the owner
      * Component tree.
      */
-    char[] qualifiedName()
+    final char[] qualifiedName()
     {
         char[][] result;
         result ~= _name;
@@ -381,32 +397,53 @@ public:
 unittest
 {
 
-    Component root = null;
-    root = construct!Component(root);
+    Component root;
+    Component.create!Component(root, null);
     root.name = "root".dup;
     assert(root.owner is null);
     assert(root.name == "root");
     assert(root.qualifiedName == "root");
 
-    Component owned1 = construct!Component(root);
+    Component owned1;
+    Component.create!Component(owned1, root);
     owned1.name = "component1".dup;
     assert(owned1.owner is root);
     assert(owned1.name == "component1");
     assert(owned1.qualifiedName == "root.component1");
 
-    Component owned11 = construct!Component(owned1);
+    Component owned11;
+    Component.create!Component(owned11, owned1);
     owned11.name = "component1".dup;
     assert(owned11.owner is owned1);
     assert(owned11.name == "component1");
     assert(owned11.qualifiedName == "root.component1.component1");
 
-    Component owned12 = construct!Component(owned1);
+    Component owned12;
+    Component.create!Component(owned12, owned1);
     owned12.name = "component1".dup;
-    assert(owned12.name == "component1_0", owned12.name);
+    assert(owned12.name == "component1_0");
+    assert(owned12.qualifiedName == "root.component1.component1_0");
 
     root.destruct;
     // owned1, owned11 & owned12 are dangling but that's expected.
     // Component instances are designed to be created and declared inside
     // other Components. Escaped refs can be set to null using the Observer system.
+}
+
+unittest
+{
+    // test for fix, PropDescriptor.rtti not set when created from GetPairs.
+    Component c;
+    Component.create!Component(c, null);
+    c.name = "whatever".dup;
+    import iz.serializer, iz.streams;
+    MemoryStream str = construct!MemoryStream;
+    Serializer ser = construct!Serializer;
+    ser.collectorToStream(c, str);
+    c.name = "654654".dup;
+    str.position = 0;
+    ser.streamToPropCollector(str, c);
+    assert(c.name == "whatever");
+    destruct(ser, str, c);
 }
 
