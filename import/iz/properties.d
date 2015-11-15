@@ -417,7 +417,7 @@ interface PropDescriptorCollection
  *
  * The analyzers are usually called in this(). The template has to be mixed in
  * each class generation that introduces new annotated properties.
- * Then analyzers, propCollectorGetPairs and propCollectorGetFields are
+ * The analyzers, propCollectorGetPairs and propCollectorGetFields are
  * function templates so they must be instantiated with the type they have
  * to scan (usually typeof(this)). The two analyzers can be called with a
  * third function template: propCollectorAll().
@@ -435,29 +435,32 @@ mixin template PropDescriptorCollector()
 //
 // static if: the template injects some virtual methods that don't need
 // to be overriden
-// oror interface: because it looks like the interface makes the members
-// detectable even if not implemented.
+// oror Base: because it looks like the interface makes the members
+// detectable even if not yet implemented.
+
+    alias ToT = typeof(this);
+    // descendant already implement the interface
+    enum BaseHas = is(BaseClassesTuple!ToT[0] : PropDescriptorCollection);
+    enum HasItf = is(ToT : PropDescriptorCollection);
+    // interface must be implemented from this generation, even if methods detected
+    enum Base = HasItf & (!BaseHas);
 
     /// see PropDescriptorCollection
-    static if (!__traits(hasMember, typeof(this), "propCollectorCount")
-        || is(typeof(this) : PropDescriptorCollection))
+    static if (!__traits(hasMember, ToT, "propCollectorCount") || Base)
     public size_t propCollectorCount() {return _collectedDescriptors.length;}
 
     /// see PropDescriptorCollection
-    static if (!__traits(hasMember, typeof(this), "propCollectorGetPtrByName")
-        || is(typeof(this) : PropDescriptorCollection))
+    static if (!__traits(hasMember, ToT, "propCollectorGetPtrByName") || Base)
     protected void* propCollectorGetPtrByName(string name)
     {return propCollectorGet!size_t(name);}
 
     /// see PropDescriptorCollection
-    static if (!__traits(hasMember, typeof(this), "propCollectorGetPtrByIndex")
-        || is(typeof(this) : PropDescriptorCollection))
+    static if (!__traits(hasMember, ToT, "propCollectorGetPtrByIndex") || Base)
     protected void* propCollectorGetPtrByIndex(size_t index)
     {return _collectedDescriptors[index];}
 
     /// see PropDescriptorCollection
-    static if (!__traits(hasMember, typeof(this), "propCollectorGetType")
-        || is(typeof(this) : PropDescriptorCollection))
+    static if (!__traits(hasMember, ToT, "propCollectorGetType") || Base)
     protected const(RuntimeTypeInfo*) propCollectorGetType(size_t index)
     {return (cast(PropDescriptor!int*) _collectedDescriptors[index]).rtti;}
 
@@ -737,6 +740,21 @@ version(unittest)
     {
         auto b1 = new B1;
         assert(b1.propCollectorCount == 3);
+    }
+
+    struct Bug
+    {
+        mixin PropDescriptorCollector;
+        this(uint value){propCollectorAll!Bug;}
+        @SetGet uint _a;
+    }
+
+    unittest
+    {
+        // test that the static if things with interface inheritence
+        // does not interfere with struct
+        Bug bug = Bug(0);
+        assert(bug.propCollectorCount == 1);
     }
 }
 
