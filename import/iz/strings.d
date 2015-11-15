@@ -24,7 +24,7 @@ struct CharRange
     this(S)(S s) pure @safe
     if (isSomeString!S)
     {
-        import std.algorithm.sorting: sort;        
+        import std.algorithm.sorting: sort;
         auto sorted = sort(to!(dchar[])(s));
         _min = sorted[0];
         _max = sorted[$-1];
@@ -103,21 +103,21 @@ pure @safe unittest
     
     auto cs2 = CharRange('f', 'a');
     assert(cs2.min == 'a');
-    assert(cs2.max == 'f'); 
+    assert(cs2.max == 'f');
     assert('b' in cs2);
-    assert('g' !in cs2);   
+    assert('g' !in cs2);
     assert(cs2.toString == "abcdef", cs2.toString);
     
     auto cs3 = CharRange(65, 70);
     assert(cs3.min == 65);
-    assert(cs3.max == 70); 
+    assert(cs3.max == 70);
     assert(66 in cs3);
-    assert(71 !in cs3);  
+    assert(71 !in cs3);
 }
 
+/// a CharRange that verify characters for decimal numbers.
 static immutable CharRange decimalChars = CharRange('0', '9');
-static immutable CharRange hexLowerChars = CharRange('a', 'f');
-static immutable CharRange hexUpperChars = CharRange('A', 'F');
+/// a CharRange that verify characters for octal numbers.
 static immutable CharRange octalChars = CharRange('0', '7');
 
 /**
@@ -126,7 +126,6 @@ static immutable CharRange octalChars = CharRange('0', '7');
  */
 struct CharMap
 {
-    import iz.memory;
     private bool[] _map;
     private dchar _min, _max;
     
@@ -188,9 +187,9 @@ struct CharMap
             else static if (is(T == CharRange))
             {
                 foreach(size_t i; elem._min - result._min .. elem._max - result._min + 1)
-                    result._map[i] = true;          
+                    result._map[i] = true;
             }
-        }        
+        }
         return result;
     }
     
@@ -199,7 +198,7 @@ struct CharMap
      *
      * Params:
      * c = A character or any value convertible to a dchar.
-     */    
+     */
     bool opIn_r(C)(C c) pure nothrow @nogc const @safe 
     {
         static if (isSomeChar!C || isImplicitlyConvertible!(C, dchar))
@@ -233,7 +232,7 @@ struct CharMap
     assert('9' in cm);
     assert('_' in cm);
     assert('%' !in cm);
-    assert('\t' in cm);  
+    assert('\t' in cm);
 }
 
 /// A CharMap that includes the hexadecimal characters.
@@ -252,7 +251,7 @@ immutable CharMap whiteChars = CharMap['\t'..'\r', ' '];
 auto nullTerminated(C)(C c)
 if (isPointer!C && isSomeChar!(PointerTarget!(C)))
 {
-    struct NullTerminated(C)   
+    struct NullTerminated(C)
     {
         private C _front;
         ///
@@ -295,7 +294,7 @@ unittest
     auto cWideString = nullTerminated(wtext.ptr);
     assert(nextWord(cWideString) == "ab"w);
     assert(nextWord(cWideString) == "cd"w);
-    assert(cWideString.empty);    
+    assert(cWideString.empty);
 }
 
 
@@ -313,16 +312,16 @@ private bool isCharTester(T)()
 {
     static if (isInputRange!T && isSomeChar!(ElementType!T))
         return true;
-    else static if (is(Unqual!T == CharRange)) 
+    else static if (is(Unqual!T == CharRange))
         return true;
-    else static if (is(Unqual!T == CharMap)) 
-        return true;    
-    else static if (isAssociativeArray!T && isSomeChar!(KeyType!T)) 
+    else static if (is(Unqual!T == CharMap))
+        return true;
+    else static if (isAssociativeArray!T && isSomeChar!(KeyType!T))
         return true; 
-    else static if (isSomeFunction!T && is(ReturnType!T == bool) && 
+    else static if (isSomeFunction!T && is(ReturnType!T == bool) &&
         Parameters!T.length == 1 && is(Parameters!T[0] == dchar))
         return true;
-    else 
+    else
         return false;
 }
 
@@ -343,13 +342,13 @@ if (isInputRange!Range && isSomeChar!(ElementType!Range) && isCharTester!T)
     alias UT = Unqual!T; 
     CharType!Range[] result;
     CharType!Range current; 
-               
+
     static if (is(UT == CharRange) || is(UT == CharMap) || isAssociativeArray!T)
     {
         while (true)
         {
             if (range.empty) break;
-            current = cast(CharType!Range) range.front;            
+            current = cast(CharType!Range) range.front;
             
             static if (until)
             {
@@ -361,14 +360,14 @@ if (isInputRange!Range && isSomeChar!(ElementType!Range) && isCharTester!T)
                 else break;
             }
             else
-            {                
+            {
                 if (current in charTester)
                 {
                     result ~= current;
                     range.popFront;
                 }
                 else break;
-            }            
+            }
         }
     }
     else static if (isInputRange!T)
@@ -385,10 +384,10 @@ if (isInputRange!Range && isSomeChar!(ElementType!Range) && isCharTester!T)
                     result ~= current;
                     range.popFront;
                 }
-                else break;            
+                else break;
             }
             else
-            {                        
+            {
                 if (canFind(charTester, current))
                 {
                     result ~= current;
@@ -396,7 +395,7 @@ if (isInputRange!Range && isSomeChar!(ElementType!Range) && isCharTester!T)
                 }
                 else break;
             }
-        }  
+        }
     }
     else static if (isSomeFunction!UT)
     {
@@ -404,7 +403,7 @@ if (isInputRange!Range && isSomeChar!(ElementType!Range) && isCharTester!T)
         {
             if (range.empty) break;
             current = cast(CharType!Range) range.front;
-            
+
             static if (until)
             {
                 if (!charTester(current))
@@ -412,10 +411,10 @@ if (isInputRange!Range && isSomeChar!(ElementType!Range) && isCharTester!T)
                     result ~= current;
                     range.popFront;
                 }
-                else break;            
+                else break;
             }
             else
-            {                        
+            {
                 if (charTester(current))
                 {
                     result ~= current;
@@ -423,11 +422,11 @@ if (isInputRange!Range && isSomeChar!(ElementType!Range) && isCharTester!T)
                 }
                 else break;
             }
-        }    
+        }
     }
     else static assert(0, "unsupported charTester argument type in nextWord(): " ~ T.stringof);
-    
-    return result;    
+
+    return result;
 }
 
 unittest
@@ -440,28 +439,26 @@ unittest
     ty";
     auto src2 = "az er
     ty";
-    auto src3 = "az er
-    ty";
-    
-    auto w1 = nextWord(src1, cs1); 
+
+    auto w1 = nextWord(src1, cs1);
     assert(w1 == "az");
     nextWord(src1, cs2);
-    auto w2 = nextWord(src1, cs1); 
+    auto w2 = nextWord(src1, cs1);
     assert(w2 == "er");
     nextWord(src1, cs2);
-    auto w3 = nextWord(src1, cs1); 
+    auto w3 = nextWord(src1, cs1);
     assert(w3 == "ty");
-    nextWord(src1, cs2);   
-    
-    auto w11 = nextWord(src2, cs3); 
+    nextWord(src1, cs2);
+
+    auto w11 = nextWord(src2, cs3);
     assert(w11 == "az");
     nextWord(src2, cs4);
-    auto w22 = nextWord(src2, cs3); 
+    auto w22 = nextWord(src2, cs3);
     assert(w22 == "er");
     nextWord(src2, cs4);
     import std.ascii: isAlpha;
-    auto w33 = nextWord(src2, &isAlpha); 
-    assert(w33 == "ty");             
+    auto w33 = nextWord(src2, &isAlpha);
+    assert(w33 == "ty");
 }
 
 /**
@@ -499,7 +496,7 @@ unittest
  */
 void skipWord(Range, T, bool until = false)(ref Range range, T charTester)
 if (isInputRange!Range && isSomeChar!(ElementType!Range) && isCharTester!T)
-{         
+{
     alias UT = Unqual!T;
     static if (is(UT == CharRange) || is(UT == CharMap) || isAssociativeArray!T)
     {
@@ -511,12 +508,12 @@ if (isInputRange!Range && isSomeChar!(ElementType!Range) && isCharTester!T)
                 if (range.front !in charTester)
                     range.popFront;
                 else break;
-            }     
+            }
             else
             {
                 if (range.front in charTester)
                     range.popFront;
-                else break;            
+                else break;
             }       
         }
     }
@@ -537,7 +534,7 @@ if (isInputRange!Range && isSomeChar!(ElementType!Range) && isCharTester!T)
                     range.popFront;
                 else break;
             }
-        }  
+        }
     }
     else static if (isSomeFunction!UT)
     {
@@ -556,8 +553,8 @@ if (isInputRange!Range && isSomeChar!(ElementType!Range) && isCharTester!T)
                     range.popFront;
                 else break;
             }
-        }    
-    }    
+        }
+    }
     else static assert(0, "unsupported charTester argument type in skipWord(): " ~ T.stringof);
 }
 
@@ -570,7 +567,7 @@ unittest
     import std.ascii: isWhite;
     auto src2 = "\t\t\r\nee";
     skipWord(src2, &isWhite);
-    assert(src2 == "ee");    
+    assert(src2 == "ee");
 }
 
 /**
@@ -607,10 +604,10 @@ if (isInputRange!Range && isSomeChar!(ElementType!Range) && isIntegral!T)
             break;
         result ~= range.front;
         range.popFront;
-        ++cnt;   
+        ++cnt;
     }   
     
-    return result;       
+    return result;
 }
 
 unittest
@@ -621,17 +618,17 @@ unittest
     assert(text1.nextSlice(8) == "3");
     auto text2 = "45";
     assert(text2.nextSlice(0) == "");
-    assert(text1.nextSlice(123456) == "");
+    assert(text1.nextSlice(12_34_56) == "");
     auto ut = "é_é";
     assert(ut.nextSlice(3) == "é_é");
-    
+
 }
 
 /**
  * Returns true of str starts with stuff.
  */
 bool canRead(Range, Stuff)(ref Range range, Stuff stuff)
-if (isInputRange!Range && isSomeChar!(ElementType!Range)  
+if (isInputRange!Range && isSomeChar!(ElementType!Range)
     && (isSomeChar!Stuff || isSomeString!Stuff))
 {
     static if (isSomeString!Range)
@@ -649,7 +646,7 @@ if (isInputRange!Range && isSomeChar!(ElementType!Range)
                 auto reader = ArrayRange!(ElementEncodingType!Range)(range);
                 auto slice = reader.nextSlice(dstuff.walkLength);
                 return dstuff == slice;
-            }  
+            }
         }
     } 
     else
@@ -678,7 +675,7 @@ unittest
  */
 auto bySlice(Range)(ref Range range, size_t len)
 if (isInputRange!Range && isSomeChar!(ElementType!Range))
-{ 
+{
     struct BySlice
     {
         private Range* _range;
@@ -727,7 +724,7 @@ if (isInputRange!Range && isSomeChar!(ElementType!Range))
     CharType!Range[] result;
     if (range.canRead("\r\n")) result = range.nextSlice(2);
     else if (range.canRead('\n')) result = range.nextSlice(1);
-    return result;    
+    return result;
 }
 
 unittest
@@ -739,7 +736,7 @@ unittest
     auto text2 = "\n";
     assert(readEol(text2) == "\n");
     auto text3 = "\r\n";
-    assert(readEol(text3) == "\r\n");    
+    assert(readEol(text3) == "\r\n");
 }
 
 /**
@@ -756,16 +753,16 @@ unittest
 {
     auto text0 = "";
     skipEol(text0);
-    assert(text0 == ""); 
+    assert(text0 == "");
     auto text1 = " ";
     skipEol(text1);
-    assert(text1 == " "); 
+    assert(text1 == " ");
     auto text2 = "\n";
     skipEol(text2);
     assert(text2 == "");
     auto text3 = "\r\na";
     skipEol(text3);
-    assert(text3 == "a");   
+    assert(text3 == "a");
 }
 
 
@@ -776,8 +773,8 @@ auto nextLine(bool keepTerminator = false, Range)(ref Range range)
 {
     auto result = nextWordUntil(range, "\r\n");
     static if (keepTerminator) result ~= range.readEol;
-    else range.skipEol;       
-    return result; 
+    else range.skipEol;
+    return result;
 }
 
 unittest
@@ -790,7 +787,7 @@ unittest
     assert(nextLine!false(text) == "12");
     assert(nextLine!false(text) == "1");
     assert(nextLine!false(text) == "");
-    assert(nextLine!false(text) == "");   
+    assert(nextLine!false(text) == "");
 }
 
 /**
@@ -814,7 +811,7 @@ if (isInputRange!Range && isSomeChar!(ElementType!Range))
         void popFront()
         {
             _front = nextLine!true(*_range);
-            import std.string;
+            import std.string: stripRight;
             _strippedfront = stripRight(_front);
         }
         ///
@@ -833,7 +830,6 @@ if (isInputRange!Range && isSomeChar!(ElementType!Range))
 
 unittest
 {
-    import std.stdio;
     auto text = "aw\r\nyess";
     auto range = text.byLine;
     assert(range.front == "aw");
@@ -850,7 +846,7 @@ unittest
  */
 size_t lineCount(Range)(Range range)
 {
-    return range.byLine.array.length;    
+    return range.byLine.array.length;
 }
 
 unittest
@@ -900,7 +896,7 @@ if (isInputRange!Range && isSomeChar!(ElementType!Range))
         ///
         void popFront()
         {
-            _front = nextWord(*_range); 
+            _front = nextWord(*_range);
         }
         ///
         auto front()
@@ -936,7 +932,7 @@ unittest
  */
 size_t wordCount(Range)(Range range)
 {
-    return range.byWord.array.length;    
+    return range.byWord.array.length;
 }
 
 unittest
@@ -960,12 +956,11 @@ auto nextSeparated(Range, Separators, bool strip = true)(ref Range range, Separa
         skipWord(result, whiteChars);
         result = nextWordUntil(result, whiteChars);
     }
-    return result;   
+    return result;
 }
 
 unittest
 {
-    import std.stdio;
     auto seps = CharMap[',', '\n'];
     auto text = "name, age \n Douglas, 27 \n Sophia 26";
     assert(text.nextSeparated(seps) == "name");
@@ -977,7 +972,7 @@ unittest
 /**
  * Returns an input range consisting of each separated word in the input argument
  */
-auto bySeparated(Range, Separators, bool strip = true)(ref Range range, Separators sep)    
+auto bySeparated(Range, Separators, bool strip = true)(ref Range range, Separators sep)
 if (isInputRange!Range && isSomeChar!(ElementType!Range))
 { 
     struct BySep
@@ -993,7 +988,7 @@ if (isInputRange!Range && isSomeChar!(ElementType!Range))
         ///
         void popFront()
         {
-            _front = nextSeparated!(Range, Separators, strip)(*_range, sep); 
+            _front = nextSeparated!(Range, Separators, strip)(*_range, sep);
         }
         ///
         auto front()
@@ -1006,7 +1001,7 @@ if (isInputRange!Range && isSomeChar!(ElementType!Range))
             return _front.length == 0;
         }
     }
-    return BySep(range);        
+    return BySep(range);
 }
 
 unittest
@@ -1036,7 +1031,7 @@ unittest
     auto text = "0123456 789";
     assert(text.readDecNumber == "0123456");
     text.popFront;
-    assert(text.readDecNumber == "789");  
+    assert(text.readDecNumber == "789");
     
     string t = "456";
     if (auto num = readDecNumber(t))
@@ -1058,7 +1053,7 @@ unittest
     assert(text1.readHexNumber == "1a2B3C");
     assert(text1 == " o");
     assert(text2.readHexNumber == "A897F2f2Ff2fF3c6C9c9Cc9cC9c123");
-    assert(text2 == " o");   
+    assert(text2 == " o");
 }
 
 /**
@@ -1072,9 +1067,9 @@ void stripLeftWhites(Range)(ref Range range)
 unittest
 {
     auto text = "  \n\r\v bla".dup;
-    auto rng = ArrayRange!char(text); 
+    auto rng = ArrayRange!char(text);
     rng.stripLeftWhites;
-    assert(rng.array == "bla");  
+    assert(rng.array == "bla");
 }
 //------------------------------------------------------------------------------
 

@@ -1204,7 +1204,7 @@ public:
      * outputStream = The stream where the data are written.
      * format = The format of the serialized data.
      */
-    void collectorToStream(Object root, Stream outputStream,
+    void collectorToStream(T)(ref T root, Stream outputStream,
         SerializationFormat format = defaultFormat)
     {
         _format = format;

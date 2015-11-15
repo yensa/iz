@@ -2,7 +2,7 @@ module iz.types;
 
 import std.c.stdlib;
 import std.traits, std.meta;
-    
+
 /// pointer.
 alias Ptr = void*;
 
@@ -19,7 +19,7 @@ alias BasicTypes = AliasSeq!(
 static unittest
 {
     foreach(T; BasicTypes)
-        assert( isBasicType!T, T.stringof);     
+        assert( isBasicType!T, T.stringof);
 }
 
     
@@ -29,7 +29,7 @@ static unittest
 bool isFixedSize(T)()
 {
     return (
-        staticIndexOf!(T,BasicTypes) != -1) || 
+        staticIndexOf!(T,BasicTypes) != -1) ||
         (is(T==struct) & (__traits(isPOD, T))
     );
 }
@@ -87,33 +87,33 @@ auto runtimeTypeInfo(T)()
     
     static if (isArray!T) alias TT = typeof(T.init[0]);
     else alias TT = T;
-    
+
     with (RuntimeType)
     {
         static if (is(TT == byte)) type = _byte;
-        else static if (is(TT == ubyte)) type = _ubyte; 
+        else static if (is(TT == ubyte)) type = _ubyte;
         else static if (is(TT == short)) type = _short;
         else static if (is(TT == ushort))type = _ushort;
         else static if (is(TT == int))   type = _int;
         else static if (is(TT == uint))  type = _uint;
         else static if (is(TT == long))  type = _long;
         else static if (is(TT == ulong)) type = _ulong;
-        
+
         else static if (is(TT == float)) type = _float;
         else static if (is(TT == double))type = _double;
         else static if (is(TT == real))  type = _real;
-        
+
         else static if (is(TT == char))  type = _char;
         else static if (is(TT == wchar)) type = _wchar;
         else static if (is(TT == dchar)) type = _dchar;
-        
+
         else static if (is(TT == class)) type = _object;
         else static if (is(TT == struct))type = _struct;
 
         else static if (is(TT == delegate))type = _delegate;
         else static if (is(TT == function))type = _function;
     }     
-    return RuntimeTypeInfo(type, array);   
+    return RuntimeTypeInfo(type, array);
 }
 
 ///ditto
@@ -151,8 +151,8 @@ if (is(T == class) || is(T == interface))
     else
     {
         import std.demangle;
-        return (cast(TypeInfo_Class)typeid(o)).name.demangle.split('.')[$-1];       
-    }    
+        return (cast(TypeInfo_Class)typeid(o)).name.demangle.split('.')[$-1];
+    }
 }
 
 version(unittest)

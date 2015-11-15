@@ -4,7 +4,7 @@ import std.traits;
 import std.typetuple;
 
 /// void version of the init() type function.
-@trusted void reset(T)(ref T t) 
+@trusted void reset(T)(ref T t)
 {
     t = T.init;
 }
@@ -117,16 +117,16 @@ if (    (kind == MaskKind.Byte && index <= T.sizeof)
     T _mask;
     static if (kind == MaskKind.Byte)
     {
-        _mask = T.min - 1 - (0xFF << index * 8); 
+        _mask = T.min - 1 - (0xFF << index * 8);
     }
     else static if (kind == MaskKind.Nibble)
     {
-        _mask = T.min - 1 - (0xF << index * 4);                           
+        _mask = T.min - 1 - (0xF << index * 4);
     }
     else static if (kind == MaskKind.Bit)
     {
-        _mask = T.min - 1 - (0x1 << index);            
-    }    
+        _mask = T.min - 1 - (0x1 << index);
+    }
     return value & _mask;
 }
 
@@ -157,7 +157,7 @@ auto maskBit(size_t index, T)(const T value) nothrow
  */
 auto mask(MaskKind kind = MaskKind.Byte, T)(const T value, size_t index) nothrow
 {
-    static immutable byteMasker = 
+    static immutable byteMasker =
     [
         0xFFFFFFFFFFFFFF00,
         0xFFFFFFFFFFFF00FF,
@@ -166,10 +166,10 @@ auto mask(MaskKind kind = MaskKind.Byte, T)(const T value, size_t index) nothrow
         0xFFFFFF00FFFFFFFF,
         0xFFFF00FFFFFFFFFF,
         0xFF00FFFFFFFFFFFF,
-        0x00FFFFFFFFFFFFFF 
+        0x00FFFFFFFFFFFFFF
     ];
     
-    static immutable nibbleMasker = 
+    static immutable nibbleMasker =
     [
         0xFFFFFFFFFFFFFFF0,
         0xFFFFFFFFFFFFFF0F,
@@ -186,7 +186,7 @@ auto mask(MaskKind kind = MaskKind.Byte, T)(const T value, size_t index) nothrow
         0xFFF0FFFFFFFFFFFF,
         0xFF0FFFFFFFFFFFFF,
         0xF0FFFFFFFFFFFFFF,
-        0x0FFFFFFFFFFFFFFF 
+        0x0FFFFFFFFFFFFFFF
     ];
     static if (kind == MaskKind.Byte)
         return value & byteMasker[index];
@@ -227,36 +227,36 @@ unittest
 {
     enum v0 = 0x44332211;
     static assert( mask!0(v0) == 0x44332200);
-    static assert( mask!1(v0) == 0x44330011);  
+    static assert( mask!1(v0) == 0x44330011);
     static assert( mask!2(v0) == 0x44002211);
     static assert( mask!3(v0) == 0x00332211);
-    
+
     assert( mask(v0,0) == 0x44332200);
-    assert( mask(v0,1) == 0x44330011);  
+    assert( mask(v0,1) == 0x44330011);
     assert( mask(v0,2) == 0x44002211);
-    assert( mask(v0,3) == 0x00332211);    
-    
+    assert( mask(v0,3) == 0x00332211);
+
     enum v1 = 0x87654321;
     static assert( mask!(0, MaskKind.Nibble)(v1) == 0x87654320);
     static assert( mask!(1, MaskKind.Nibble)(v1) == 0x87654301);
-    static assert( mask!(2, MaskKind.Nibble)(v1) == 0x87654021); 
+    static assert( mask!(2, MaskKind.Nibble)(v1) == 0x87654021);
     static assert( mask!(3, MaskKind.Nibble)(v1) == 0x87650321);
     static assert( mask!(7, MaskKind.Nibble)(v1) == 0x07654321);
     
     assert( mask!(MaskKind.Nibble)(v1,0) == 0x87654320);
     assert( mask!(MaskKind.Nibble)(v1,1) == 0x87654301);
-    assert( mask!(MaskKind.Nibble)(v1,2) == 0x87654021); 
+    assert( mask!(MaskKind.Nibble)(v1,2) == 0x87654021);
     assert( mask!(MaskKind.Nibble)(v1,3) == 0x87650321);
-    assert( mask!(MaskKind.Nibble)(v1,7) == 0x07654321);     
-    
+    assert( mask!(MaskKind.Nibble)(v1,7) == 0x07654321);
+
     enum v2 = 0b11111111;
     static assert( mask!(0, MaskKind.Bit)(v2) == 0b11111110);
     static assert( mask!(1, MaskKind.Bit)(v2) == 0b11111101);
-    static assert( mask!(7, MaskKind.Bit)(v2) == 0b01111111);  
-    
+    static assert( mask!(7, MaskKind.Bit)(v2) == 0b01111111);
+
     assert( maskBit(v2,0) == 0b11111110);
     assert( maskBit(v2,1) == 0b11111101);
-    assert( mask!(MaskKind.Bit)(v2,7) == 0b01111111);       
+    assert( mask!(MaskKind.Bit)(v2,7) == 0b01111111);
 }
 
 /**
@@ -275,7 +275,7 @@ struct ArrayRange(T, bool assumeDecoded = false)
 {
     static if (!isSomeChar!T || assumeDecoded || is(T==dchar))
     {
-        private T* _front, _back;    
+        private T* _front, _back;
         ///
         this(ref T[] stuff) 
         {
@@ -296,7 +296,7 @@ struct ArrayRange(T, bool assumeDecoded = false)
         T back()
         {
             return *_back;
-        }    
+        }
         ///
         void popFront()
         { 
@@ -319,40 +319,40 @@ struct ArrayRange(T, bool assumeDecoded = false)
             result._front = _front;
             result._back = _back;
             return result; 
-        } 
+        }
     } 
     else
     {
-    
-    private: 
-    
+
+    private:
+
         import std.utf: decode;
         size_t _position, _previous, _len;
         dchar _decoded;
         T* _front;
         bool _decode;
-        
+
         void readNext()
         {
             _previous = _position;
             auto str = _front[0 .. _len];
             _decoded = decode(str, _position);
         }
-        
+
     public:
-    
+
         ///
         this(ref T[] stuff) 
         { 
             _front = stuff.ptr;
             _len = stuff.length;
             _decode = true;
-        }     
+        }
         ///
         @property bool empty()
         {
             return _position >= _len;
-        } 
+        }
         ///
         dchar front()
         {
@@ -362,7 +362,7 @@ struct ArrayRange(T, bool assumeDecoded = false)
                 readNext;
             }
             return _decoded;
-        }       
+        }
         ///
         void popFront()
         {
@@ -381,11 +381,11 @@ struct ArrayRange(T, bool assumeDecoded = false)
             result._position   = _position;
             result._previous   = _previous;
             result._len        = _len;
-            result._decoded    = _decoded; 
+            result._decoded    = _decoded;
             result._front      = _front;
-            result._decode     = _decode;  
+            result._decode     = _decode;
             return result;
-        }              
+        }
     }
 }
 
@@ -400,8 +400,8 @@ unittest
     rng.popFront;
     assert(rng.front == 'a');
     rng.popFront;
-    assert(rng.empty);   
-    assert(arr == "bla");  
+    assert(rng.empty);
+    assert(arr == "bla");
     //    
     auto t1 = "é_é";
     auto r1 = ArrayRange!(immutable(char))(t1);
@@ -409,11 +409,11 @@ unittest
     foreach(i; 0 .. 3) r1.popFront;
     assert(r1.empty);
     r1 = r2;
-    assert(r1.front == 'é');  
+    assert(r1.front == 'é');
     //
     auto r3 = ArrayRange!(immutable(char),true)(t1);
     foreach(i; 0 .. 5) r3.popFront;
-    assert(r3.empty);   
+    assert(r3.empty);
 }
 
 unittest
@@ -427,7 +427,7 @@ unittest
         assert(rng.front == cnt++);
         rng.popFront;
     }
-    assert(arr == src);   
+    assert(arr == src);
 }
 
 /**
@@ -473,6 +473,6 @@ body
     foreach(immutable i; 0 .. 100)
         pickAndCall!(byte)(0, &foo, 1, test);
     assert(cnt == 0);
-    assert(!test);    
+    assert(!test);
 }
 
