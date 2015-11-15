@@ -38,7 +38,7 @@ class SerializableReference: Serializable
     public
     {
         ///
-        this() {propCollectorAll;}
+        this() {propCollectorAll!SerializableReference;}
 
         /**
          * Sets the internal fields according to a referenced.
@@ -1150,7 +1150,7 @@ public:
         foreach(immutable i; 0 .. collector.propCollectorCount)
         {
             alias DescType = PropDescriptor!int; 
-            void* descr = collector.propCollectorGetPtr(i);
+            void* descr = collector.propCollectorGetPtrByIndex(i);
             const(RuntimeTypeInfo*) rtti = collector.propCollectorGetType(i);
             //
             void addValueProp(T)()
@@ -1256,7 +1256,7 @@ public:
             {
                 bool done;  
                 IstNode childNode = cast(IstNode) child;
-                if (void* t0 = target.propCollectorGetPtr(childNode.info.name)) 
+                if (void* t0 = target.propCollectorGetPtrByName(childNode.info.name)) 
                 {
                     PropDescriptor!int* t1 = cast(PropDescriptor!int*)t0;
                     if (t1.rtti.array == childNode.info.isArray && 

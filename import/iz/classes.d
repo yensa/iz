@@ -262,6 +262,8 @@ private alias ComponentSubject = CustomSubject!(ComponentNotification, Component
 class Component: PropDescriptorCollection
 {
 
+    mixin PropDescriptorCollector;
+
 private:
 
     Component _owner;
@@ -278,14 +280,13 @@ private:
 
 protected:
 
-    mixin PropDescriptorCollector;
     char[] _name;
 
 public:
 
     this()
     {
-        propCollectorAll;
+        propCollectorAll!Component;
         _compSubj = construct!ComponentSubject;
         _owned = construct!(DynamicList!Component);
     }

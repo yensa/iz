@@ -387,34 +387,83 @@ mixin(genStandardPropDescriptors);
  */
 interface PropDescriptorCollection
 {
+    /**
+     * Returns the count of descriptor the analyzers have created.
+     */
     size_t propCollectorCount();
-    void * propCollectorGetPtr(string name);
-    void * propCollectorGetPtr(size_t index);
+    /**
+     * Returns a pointer to a descriptor according to its name.
+     * Similar to the propCollectorGet() function template excepted that the
+     * result type has not to be specified.
+     */
+    void* propCollectorGetPtrByName(string name);
+    /**
+     * Returns a pointer an indexed descriptor.
+     * index must be with the 0 .. propCollectorCount range.
+     */
+    void* propCollectorGetPtrByIndex(size_t index);
+    /**
+     * Returns a pointer to the RTTI for the nth descriptor.
+     * index must be with the 0 .. propCollectorCount range.
+     * This allows to cast properly the result of propCollectorGetPtr.
+     */
     const(RuntimeTypeInfo*) propCollectorGetType(size_t index);
 }
 
 /**
- * When mixed in a class, several analyzers can be used to automatically create
- * the PropDescriptors for the properties anotated with @Set and @Get
- * or the fields annotated with @SetGet.
+ * When mixed in a class or a struct, two analyzers can be used to create
+ * automatically the PropDescriptors for the properties setter and getter pairs
+ * anotated with @Set and @Get or the fields annotated with @SetGet.
  *
- * The analyzers are usually called in this(). 
+ * The analyzers are usually called in this(). The template has to be mixed in
+ * each class generation that introduces new annotated properties.
+ * Then analyzers, propCollectorGetPairs and propCollectorGetFields are
+ * function templates so they must be instantiated with the type they have
+ * to scan (usually typeof(this)). The two analyzers can be called with a
+ * third function template: propCollectorAll().
  */
 mixin template PropDescriptorCollector()
 {
-
     /**
      * Contains the list of izPropDesrcriptors created by the analyzers.
      * propCollectorGet() can be used to correctly cast an item.
      */
-    private void * [] descriptors;
+    static if (!__traits(hasMember, typeof(this), "_collectedDescriptors"))
+    protected void*[] _collectedDescriptors;
+
+// virtual methods or PropDescriptorCollection methods
+//
+// static if: the template injects some virtual methods that don't need
+// to be overriden
+// oror interface: because it looks like the interface makes the members
+// detectable even if not implemented.
+
+    /// see PropDescriptorCollection
+    static if (!__traits(hasMember, typeof(this), "propCollectorCount")
+        || is(typeof(this) : PropDescriptorCollection))
+    public size_t propCollectorCount() {return _collectedDescriptors.length;}
+
+    /// see PropDescriptorCollection
+    static if (!__traits(hasMember, typeof(this), "propCollectorGetPtrByName")
+        || is(typeof(this) : PropDescriptorCollection))
+    protected void* propCollectorGetPtrByName(string name)
+    {return propCollectorGet!size_t(name);}
+
+    /// see PropDescriptorCollection
+    static if (!__traits(hasMember, typeof(this), "propCollectorGetPtrByIndex")
+        || is(typeof(this) : PropDescriptorCollection))
+    protected void* propCollectorGetPtrByIndex(size_t index)
+    {return _collectedDescriptors[index];}
+
+    /// see PropDescriptorCollection
+    static if (!__traits(hasMember, typeof(this), "propCollectorGetType")
+        || is(typeof(this) : PropDescriptorCollection))
+    protected const(RuntimeTypeInfo*) propCollectorGetType(size_t index)
+    {return (cast(PropDescriptor!int*) _collectedDescriptors[index]).rtti;}
+
+// templates: no problem, instantiated according to class This or That
 
     /**
-     * Returns the count of descriptor the analyzers have created.
-     */
-    public final size_t propCollectorCount(){return descriptors.length;}
-
-    /** 
      * Returns a pointer to a descriptor according to its name.
      * Params:
      * name = the identifier used for the setter and the getter.
@@ -422,59 +471,30 @@ mixin template PropDescriptorCollector()
      * Returns:
      * null if the operation fails otherwise a pointer to an PropDescriptor!T.
      */
-    protected final PropDescriptor!T * propCollectorGet(T)(string name, bool createIfMissing = false)
+    protected PropDescriptor!T * propCollectorGet(T)(string name, bool createIfMissing = false)
     {
         PropDescriptor!T * descr;
-        
-        for(auto i = 0; i < descriptors.length; i++)
+
+        for(auto i = 0; i < _collectedDescriptors.length; i++)
         {
-            auto maybe = cast(PropDescriptor!T *) descriptors[i];
+            auto maybe = cast(PropDescriptor!T *) _collectedDescriptors[i];
             if (maybe.name != name) continue;
-            descr = maybe; break; 
+            descr = maybe; break;
         }
 
         if (createIfMissing && !descr)
         {
             descr = new PropDescriptor!T;
             descr.name = name;
-            descriptors ~= descr;
+            _collectedDescriptors ~= descr;
         }
         return descr;
-    }
-
-    /** 
-     * Returns a pointer to a descriptor according to its name.
-     * Similar to the *propCollectorGet()* excepted that the result
-     * type has not to be specified.
-     */    
-    protected final void * propCollectorGetPtr(string name)
-    {
-        return propCollectorGet!size_t(name);
-    }
-
-    /**
-     * Returns a pointer an indexed descriptor.
-     * index must be with the 0 .. propCollectorCount range.
-     */
-    protected final void * propCollectorGetPtr(size_t index)
-    {
-        return descriptors[index];
-    }
-
-    /**
-     * Returns a pointer to the RTTI for the nth descriptor.
-     * index must be with the 0 .. propCollectorCount range.
-     * This allows to cast properly the result of propCollectorGetPtr.
-     */
-    protected final const(RuntimeTypeInfo*) propCollectorGetType(size_t index)
-    {
-        return (cast(PropDescriptor!int*) descriptors[index]).rtti;
     }
 
     /**
      * Performs all the possible analysis.
      */
-    protected final void propCollectorAll(T = typeof(this))()
+    protected void propCollectorAll(T)()
     {
         propCollectorGetFields!T;
         propCollectorGetPairs!T;
@@ -485,7 +505,7 @@ mixin template PropDescriptorCollector()
      * and whose identifier starts with one of the following prefix: underscore, f, F.
      * The resulting property descriptors names don't include the prefix.
      */
-    protected void propCollectorGetFields(T = typeof(this))()
+    protected void propCollectorGetFields(T)()
     {
         import std.algorithm : canFind;
         import std.traits: isCallable;
@@ -516,50 +536,7 @@ mixin template PropDescriptorCollector()
      * annotated with @Set/@Get.
      * In a class hierarchy, an overriden accessor replaces the ancestor's one. 
      */
-    protected void propCollectorGetPairs(T = typeof(this))()
-    {
-    version(none)
-    {
-        struct Delegate {void* ptr, funcptr;}
-        auto virtualTable = typeid(this).vtbl;
-
-        foreach(member; __traits(allMembers, typeof(this))) 
-        foreach(overload; __traits(getOverloads, typeof(this), member))
-        foreach(attribute; __traits(getAttributes, overload))
-        {
-            static if (is(attribute == Get) && isCallable!overload &&
-                __traits(isVirtualMethod, overload))
-            {
-                alias DescriptorType = PropDescriptor!(ReturnType!overload);
-                auto descriptor = propCollectorGet!(ReturnType!overload)(member, true);
-                auto virtualIndex = __traits(getVirtualIndex, overload);
-                assert(virtualIndex > -1);
-                // setup the getter   
-                Delegate dg;
-                dg.ptr = cast(void*)this;
-                dg.funcptr = virtualTable[virtualIndex];
-                descriptor.getter = *cast(DescriptorType.PropGetter *) &dg;
-                //
-                version(none) writeln(attribute.stringof, " < ", member);
-            }
-            else static if (is(attribute == Set) && isCallable!overload &&
-                __traits(isVirtualMethod, overload))
-            {
-                alias DescriptorType = PropDescriptor!(Parameters!overload);
-                auto descriptor = propCollectorGet!(Parameters!overload)(member, true);
-                auto virtualIndex = __traits(getVirtualIndex, overload);
-                assert(virtualIndex > -1);
-                // setup the setter   
-                Delegate dg;
-                dg.ptr = cast(void*)this;
-                dg.funcptr = virtualTable[virtualIndex];
-                descriptor.setter = *cast(DescriptorType.PropSetter *) &dg;
-                //    
-                version(none) writeln(attribute.stringof, " > ", member);
-            }
-        }
-    }
-    else
+    protected void propCollectorGetPairs(T)()
     {
         foreach(member; __traits(allMembers, T))
         foreach(overload; __traits(getOverloads, T, member))
@@ -587,7 +564,6 @@ mixin template PropDescriptorCollector()
             }
         }
     }
-    }
 }
 
 version(unittest)
@@ -597,8 +573,8 @@ version(unittest)
         mixin PropDescriptorCollector;
         this(A...)(A a)
         {
-            propCollectorGetPairs;
-            propCollectorGetFields;
+            propCollectorGetPairs!Foo;
+            propCollectorGetFields!Foo;
         }
 
         @SetGet private uint _anUint;
@@ -655,7 +631,7 @@ version(unittest)
         mixin PropDescriptorCollector;
         this()
         {
-            propCollectorGetPairs;
+            propCollectorGetPairs!Bar;
         }
         @Set void field(size_t aValue)
         {
@@ -688,7 +664,7 @@ version(unittest)
         this()
         {
             _o = new Object;
-            propCollectorGetFields;
+            propCollectorGetFields!Dog;
         }
     }
 
@@ -703,14 +679,14 @@ version(unittest)
     {
         mixin PropDescriptorCollector;
         @SetGet Delegate _meaow;
-        this(){propCollectorGetFields;}
+        this(){propCollectorGetFields!Cat;}
     }
 
     class Fly
     {
         mixin PropDescriptorCollector;
         @GetSet string _bzzz(){return "bzzz";}
-        this(){propCollectorGetFields;}
+        this(){propCollectorGetFields!Fly;}
     }
 
     unittest
@@ -718,7 +694,7 @@ version(unittest)
         // test that a delegate is detected as a field
         Cat cat = new Cat;
         assert(cat.propCollectorCount == 1);
-        auto descr = cast(PropDescriptor!uint*) cat.propCollectorGetPtr(0);
+        auto descr = cast(PropDescriptor!uint*) cat.propCollectorGetPtrByIndex(0);
         assert(descr);
         assert(descr.rtti.type == RuntimeType._delegate);
         // test that a plain function is not detected as field
@@ -729,7 +705,7 @@ version(unittest)
     class Bee
     {
         mixin PropDescriptorCollector;
-        this(){propCollectorGetPairs;}
+        this(){propCollectorGetPairs!Bee;}
         @Set void delegate(uint) setter;
         @Get int delegate() getter;
     }
@@ -744,13 +720,14 @@ version(unittest)
     class B0
     {
         mixin PropDescriptorCollector;
-        this(){propCollectorAll;}
+        this(){propCollectorAll!B0;}
         @SetGet int _a;
     }
 
     class B1: B0
     {
-        //this(){propCollectorAll!(typeof(this));}
+        mixin PropDescriptorCollector;
+        this(){propCollectorAll!B1;}
         @Set void b(int value){}
         @Get int b(){return 0;}
         @SetGet int _c;
@@ -758,9 +735,8 @@ version(unittest)
 
     unittest
     {
-        //TODO-cbugfix: Once PropCollector injected it cant find any new properties in derivated classes
         auto b1 = new B1;
-        //assert(b1.propCollectorCount == 3);
+        assert(b1.propCollectorCount == 3);
     }
 }
 
