@@ -431,6 +431,12 @@ mixin template PropDescriptorCollector()
     static if (!__traits(hasMember, typeof(this), "_collectedDescriptors"))
     protected void*[] _collectedDescriptors;
 
+
+    // imports mandatory to mix the template
+    import iz.types: ScopedReachability;
+    import std.traits: isCallable, isDelegate, isFunctionPointer, Parameters,
+        ReturnType, BaseClassesTuple;
+
 // virtual methods or PropDescriptorCollection methods
 //
 // static if: the template injects some virtual methods that don't need
@@ -438,9 +444,8 @@ mixin template PropDescriptorCollector()
 // oror Base: because it looks like the interface makes the members
 // detectable even if not yet implemented.
 
-    import iz.types, std.traits;
     alias ToT = typeof(this);
-    // descendant already implement the interface
+    // descendant already implements the interface
     enum BaseHas = is(BaseClassesTuple!ToT[0] : PropDescriptorCollection);
     enum HasItf = is(ToT : PropDescriptorCollection);
     // interface must be implemented from this generation, even if methods detected
@@ -465,7 +470,7 @@ mixin template PropDescriptorCollector()
     protected const(RuntimeTypeInfo*) propCollectorGetType(size_t index)
     {return (cast(PropDescriptor!int*) _collectedDescriptors[index]).rtti;}
 
-// templates: no problem, instantiated according to class This or That
+// templates: no problem with overrides, instantiated according to class This or That
 
     /**
      * Returns a pointer to a descriptor according to its name.
@@ -511,11 +516,13 @@ mixin template PropDescriptorCollector()
      */
     protected void propCollectorGetFields(T)()
     {
-        import std.algorithm : canFind;
+        bool isFieldPrefix(char c)
+        {return c == '_' || c == 'f' || c == 'F';}
+
         mixin ScopedReachability;
         foreach(member; __traits(allMembers, T))
         static if (isMemberReachable!(T, member))
-        static if (canFind("_fF", member[0]) && (!isCallable!(__traits(getMember, T, member))
+        static if (isFieldPrefix(member[0]) && (!isCallable!(__traits(getMember, T, member))
             || (isDelegate!(__traits(getMember, T, member)))
             || (isFunctionPointer!(__traits(getMember, T, member)))
         ))
@@ -681,12 +688,10 @@ version(unittest)
         }
     }
 
-    unittest
-    {
-        Dog dog = new Dog;
-        assert(dog.propCollectorCount == 1);
-    }
+}
 
+unittest
+{
     alias Delegate = void delegate(uint a);
     class Cat
     {
@@ -702,19 +707,19 @@ version(unittest)
         this(){propCollectorGetFields!Fly;}
     }
 
-    unittest
-    {
-        // test that a delegate is detected as a field
-        Cat cat = new Cat;
-        assert(cat.propCollectorCount == 1);
-        auto descr = cast(PropDescriptor!uint*) cat.propCollectorGetPtrByIndex(0);
-        assert(descr);
-        assert(descr.rtti.type == RuntimeType._delegate);
-        // test that a plain function is not detected as field
-        Fly fly = new Fly;
-        assert(fly.propCollectorCount == 0);
-    }
+    // test that a delegate is detected as a field
+    Cat cat = new Cat;
+    assert(cat.propCollectorCount == 1);
+    auto descr = cast(PropDescriptor!uint*) cat.propCollectorGetPtrByIndex(0);
+    assert(descr);
+    assert(descr.rtti.type == RuntimeType._delegate);
+    // test that a plain function is not detected as field
+    Fly fly = new Fly;
+    assert(fly.propCollectorCount == 0);
+}
 
+unittest
+{
     class Bee
     {
         mixin PropDescriptorCollector;
@@ -722,21 +727,19 @@ version(unittest)
         @Set void delegate(uint) setter;
         @Get int delegate() getter;
     }
+    // test that delegates as fields are not detected as set/get pairs
+    Bee bee = new Bee;
+    assert(bee.propCollectorCount == 0);
+}
 
-    unittest
-    {
-        // test that delegates as fields are not detected as set/get pairs
-        Bee bee = new Bee;
-        assert(bee.propCollectorCount == 0);
-    }
-
+unittest
+{
     class B0
     {
         mixin PropDescriptorCollector;
         this(){propCollectorAll!B0;}
         @SetGet int _a;
     }
-
     class B1: B0
     {
         mixin PropDescriptorCollector;
@@ -745,27 +748,23 @@ version(unittest)
         @Get int b(){return 0;}
         @SetGet int _c;
     }
+    // test that all props are detected in the inheritence list
+    auto b1 = new B1;
+    assert(b1.propCollectorCount == 3);
+}
 
-    unittest
-    {
-        auto b1 = new B1;
-        assert(b1.propCollectorCount == 3);
-    }
-
+unittest
+{
     struct Bug
     {
         mixin PropDescriptorCollector;
         this(uint value){propCollectorAll!Bug;}
         @SetGet uint _a;
     }
-
-    unittest
-    {
-        // test that the 'static if things' related to 'interface inheritence'
-        // dont interfere when mixed in struct
-        Bug bug = Bug(0);
-        assert(bug.propCollectorCount == 1);
-    }
+    // test that the 'static if things' related to 'interface inheritence'
+    // dont interfere when mixed in struct
+    Bug bug = Bug(0);
+    assert(bug.propCollectorCount == 1);
 }
 
 unittest

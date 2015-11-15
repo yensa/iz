@@ -2141,7 +2141,7 @@ version(unittest)
     }
     //----
 
-    //TODO-ctest: test the serialization of multi-line strings in iztext format
+    //TODO-cfeature: double quote escapes in serialization iztext format
 
     // source errors ---+
     unittest
