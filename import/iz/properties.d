@@ -751,8 +751,8 @@ version(unittest)
 
     unittest
     {
-        // test that the static if things with interface inheritence
-        // does not interfere with struct
+        // test that the 'static if things' related to 'interface inheritence'
+        // dont interfere when mixed in struct
         Bug bug = Bug(0);
         assert(bug.propCollectorCount == 1);
     }

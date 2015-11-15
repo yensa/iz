@@ -2141,6 +2141,8 @@ version(unittest)
     }
     //----
 
+    //TODO-ctest: test the serialization of multi-line strings in iztext format
+
     // source errors ---+
     unittest
     {
