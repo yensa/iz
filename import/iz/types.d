@@ -73,7 +73,9 @@ enum RuntimeType : ubyte
  */
 struct RuntimeTypeInfo
 {
+    /// Unqualified type
     RuntimeType type;
+    /// As array
     bool array;
 }
 
@@ -82,7 +84,7 @@ struct RuntimeTypeInfo
  */
 auto runtimeTypeInfo(T)()
 {
-    bool array = isArray!T;
+    enum array = isArray!T;
     RuntimeType type;
     
     static if (isArray!T) alias TT = Unqual!(typeof(T.init[0]));
@@ -145,12 +147,12 @@ if (is(T == class) || is(T == interface))
 {
     static if (is(T == class)) Object o = t;
     else Object o = cast(Object) t;
-    import std.array;
+    import std.array: split;
     static if (assumeDemangled)
         return (cast(TypeInfo_Class)typeid(o)).name.split('.')[$-1];
     else
     {
-        import std.demangle;
+        import std.demangle: demangle;
         return (cast(TypeInfo_Class)typeid(o)).name.demangle.split('.')[$-1];
     }
 }

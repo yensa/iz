@@ -1,8 +1,12 @@
 module iz.serializer;
 
-import std.range;
-import std.stdio, std.typetuple, std.conv, std.traits;
-import iz.types, iz.memory, iz.properties, iz.containers, iz.streams, iz.referencable;
+version(unittest) import std.stdio;
+
+import
+    std.range, std.typetuple, std.conv, std.traits;
+import
+    iz.types, iz.memory, iz.properties, iz.containers, iz.streams,
+    iz.referencable;
 
 // Serializable types ---------------------------------------------------------+
 
@@ -205,11 +209,11 @@ unittest
     static assert( isSerializable!GenericDelegate);
 }
 
-private string getElemStringOf(T)() if (isArray!T)
+private string getElemStringOf(T)()
+if (isArray!T)
 {
+    // Not ElementType: on string and wstring it always returns  dchar.
     return typeof(T.init[0]).stringof;
-    // BUG with string litterals
-    //return (ElementType!T).stringof;
 }
 
 unittest
@@ -241,7 +245,7 @@ struct SerNodeInfo
     /// the type pf the property
     SerializableType type;
     /// a pointer to a PropDescriptor
-    Ptr   descriptor;
+    Ptr     descriptor;
     /// the value
     ubyte[] value;
     /// the name of the property
@@ -269,8 +273,8 @@ alias WantDescriptorEvent = void delegate(IstNode node, ref Ptr descriptor, out 
 /**
  * Event triggered when a serializer failed to get an object to deserialize.
  * Params:
- * node = The information the callee uses to instantiate a Serializable.
- * serializable = the Object the callee has to instantiate. 
+ * node = The information the callee uses to set the parameter serializable.
+ * serializable = the Object the callee has to return.
  */
 alias WantObjectEvent = void delegate(IstNode node, ref Object serializable);
 
@@ -342,23 +346,22 @@ void nodeInfo2Declarator(const SerNodeInfo* nodeInfo)
             descr.set(str);
             destruct(str);
             break;
-        case _delegate:
+        case _delegate, _function:
             char[] refId = cast(char[]) nodeInfo.value[];
-            writeln(refId);
-            void* refToDg = ReferenceMan.reference!(void)(refId);
-            auto dg = *cast(GenericDelegate*) refToDg;
-            auto descr = cast(PropDescriptor!GenericDelegate*) nodeInfo.descriptor;
-            descr.set(dg);
-            break;
-        case _function:
-            char[] refId = cast(char[]) nodeInfo.value[];
-            void* refToDg = ReferenceMan.reference!(void)(refId);
-            auto dg = *cast(GenericFunction*) refToDg;
-            auto descr = cast(PropDescriptor!GenericFunction*) nodeInfo.descriptor;
-            descr.set(dg);
+            void* refvoid = ReferenceMan.reference!(void)(refId);
+            void setFromRef(T)()
+            {
+                auto stuff = *cast(T*) refvoid;
+                auto descr = cast(PropDescriptor!T*) nodeInfo.descriptor;
+                descr.set(stuff);
+            }
+            if (nodeInfo.type == _delegate) setFromRef!GenericDelegate;
+            else setFromRef!GenericFunction;
             break;
     }
 }
+
+private __gshared static char[] invalidText = "invalid".dup;
 
 /// Converts the raw data contained in a SerNodeInfo to its string representation.
 char[] value2text(const SerNodeInfo* nodeInfo)
@@ -369,7 +372,7 @@ char[] value2text(const SerNodeInfo* nodeInfo)
     //
     with (SerializableType) final switch(nodeInfo.type)
     {
-        case _invalid: return "invalid".dup;
+        case _invalid: return invalidText;
         case _serializable, _object: return cast(char[])(nodeInfo.value);
         case _ubyte:    return v2t!ubyte;
         case _byte:     return v2t!byte;
@@ -410,7 +413,7 @@ ubyte[] text2value(char[] text, const SerNodeInfo* nodeInfo)
     //    
     with(SerializableType) final switch(nodeInfo.type)
     {
-        case _invalid:  return cast(ubyte[])"invalid".dup;
+        case _invalid:  return cast(ubyte[])invalidText;
         case _ubyte:    return t2v!ubyte;
         case _byte:     return t2v!byte;
         case _ushort:   return t2v!ushort;
@@ -566,19 +569,15 @@ class IstNode : TreeItem
         {
             if (!level) return "";
             //   
-            import std.array: join;
+            import std.algorithm: joiner;
             string[] items;
-            items.length = level * 2;
-            auto cnt = items.length;
             IstNode curr = cast(IstNode) parent;
             while (curr)
             {
-                cnt--;
-                items[cnt--] = ".";
-                items[cnt] = curr.info.name;
+                items ~= curr.info.name;
                 curr = cast(IstNode) curr.parent;
             }
-            return items.join[0..$-1];    
+            return items.retro.join(".");
         }
     }
 }
@@ -592,8 +591,8 @@ alias SerializationReader = void function(Stream stream, IstNode istNode);
 // JSON format ----------------------------------------------------------------+
 private void writeJSON(IstNode istNode, Stream stream)
 {
-    import std.json;
-    version(assert) bool pretty = true; else bool pretty = false;
+    import std.json: JSONValue, toJSON;
+    version(assert) const bool pretty = true; else const bool pretty = false;
     //    
     auto level  = JSONValue(istNode.level);
     auto type   = JSONValue(istNode.info.type);
@@ -609,7 +608,7 @@ private void writeJSON(IstNode istNode, Stream stream)
 
 private void readJSON(Stream stream, IstNode istNode)
 {
-    import std.json;
+    import std.json: JSONValue, parseJSON, JSON_TYPE;
     // cache property
     size_t cnt, len;
     char c;
@@ -638,7 +637,7 @@ private void readJSON(Stream stream, IstNode istNode)
     cache.length = len;
     stream.read(cache.ptr, cache.length);
     //
-    JSONValue prop = parseJSON(cache);
+    const JSONValue prop = parseJSON(cache);
     
     const(JSONValue)* level = "level" in prop;
     if (level && level.type == JSON_TYPE.INTEGER)
@@ -658,7 +657,7 @@ private void readJSON(Stream stream, IstNode istNode)
     else 
         istNode.info.isDamaged = true;
         
-    const(JSONValue)* isarray = "isarray" in prop;
+    const JSONValue* isarray = "isarray" in prop;
     if (isarray && isarray.type == JSON_TYPE.INTEGER)
         istNode.info.isArray = cast(bool) isarray.integer;
     else 
@@ -789,7 +788,6 @@ version(BigEndian) private ubyte[] swapBE(const ref ubyte[] input, size_t div)
 
 private void writeBin(IstNode istNode, Stream stream)
 {
-    ubyte bin;
     ubyte[] data;
     uint datalength;
     //header
@@ -1152,7 +1150,7 @@ public:
         {
             alias DescType = PropDescriptor!int; 
             void* descr = collector.propCollectorGetPtrByIndex(i);
-            const(RuntimeTypeInfo*) rtti = collector.propCollectorGetType(i);
+            const RuntimeTypeInfo* rtti = collector.propCollectorGetType(i);
             //
             void addValueProp(T)()
             {
@@ -1614,7 +1612,7 @@ private static string genAllAddProps()
 {
     string result;
     char[] type;
-    import std.ascii;
+    import std.ascii: toUpper;
     foreach(T; SerializableTypes) if (!(is(T == struct)) && !(is(T == GenericDelegate))
      && !(is(T == GenericFunction)) )
     {
@@ -1652,19 +1650,19 @@ version(unittest)
         void testType(T)(T t)
         {
             char[] asText;
-            T value = t;
+            T v = t;
             SerNodeInfo inf;
             PropDescriptor!T descr;
             //
-            descr.define(&value, "property");
+            descr.define(&v, "property");
             setNodeInfo!T(&inf, &descr);
             //
-            asText = to!string(value).dup;
+            asText = to!string(v).dup;
             assert(value2text(&inf) == asText, T.stringof);
             static if (!isArray!T) 
-                assert(*cast(T*)(text2value(asText, &inf)).ptr == value, T.stringof);
+                assert(*cast(T*)(text2value(asText, &inf)).ptr == v, T.stringof);
             static if (isArray!T) 
-                assert(cast(ubyte[])text2value(asText, &inf)==cast(ubyte[])value, T.stringof);
+                assert(cast(ubyte[])text2value(asText, &inf)==cast(ubyte[])v, T.stringof);
         }
 
         struct ImpConv{uint _field; alias _field this;}
