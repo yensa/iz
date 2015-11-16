@@ -467,7 +467,7 @@ mixin template PropDescriptorCollector()
 // templates: no problem with overrides, instantiated according to class This or That
 
     // imports mandatory to mix the template
-    import iz.types: ScopedReachability;
+    import iz.types: ScopedReachability, runtimeTypeInfo;
     import std.traits: isCallable, isDelegate, isFunctionPointer, Parameters,
         ReturnType, BaseClassesTuple;
 

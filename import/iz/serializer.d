@@ -686,7 +686,6 @@ private void writeText(IstNode istNode, Stream stream)
     // name
     char[] name = istNode.info.name.dup;
     stream.write(name.ptr, name.length);
-    stream.writeChar(' ');
     // name value separators
     char[] name_value = " = \"".dup;
     stream.write(name_value.ptr, name_value.length);
@@ -740,7 +739,6 @@ private void readText(Stream stream, IstNode istNode)
     istNode.info.name = identifier.idup;
 
     // name value separators
-    i++;
     while(propText[i] != ' ') i++;
     i++;
     //std.stdio.writeln(propText[i]); 
