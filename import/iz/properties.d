@@ -509,9 +509,9 @@ mixin template PropDescriptorCollector()
     }
 
     /**
-     * Creates the properties descriptors for each field marked with @SetGet
-     * and whose identifier starts with one of the following prefix: underscore, f, F.
-     * The resulting property descriptors names don't include the prefix.
+     * Creates the properties descriptors for each field annotated with @SetGet
+     * and whose identifier starts with one of these prefixes: underscore, f, F.
+     * The .name property of the descriptors don't include the prefix.
      */
     protected void propCollectorGetFields(T)()
     {
@@ -546,6 +546,7 @@ mixin template PropDescriptorCollector()
      */
     protected void propCollectorGetPairs(T)()
     {
+        //TODO-csafety: @Set/@Get, only one param in the setter, descriptors rtti equality
         mixin ScopedReachability;
         foreach(member; __traits(allMembers, T))
         static if (isMemberReachable!(T, member))
@@ -558,6 +559,9 @@ mixin template PropDescriptorCollector()
                 alias DescriptorType = PropDescriptor!Type;
                 auto descriptor = propCollectorGet!(Type)(member, true);
                 auto dg = &overload;
+                version(assert) if (descriptor.setter) assert (
+                    runtimeTypeInfo!Type == *descriptor.rtti, // note: rtti unqalifies the type
+                    "setter and getter types mismatch");
                 descriptor.define(descriptor.setter, dg, member);
                 //   
                 version(none) writeln(attribute.stringof, " < ", member);
@@ -565,9 +569,14 @@ mixin template PropDescriptorCollector()
             else static if (is(attribute == Set) && isCallable!overload)
             {
                 alias Type = Parameters!overload;
+                version(assert) static assert(Type.length == 1,
+                    "setter must only have one parameter");
                 alias DescriptorType = PropDescriptor!Type;
                 auto descriptor = propCollectorGet!(Parameters!overload)(member, true);
                 auto dg = &overload;
+                version(assert) if (descriptor.getter) assert (
+                    runtimeTypeInfo!Type == *descriptor.rtti,
+                    "setter and getter type mismatch");
                 descriptor.define(dg, descriptor.getter, member);
                 //
                 version(none) writeln(attribute.stringof, " > ", member);
@@ -689,6 +698,24 @@ version(unittest)
 
 unittest
 {
+    auto foo = construct!Foo;
+    foo.use;
+    foo.destruct;
+
+    auto baz = construct!Baz;
+    auto prop = baz.propCollectorGet!size_t("field");
+    prop.set(0);
+    assert(baz.info == "BarBaz");
+    assert(baz.propCollectorCount == 1);
+    auto a = prop.get;
+    assert(baz.info == "most derived");
+    baz.destruct;
+
+    writeln("PropDescriptorCollector passed the tests");
+}
+
+unittest
+{
     alias Delegate = void delegate(uint a);
     class Cat
     {
@@ -766,21 +793,39 @@ unittest
 
 unittest
 {
-    auto foo = construct!Foo;
-    foo.use;
-    foo.destruct;
-
-    auto baz = construct!Baz;
-    auto prop = baz.propCollectorGet!size_t("field");
-    prop.set(0);
-    assert(baz.info == "BarBaz");
-    assert(baz.propCollectorCount == 1);
-    auto a = prop.get;
-    assert(baz.info == "most derived");
-    baz.destruct;
-
-    writeln("PropDescriptorCollector passed the tests");
+    // test safety, multiple setter types
+    enum decl = q{
+        class Bug
+        {
+            mixin PropDescriptorCollector;
+            this(){propCollectorAll!Bug;}
+            @Set void b(int value, uint ouch){}
+            @Get int b(){return 0;}
+        }
+    };
+    static assert( !__traits(compiles, mixin(decl)));
 }
+
+unittest
+{
+    // test safety, setter & getter types mismatch
+    version(assert)
+    {
+        bool test;
+        class Bug
+        {
+            mixin PropDescriptorCollector;
+            this(){propCollectorAll!Bug;}
+            @Set void b(string value){}
+            @Get int b(){return 0;}
+        }
+        try auto b = new Bug;
+        catch(Error e) test = true;
+        assert(test);
+    }
+}
+
+
 
 /**
  * This container maintains a list of property synchronized between themselves.

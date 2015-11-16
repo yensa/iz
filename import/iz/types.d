@@ -85,8 +85,8 @@ auto runtimeTypeInfo(T)()
     bool array = isArray!T;
     RuntimeType type;
     
-    static if (isArray!T) alias TT = typeof(T.init[0]);
-    else alias TT = T;
+    static if (isArray!T) alias TT = Unqual!(typeof(T.init[0]));
+    else alias TT = Unqual!T;
 
     with (RuntimeType)
     {
