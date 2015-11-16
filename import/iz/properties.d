@@ -474,10 +474,11 @@ mixin template PropDescriptorCollector()
     /**
      * Returns a pointer to a descriptor according to its name.
      * Params:
-     * name = the identifier used for the setter and the getter.
-     * createIfMissing = when set to true, the result is never null.
+     *      T = T type of the property.
+     *      name = the identifier used for the setter and the getter.
+     *      createIfMissing = when set to true, the result is never null.
      * Returns:
-     * null if the operation fails otherwise a pointer to an PropDescriptor!T.
+     *      null if the operation fails otherwise a pointer to a PropDescriptor!T.
      */
     protected PropDescriptor!T * propCollectorGet(T)(string name, bool createIfMissing = false)
     {
@@ -546,7 +547,6 @@ mixin template PropDescriptorCollector()
      */
     protected void propCollectorGetPairs(T)()
     {
-        //TODO-csafety: @Set/@Get, only one param in the setter, descriptors rtti equality
         mixin ScopedReachability;
         foreach(member; __traits(allMembers, T))
         static if (isMemberReachable!(T, member))

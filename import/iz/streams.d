@@ -185,15 +185,17 @@ interface Stream
      */
     size_t read(Ptr buffer, size_t count);
     /**
-     * Reads T.sizeof bytes in value.
-     * Returns the count of bytes that's been read.
+     * Reads and returns a T.
+     * The return is undefined if the stream position does not allow to read a T.
      * T must verify isFixedSize.
      * Typed readers are generated for each type in iz.types.BasicTypes
      * and they are named readInt, readChar, etc.
      */
-    final size_t readVariable(T)(T* value)
+    final T readVariable(T)()
     {
-        return read(value, T.sizeof);
+        T result;
+        read(&result, T.sizeof);
+        return result;
     }     
     /**
      * Writes count bytes to buffer.
@@ -529,7 +531,7 @@ unittest
  * t = The array to write.
  */
 void writeArray(bool WriteLength = true, T)(Stream str, auto ref T t)
-if (isArray!T && !hasLength!(typeof(T.init[0])))
+if (isArray!T && !isMultiDimensionalArray!T)
 {
     static if (WriteLength) str.writeUlong(t.length);
     str.write(t.ptr, t.length * typeof(T.init[0]).sizeof);
@@ -546,14 +548,10 @@ if (isArray!T && !hasLength!(typeof(T.init[0])))
  * t = The array to write.
  */
 void readArray(bool ReadLength = true, T)(Stream str, auto ref T t)
-if (isArray!T && !hasLength!(typeof(T.init[0])))
+if (isArray!T && !isMultiDimensionalArray!T)
 {
-    ulong len = void;
     static if (ReadLength)
-    {
-        str.readUlong(&len);
-        t.length = len;
-    }
+        t.length = str.readUlong;
     str.read(t.ptr, t.length * typeof(T.init[0]).sizeof);
 }
 
@@ -1276,7 +1274,7 @@ version(unittest)
     class MemoryStreamTest1 : CommonStreamTester!MemoryStream {}
     class FileStreamTest1: CommonStreamTester!(FileStream, "filestream1.txt"){}
 
-    unittest
+    /*unittest
     {
         auto sz = 0x1_FFFF_FFFFUL;
         auto huge = construct!FileStream("huge.bin");
@@ -1288,7 +1286,7 @@ version(unittest)
         huge.size = sz;
         huge.position = 0;
         assert(huge.size == sz);
-    }
+    }*/
 
     class CommonStreamTester(T, A...)
     {
@@ -1335,9 +1333,8 @@ version(unittest)
             str.position = 0;
             for (int i = 0; i < len; i++)
             {
-                int r0,r1;
-                str.readInt(&r0);
-                strcpy.readInt(&r1);
+                auto r0 = str.readInt;
+                auto r1 = strcpy.readInt;
                 assert(r0 == r1);
             }
             strcpy.position = 0;
