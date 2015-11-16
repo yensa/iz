@@ -161,6 +161,7 @@ private static bool isSerStructType(T)()
 private bool isSerArrayType(T)()
 {
     static if (!isArray!T) return false;
+    else static if (isMultiDimensionalArray!T) return false;
     else static if (true)
     {
         alias TT = typeof(T.init[0]);
@@ -1780,6 +1781,8 @@ version(unittest)
             }
     }
 
+    //TODO-cdecision: delete the serialization system based on manual declarations, the other is much more usable
+    // by format only use the system based on manual declarations
     void testByFormat(SerializationFormat format)()
     {
         MemoryStream str  = construct!MemoryStream;
@@ -1989,7 +1992,6 @@ version(unittest)
         writeln("Serializer passed the ", to!string(format), " format test");
     }
 
-
     // test fields renamed between two versions ---+
     class ErrSer: Serializable
     {
@@ -2138,6 +2140,58 @@ version(unittest)
         assert(c._d);
         c._d(123);
         assert(c.dgTest == "awyesss");
+    }
+    //----
+
+    // test generic Reference restoring ---+
+    class HasGenRef: PropDescriptorCollection
+    {
+        // the source, usually comes from outside
+        Object source;
+        // what's gonna be assigned
+        Object target;
+        mixin PropDescriptorCollector;
+        this()
+        {
+            propCollectorAll!HasGenRef;
+            source = construct!Object;
+            ReferenceMan.storeReference!void(cast(void*)source,"thiswillwork");
+            target = source;
+        }
+        ~this()
+        {
+            destruct(source);
+        }
+
+        @Get const(char)[] objectReference()
+        {
+            // get ID from what's currently assigned
+            return ReferenceMan.referenceID!void(cast(void*)target);
+        }
+
+        @Set objectReference(char[] value)
+        {
+            // ID -> Reference -> assign the variable
+            target = cast(Object) ReferenceMan.reference!void(value);
+        }
+
+        //TODO-cdecision: maybe delete the code related to delegate serialization, the mechanism used in this unittest looks better
+
+    }
+
+    unittest
+    {
+        MemoryStream str = construct!MemoryStream;
+        Serializer ser = construct!Serializer;
+        HasGenRef obj = construct!HasGenRef;
+        scope(exit) destruct(ser, str, obj);
+
+        ser.collectorToStream(obj, str);
+        str.position = 0;
+        obj.target = null;
+
+        ser.streamToPropCollector(str, obj);
+        assert(obj.target == obj.source);
     }
     //----
 

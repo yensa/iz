@@ -180,7 +180,7 @@ version(unittest)
  * __traits(getProtection) does not faithfully represent the member accessibility
  * if the function is declared in another module.
  * Another problem is that __traits(getProtection) does not well represent the
- * accessibility of the private members (own members or friends class /struct).
+ * accessibility of the private members (own members or friend classes /structs).
  */
 mixin template ScopedReachability()
 {
@@ -189,4 +189,57 @@ mixin template ScopedReachability()
     {
         return __traits(compiles, __traits(getMember, T, member));
     }
+}
+
+/**
+ * Detects whether type $(D T) is a multi dimensional array.
+ * Params:
+ *      T = type to be tested
+ *
+ * Returns:
+ *      true if T is a multi dimensional array
+ */
+template isMultiDimensionalArray(T)
+{
+    static if (!isArray!T)
+        enum isMultiDimensionalArray = false;
+    else
+    {
+        import std.range: hasLength;
+        alias DT = typeof(T.init[0]);
+        enum isMultiDimensionalArray = hasLength!DT || isNarrowString!DT;
+    }
+}
+///
+unittest
+{
+    assert(isMultiDimensionalArray!(string[]) );
+    assert(!isMultiDimensionalArray!(int[]) );
+    assert(isMultiDimensionalArray!(int[][]) );
+    assert(!isMultiDimensionalArray!(int) );
+    assert(!isMultiDimensionalArray!(string) );
+    assert(!isMultiDimensionalArray!(int[][] function()) );
+    assert(!isMultiDimensionalArray!void);
+}
+
+/**
+ * Returns the dimension count of a $(D array).
+ */
+size_t dimensionCount(T)()
+if (isArray!T)
+{
+    size_t result = 1;
+    static if (isMultiDimensionalArray!T)
+    {
+        alias DT = typeof(T.init[0]);
+        result += dimensionCount!DT;
+    }
+    return result;
+}
+///
+unittest
+{
+    assert(dimensionCount!(int[]) == 1);
+    assert(dimensionCount!(int[][]) == 2);
+    assert(dimensionCount!(int[][][]) == 3);
 }

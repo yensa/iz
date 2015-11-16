@@ -431,12 +431,6 @@ mixin template PropDescriptorCollector()
     static if (!__traits(hasMember, typeof(this), "_collectedDescriptors"))
     protected void*[] _collectedDescriptors;
 
-
-    // imports mandatory to mix the template
-    import iz.types: ScopedReachability;
-    import std.traits: isCallable, isDelegate, isFunctionPointer, Parameters,
-        ReturnType, BaseClassesTuple;
-
 // virtual methods or PropDescriptorCollection methods
 //
 // static if: the template injects some virtual methods that don't need
@@ -471,6 +465,11 @@ mixin template PropDescriptorCollector()
     {return (cast(PropDescriptor!int*) _collectedDescriptors[index]).rtti;}
 
 // templates: no problem with overrides, instantiated according to class This or That
+
+    // imports mandatory to mix the template
+    import iz.types: ScopedReachability;
+    import std.traits: isCallable, isDelegate, isFunctionPointer, Parameters,
+        ReturnType, BaseClassesTuple;
 
     /**
      * Returns a pointer to a descriptor according to its name.
@@ -518,16 +517,14 @@ mixin template PropDescriptorCollector()
     {
         bool isFieldPrefix(char c)
         {return c == '_' || c == 'f' || c == 'F';}
+        enum getStuff = q{__traits(getMember, T, member)};
 
         mixin ScopedReachability;
         foreach(member; __traits(allMembers, T))
         static if (isMemberReachable!(T, member))
-        static if (isFieldPrefix(member[0]) && (!isCallable!(__traits(getMember, T, member))
-            || (isDelegate!(__traits(getMember, T, member)))
-            || (isFunctionPointer!(__traits(getMember, T, member)))
-        ))
+        static if (isFieldPrefix(member[0]) && !isCallable!(mixin(getStuff))
+            || isDelegate!(mixin(getStuff)) || isFunctionPointer!(mixin(getStuff)))
         {
-            static if (is(typeof(__traits(getMember, this, member))))
             foreach(attribute; __traits(getAttributes, __traits(getMember, this, member)))
             static if (is(attribute == SetGet)) 
             {
