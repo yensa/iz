@@ -6,7 +6,7 @@ import
     std.range, std.typetuple, std.conv, std.traits;
 import
     iz.types, iz.memory, iz.properties, iz.containers, iz.streams,
-    iz.referencable;
+    iz.referencable, iz.strings;
 
 // Serializable types ---------------------------------------------------------+
 
@@ -36,7 +36,7 @@ class SerializableReference: Serializable
     private
     {
         char[] _tp;
-        char[]  _id;
+        char[] _id;
         mixin PropDescriptorCollector;
     }
     public
@@ -82,7 +82,7 @@ enum SerializableType
 {
     // must match iz.types.RuntimeType
     _invalid= 0,
-    _byte   = 0x01, _ubyte, _short, _ushort, _int, _uint, _long, _ulong,
+    _bool   = 0x01, _byte, _ubyte, _short, _ushort, _int, _uint, _long, _ulong,
     _float  = 0x10, _double,
     _char   = 0x20, _wchar, _dchar,
     _object = 0x30, _serializable,
@@ -95,7 +95,7 @@ private struct InvalidSerType{}
 // must match iz.types.RuntimeType
 private alias SerializableTypes = TypeTuple!(
     InvalidSerType, 
-    byte, ubyte, short, ushort, int, uint, long, ulong,
+    bool, byte, ubyte, short, ushort, int, uint, long, ulong,
     float, double,
     char, wchar, dchar,
     Object, Serializable,
@@ -231,7 +231,7 @@ private string getSerializableTypeString(T)()
     else static if (is(T:Object)) return Serializable.stringof;
     else static if (isSerStructType!T)
         foreach(TT; SerializableTypes)
-            static if (isAssignable!(T,TT))
+            static if (isAssignable!(T,TT) && !is(TT==bool))
                 return TT.stringof;
     assert(0, "failed to get the string for a serializable type");
 }
@@ -325,6 +325,7 @@ void nodeInfo2Declarator(const SerNodeInfo* nodeInfo)
     with (SerializableType) final switch(nodeInfo.type)
     {
         case _invalid, _serializable, _object: break;
+        case _bool: toDecl!bool; break;
         case _byte: toDecl!byte; break;
         case _ubyte: toDecl!ubyte; break;
         case _short: toDecl!short; break;
@@ -374,6 +375,7 @@ char[] value2text(const SerNodeInfo* nodeInfo)
     {
         case _invalid: return invalidText;
         case _serializable, _object: return cast(char[])(nodeInfo.value);
+        case _bool:     return v2t!bool;
         case _ubyte:    return v2t!ubyte;
         case _byte:     return v2t!byte;
         case _ushort:   return v2t!ushort;
@@ -414,6 +416,7 @@ ubyte[] text2value(char[] text, const SerNodeInfo* nodeInfo)
     with(SerializableType) final switch(nodeInfo.type)
     {
         case _invalid:  return cast(ubyte[])invalidText;
+        case _bool:     return t2v!bool;
         case _ubyte:    return t2v!ubyte;
         case _byte:     return t2v!byte;
         case _ushort:   return t2v!ushort;
@@ -443,7 +446,7 @@ void setNodeInfo(T)(SerNodeInfo* nodeInfo, PropDescriptor!T* descriptor)
         static if (isSerStructType!T)
         {
             foreach(TT;SerializableTypes)
-                static if (isAssignable!(T,TT))
+                static if (isAssignable!(T,TT) && !is(TT == bool))
                 {
                     nodeInfo.type = text2type[TT.stringof];
                     break;
@@ -694,7 +697,7 @@ private void writeText(IstNode istNode, Stream stream)
     stream.write(value.ptr, value.length);
     char[] eol = "\"\n".dup;
     stream.write(eol.ptr, eol.length);
-}  
+}
 
 private void readText(Stream stream, IstNode istNode)
 {
@@ -702,53 +705,49 @@ private void readText(Stream stream, IstNode istNode)
     char[] identifier;  
     // cache the property
     char[] propText;
-    char[2] eop;
+    char old, curr;
     auto immutable initPos = stream.position;
-    while((eop != "\"\n") & (stream.position != stream.size))
+    while(true)
     {
-        stream.read(eop.ptr, 2);
-        stream.position = stream.position -1;
+        // end of stream (error)
+        if (stream.position == stream.size) break;
+        old = curr;
+        curr = stream.readChar;
+        // regular end of property
+        if (old == '"' && curr == '\n')
+        {
+            stream.position = stream.position - 1;
+            break;
+        }
+        // end of stream without new line
+        else if (curr == '\n' && stream.position == stream.size)
+            break;
     }
     auto immutable endPos = stream.position;
     propText.length = cast(ptrdiff_t)(endPos - initPos);
     stream.position = initPos;
     stream.read(propText.ptr, propText.length);
     stream.position = endPos + 1;
-
     // level
-    i = 0;
-    while (propText[i] == '\t') i++;
-    istNode.info.level = cast(uint) i;
-    
+    bool isLevelIndicator(dchar c)
+    {return c == ' ' || c == '\t';}
+    identifier = nextWord(propText, &isLevelIndicator);
+    istNode.info.level = cast(uint) identifier.length;
     // type
-    identifier = identifier.init;
-    while(propText[i] != ' ') 
-        identifier ~= propText[i++];
+    identifier = nextWord(propText);
     if (identifier.length > 2)
         istNode.info.isArray = (identifier[$-2 .. $] == "[]");
-    if (istNode.info.isArray) 
+    if (istNode.info.isArray)
         identifier = identifier[0 .. $-2];
-    if (identifier in text2type) 
-        istNode.info.type = text2type[identifier];
-         
+    istNode.info.type = text2type[identifier];
     // name
-    i++;
-    identifier = identifier.init;
-    while(propText[i] != ' ') 
-        identifier ~= propText[i++];
-    istNode.info.name = identifier.idup;
-
-    // name value separators
-    while(propText[i] != ' ') i++;
-    i++;
-    //std.stdio.writeln(propText[i]); 
-    i++; 
-    while(propText[i] != ' ') i++;
-    
-    // value     
-    i++;
-    identifier = propText[i..$];
-    identifier = identifier[1..$-1];
+    istNode.info.name = nextWord(propText).idup;
+    // name value separator
+    identifier = nextWord(propText);
+    assert(identifier == "=");
+    // value
+    skipWordUntil(propText, '"');
+    identifier = propText[1..$-1];
     istNode.info.value = text2value(identifier, istNode.info);
 }
 //----
@@ -1158,6 +1157,7 @@ public:
             with(RuntimeType) final switch(rtti.type)
             {
                 case _void, _struct, _real: assert(0);
+                case _bool:   addValueProp!bool; break;
                 case _byte:   addValueProp!byte; break;
                 case _ubyte:  addValueProp!ubyte; break;
                 case _short:  addValueProp!short; break;
@@ -1981,11 +1981,18 @@ version(unittest)
         bar.set = [];
         str.position = 0;
         ser.streamToObject(str, bar, format);
+        //TODO-cbetterbugfix: implicit convertion from struct to bool: Set8 <=> bool in size
+        // but value written is only 1 or 0.
+        // solution 1/ put bool at the end of the types list
+        // solution 2/ check for implicit convertion in reverse order,
+        // solution 3/ use another template that isImplicitly convertible
+        // solution 4/ statically check that methods fromThis toThat are here and use them.
+        //
         assert( bar.set == SetofA(A.a1,A.a2), to!string(bar.set));
 
         // ----
 
-        writeln("Serializer passed the ", to!string(format), " format test");
+        writeln("Serializer passed the ", format, " format test");
     }
 
     // test fields renamed between two versions ---+
@@ -2097,7 +2104,7 @@ version(unittest)
         {
             destruct(_anothersub);
         }
-        void dtarget(uint param){dgTest = "awyesss"; writeln(param);}
+        void dtarget(uint param){dgTest = "awyesss";}
         void reset()
         {
             _a = 0; _b = 0; _c = 0;

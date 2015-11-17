@@ -54,7 +54,7 @@ alias GenericFunction = void function();
 enum RuntimeType : ubyte
 {
     _void   = 0,
-    _byte   = 0x01, _ubyte, _short, _ushort, _int, _uint, _long, _ulong,
+    _bool   = 0x01, _byte, _ubyte, _short, _ushort, _int, _uint, _long, _ulong,
     _float  = 0x10, _double, _real,
     _char   = 0x20, _wchar, _dchar,
     _object = 0x30,
@@ -92,7 +92,8 @@ auto runtimeTypeInfo(T)()
 
     with (RuntimeType)
     {
-        static if (is(TT == byte)) type = _byte;
+        static if (is(TT == bool)) type = _bool;
+        else static if (is(TT == byte))  type = _byte;
         else static if (is(TT == ubyte)) type = _ubyte;
         else static if (is(TT == short)) type = _short;
         else static if (is(TT == ushort))type = _ushort;
