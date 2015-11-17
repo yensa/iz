@@ -295,10 +295,10 @@ public:
      * Constructs a new instance whose life-time will be managed.
      * by its owner.
      */
-    static auto create(C)(ref C c, Component owner)
+    static C create(C = typeof(this))(Component owner)
     if (is(C : Component))
     {
-        c = construct!C;
+        C c = construct!C;
         c._owner = owner;
         if (owner) owner.addOwned(c);
         return c;
@@ -398,29 +398,25 @@ public:
 unittest
 {
 
-    Component root;
-    Component.create!Component(root, null);
+    auto root = Component.create(null);
     root.name = "root".dup;
     assert(root.owner is null);
     assert(root.name == "root");
     assert(root.qualifiedName == "root");
 
-    Component owned1;
-    Component.create!Component(owned1, root);
+    auto owned1 = Component.create!Component(root);
     owned1.name = "component1".dup;
     assert(owned1.owner is root);
     assert(owned1.name == "component1");
     assert(owned1.qualifiedName == "root.component1");
 
-    Component owned11;
-    Component.create!Component(owned11, owned1);
+    auto owned11 = Component.create!Component(owned1);
     owned11.name = "component1".dup;
     assert(owned11.owner is owned1);
     assert(owned11.name == "component1");
     assert(owned11.qualifiedName == "root.component1.component1");
 
-    Component owned12;
-    Component.create!Component(owned12, owned1);
+    auto owned12 = Component.create!Component(owned1);
     owned12.name = "component1".dup;
     assert(owned12.name == "component1_0");
     assert(owned12.qualifiedName == "root.component1.component1_0");
@@ -434,8 +430,7 @@ unittest
 unittest
 {
     // test for fix, PropDescriptor.rtti not set when created from GetPairs.
-    Component c;
-    Component.create!Component(c, null);
+    auto c = Component.create!Component(null);
     c.name = "whatever".dup;
     import iz.serializer, iz.streams;
     MemoryStream str = construct!MemoryStream;
