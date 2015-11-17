@@ -120,6 +120,9 @@ static immutable CharRange decimalChars = CharRange('0', '9');
 /// a CharRange that verify characters for octal numbers.
 static immutable CharRange octalChars = CharRange('0', '7');
 
+
+//TODO-cbugfix: CharMap issues when instantiated on th stack (local var, e.g iztext format reader)
+
 /**
  * CharMap is an helper struct that allows to test
  * if a char is within a set of characters.
@@ -321,6 +324,8 @@ private bool isCharTester(T)()
     else static if (isSomeFunction!T && is(ReturnType!T == bool) &&
         Parameters!T.length == 1 && is(Parameters!T[0] == dchar))
         return true;
+    else static if (isSomeChar!T)
+        return true;
     else
         return false;
 }
@@ -416,6 +421,33 @@ if (isInputRange!Range && isSomeChar!(ElementType!Range) && isCharTester!T)
             else
             {
                 if (charTester(current))
+                {
+                    result ~= current;
+                    range.popFront;
+                }
+                else break;
+            }
+        }
+    }
+    else static if (isSomeChar!UT)
+    {
+        while (true)
+        {
+            if (range.empty) break;
+            current = cast(CharType!Range) range.front;
+
+            static if (until)
+            {
+                if (charTester != current)
+                {
+                    result ~= current;
+                    range.popFront;
+                }
+                else break;
+            }
+            else
+            {
+                if (charTester == current)
                 {
                     result ~= current;
                     range.popFront;
@@ -555,6 +587,25 @@ if (isInputRange!Range && isSomeChar!(ElementType!Range) && isCharTester!T)
             }
         }
     }
+    else static if (isSomeChar!UT)
+    {
+        while (true)
+        {
+            if (range.empty) break;
+            static if (until)
+            {
+                if (charTester != range.front)
+                    range.popFront;
+                else break;
+            }
+            else
+            {
+                if (charTester == range.front)
+                    range.popFront;
+                else break;
+            }
+        }
+    }
     else static assert(0, "unsupported charTester argument type in skipWord(): " ~ T.stringof);
 }
 
@@ -579,7 +630,7 @@ unittest
  */
 void skipWordUntil(Range, T)(ref Range range, T charTester)
 {
-    return skipWord!(Range, T, true)(range, charTester);
+    skipWord!(Range, T, true)(range, charTester);
 }
 
 unittest
