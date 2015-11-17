@@ -532,6 +532,7 @@ mixin template PropDescriptorCollector()
                 descriptor.define(propPtr, propName);
                 //
                 version(none) writeln(attribute.stringof, " : ", member);
+                break;
             }
         }
     }
@@ -539,7 +540,11 @@ mixin template PropDescriptorCollector()
     /**
      * Creates the property descriptors for the setter/getter pairs 
      * annotated with @Set/@Get.
-     * In a class hierarchy, an overriden accessor replaces the ancestor's one. 
+     *
+     * In a class hierarchy, an overriden accessor replaces the ancestor's one.
+     * If a setter is annoted with @HideSet or a getter with @HideGet then
+     * the descriptor created by analysing an ancestor is removed from the
+     * collection.
      */
     protected void propCollectorGetPairs(T)()
     {
@@ -595,6 +600,7 @@ mixin template PropDescriptorCollector()
                 if (descr)
                 {
                     auto index = countUntil(_collectedDescriptors, descr);
+                    assert(index != -1);
                     _collectedDescriptors = remove(_collectedDescriptors, index);
                 }
             }
@@ -809,7 +815,7 @@ unittest
         this(){propCollectorAll!B1;}
         @HideGet override int b(){return super.b();}
     }
-    // test that all props marked with @HideSet/Get are not published anymore
+    // test that a prop marked with @HideSet/Get are not published anymore
     auto b0 = new B0;
     assert(b0.propCollectorCount == 1);
     auto b1 = new B1;
@@ -865,12 +871,13 @@ unittest
 }
 
 
+//TODO-cfeature: A PropBinder version based on iz.types.RuntimeTypeInfo
 
 /**
- * This container maintains a list of property synchronized between themselves.
+ * A PropertyBinder synchronizes the value of several variables between themselves.
  *
- * The reference to the properties are stored using the PropDescriptor format. 
- * The PropDescriptor name can be omitted.
+ * The access to the variables is done via the PropDescriptor format, hence
+ * a PropertyBinder stores a list of PropDescriptor with the same types.
  *
  * Params:
  * T = the common type of the properties.
