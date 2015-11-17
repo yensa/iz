@@ -79,6 +79,7 @@ object _1: TCENativeProject
     'import/iz/strings.d'
     'import/iz/sugar.d'
     'import/iz/types.d'
+    'import/iz/package.d'
   )
   ConfigurationIndex = 0
 end
