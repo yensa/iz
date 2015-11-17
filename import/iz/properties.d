@@ -340,12 +340,9 @@ struct Get;
 struct SetGet;
 /// ditto
 alias GetSet = SetGet;
-
-//TODO-cfeature: Hide a published property using @HideSet & @HideGet attributes
-
-/// designed to disable a @Set in an descendant class
+/// designed to make undetectable a property collected in a ancestor.
 struct HideSet;
-/// designed to disable a @Get in an descendant class
+/// ditto
 struct HideGet;
 
 /**
@@ -438,6 +435,7 @@ mixin template PropDescriptorCollector()
 // oror Base: because it looks like the interface makes the members
 // detectable even if not yet implemented.
 
+    import std.traits: BaseClassesTuple;
     alias ToT = typeof(this);
     // descendant already implements the interface
     enum BaseHas = is(BaseClassesTuple!ToT[0] : PropDescriptorCollection);
@@ -465,11 +463,6 @@ mixin template PropDescriptorCollector()
     {return (cast(PropDescriptor!int*) _collectedDescriptors[index]).rtti;}
 
 // templates: no problem with overrides, instantiated according to class This or That
-
-    // imports mandatory to mix the template
-    import iz.types: ScopedReachability, runtimeTypeInfo;
-    import std.traits: isCallable, isDelegate, isFunctionPointer, Parameters,
-        ReturnType, BaseClassesTuple;
 
     /**
      * Returns a pointer to a descriptor according to its name.
@@ -516,6 +509,9 @@ mixin template PropDescriptorCollector()
      */
     protected void propCollectorGetFields(T)()
     {
+        import iz.types: ScopedReachability;
+        import std.traits: isCallable, isDelegate, isFunctionPointer;
+
         bool isFieldPrefix(char c)
         {return c == '_' || c == 'f' || c == 'F';}
         enum getStuff = q{__traits(getMember, T, member)};
@@ -547,26 +543,38 @@ mixin template PropDescriptorCollector()
      */
     protected void propCollectorGetPairs(T)()
     {
+        import iz.types: ScopedReachability, runtimeTypeInfo;
+        import std.traits: isCallable, Parameters, ReturnType;
+        import std.meta: AliasSeq, staticIndexOf;
+        import std.algorithm.mutation: remove;
+        import std.algorithm.searching: countUntil;
+
         mixin ScopedReachability;
         foreach(member; __traits(allMembers, T))
         static if (isMemberReachable!(T, member))
         foreach(overload; __traits(getOverloads, T, member))
-        foreach(attribute; __traits(getAttributes, overload))
         {
-            static if (is(attribute == Get) && isCallable!overload)
+            alias Attributes = AliasSeq!(__traits(getAttributes, overload));
+            enum getterAttrib = staticIndexOf!(Get, Attributes) != -1;
+            enum setterAttrib = staticIndexOf!(Set, Attributes) != -1;
+            enum ungetAttrib = staticIndexOf!(HideGet, Attributes) != -1;
+            enum unsetAttrib = staticIndexOf!(HideSet, Attributes) != -1;
+
+            static if (getterAttrib && !ungetAttrib && isCallable!overload)
             {
                 alias Type = ReturnType!overload;
                 alias DescriptorType = PropDescriptor!Type;
                 auto descriptor = propCollectorGet!(Type)(member, true);
                 auto dg = &overload;
                 version(assert) if (descriptor.setter) assert (
-                    runtimeTypeInfo!Type == *descriptor.rtti, // note: rtti unqalifies the type
+                    // note: rtti unqalifies the type
+                    runtimeTypeInfo!Type == *descriptor.rtti,
                     "setter and getter types mismatch");
                 descriptor.define(descriptor.setter, dg, member);
                 //   
                 version(none) writeln(attribute.stringof, " < ", member);
             }
-            else static if (is(attribute == Set) && isCallable!overload)
+            else static if (setterAttrib && !unsetAttrib && isCallable!overload)
             {
                 alias Type = Parameters!overload;
                 version(assert) static assert(Type.length == 1,
@@ -580,6 +588,15 @@ mixin template PropDescriptorCollector()
                 descriptor.define(dg, descriptor.getter, member);
                 //
                 version(none) writeln(attribute.stringof, " > ", member);
+            }
+            else static if ((ungetAttrib | unsetAttrib) && isCallable!overload)
+            {
+                auto descr = propCollectorGet!size_t(member, false);
+                if (descr)
+                {
+                    auto index = countUntil(_collectedDescriptors, descr);
+                    _collectedDescriptors = remove(_collectedDescriptors, index);
+                }
             }
         }
     }
@@ -775,6 +792,28 @@ unittest
     // test that all props are detected in the inheritence list
     auto b1 = new B1;
     assert(b1.propCollectorCount == 3);
+}
+
+unittest
+{
+    class B0
+    {
+        mixin PropDescriptorCollector;
+        this(){propCollectorAll!B0;}
+        @Set void b(int value){}
+        @Get int b(){return 0;}
+    }
+    class B1: B0
+    {
+        mixin PropDescriptorCollector;
+        this(){propCollectorAll!B1;}
+        @HideGet override int b(){return super.b();}
+    }
+    // test that all props marked with @HideSet/Get are not published anymore
+    auto b0 = new B0;
+    assert(b0.propCollectorCount == 1);
+    auto b1 = new B1;
+    assert(b1.propCollectorCount == 0);
 }
 
 unittest
