@@ -78,8 +78,9 @@ struct PropDescriptor(T)
         /// pseudo setter internally used when a T is directly written.
         void internalSetter(T value)
         {
+            alias TT = Unqual!T;
             const T current = getter()();
-            if (value != current) *_setPtr = value;
+            if (value != current) *(cast(TT*)_setPtr) = value;
         }
 
         /// pseudo getter internally used when a T is directly read
@@ -516,6 +517,8 @@ mixin template PropDescriptorCollector()
         {return c == '_' || c == 'f' || c == 'F';}
         enum getStuff = q{__traits(getMember, T, member)};
 
+        // here 'cast(T)this' work without remixing in sub classes
+
         mixin ScopedReachability;
         foreach(member; __traits(allMembers, T))
         static if (isMemberReachable!(T, member))
@@ -553,6 +556,9 @@ mixin template PropDescriptorCollector()
         import std.meta: AliasSeq, staticIndexOf;
         import std.algorithm.mutation: remove;
         import std.algorithm.searching: countUntil;
+
+        // here 'cast(T)this' does not work without remixing in sub classes
+        // because of the '&overload'
 
         mixin ScopedReachability;
         foreach(member; __traits(allMembers, T))
