@@ -86,6 +86,11 @@ public:
         return (referenceID!RT(aReference) != "");
     }
 
+    static bool opBinaryRight(string op : "in", RT)(RT* aReference)
+    {
+        return (referenceID!RT(aReference) != "");
+    }
+
     /**
      * Empties the references and the types.
      */
@@ -299,6 +304,7 @@ unittest
     assert( ReferenceMan.isReferenced(&f1) );
     assert( ReferenceMan.isReferenced(&f2) );
     assert( ReferenceMan.isReferenced(&f3) );
+    assert( &f3 in ReferenceMan );
 
     ReferenceMan.removeReference(&f1);
     ReferenceMan.removeReference(&f2);

@@ -729,9 +729,12 @@ private void readText(Stream stream, IstNode istNode)
     stream.read(propText.ptr, propText.length);
     stream.position = endPos + 1;
     // level
-    bool isLevelIndicator(dchar c)
-    {return c == ' ' || c == '\t';}
-    identifier = nextWord(propText, &isLevelIndicator);
+    //bool isLevelIndicator(dchar c)
+    //{return c == ' ' || c == '\t';}
+
+    auto isLevelIndicator = (dchar c) => (c == ' ' || c == '\t');
+
+    identifier = nextWord(propText, isLevelIndicator);
     istNode.info.level = cast(uint) identifier.length;
     // type
     identifier = nextWord(propText);

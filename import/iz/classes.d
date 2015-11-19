@@ -309,7 +309,7 @@ public:
      */
     ~this()
     {
-        ReferenceMan.removeReference!void(cast(void*)this);
+        ReferenceMan.removeReference(cast(Component*)this);
         foreach_reverse(o; _owned)
         {
             // observers can invalidate any escaped reference to a owned
@@ -365,13 +365,13 @@ public:
      * This value is a collected property.
      * This value is stored as an ID in the ReferenceMan with the void type.
      */
-    final @Set name(char[] value)
+    final @Set name(const(char)[] value)
     {
         if (_name == value) return;
-        ReferenceMan.removeReference!void(cast(void*)this);
+        ReferenceMan.removeReference(cast(Component*)this);
         if (nameAvailable(value)) _name = value.dup;
         else _name = getUniqueName(value);
-        ReferenceMan.storeReference!void(cast(void*)this, qualifiedName);
+        ReferenceMan.storeReference(cast(Component*)this, qualifiedName);
     }
     /// ditto
     final @Get char[] name() {return _name;}
@@ -399,7 +399,7 @@ unittest
 {
 
     auto root = Component.create(null);
-    root.name = "root".dup;
+    root.name = "root";
     assert(root.owner is null);
     assert(root.name == "root");
     assert(root.qualifiedName == "root");
@@ -411,13 +411,13 @@ unittest
     assert(owned1.qualifiedName == "root.component1");
 
     auto owned11 = Component.create!Component(owned1);
-    owned11.name = "component1".dup;
+    owned11.name = "component1";
     assert(owned11.owner is owned1);
     assert(owned11.name == "component1");
     assert(owned11.qualifiedName == "root.component1.component1");
 
     auto owned12 = Component.create!Component(owned1);
-    owned12.name = "component1".dup;
+    owned12.name = "component1";
     assert(owned12.name == "component1_0");
     assert(owned12.qualifiedName == "root.component1.component1_0");
 
@@ -431,7 +431,7 @@ unittest
 {
     // test for fix, PropDescriptor.rtti not set when created from GetPairs.
     auto c = Component.create!Component(null);
-    c.name = "whatever".dup;
+    c.name = "whatever";
     import iz.serializer, iz.streams;
     MemoryStream str = construct!MemoryStream;
     Serializer ser = construct!Serializer;
@@ -441,5 +441,12 @@ unittest
     ser.streamToPropCollector(str, c);
     assert(c.name == "whatever");
     destruct(ser, str, c);
+}
+
+unittest
+{
+    auto c = Component.create!Component(null);
+    c.name = "a";
+    assert(ReferenceMan.referenceID(cast(Component*)c) == "a");
 }
 
