@@ -216,33 +216,32 @@ template isMultiDimensionalArray(T)
 ///
 unittest
 {
-    assert(isMultiDimensionalArray!(string[]) );
-    assert(!isMultiDimensionalArray!(int[]) );
-    assert(isMultiDimensionalArray!(int[][]) );
-    assert(!isMultiDimensionalArray!(int) );
-    assert(!isMultiDimensionalArray!(string) );
-    assert(!isMultiDimensionalArray!(int[][] function()) );
-    assert(!isMultiDimensionalArray!void);
+    static assert(isMultiDimensionalArray!(string[]) );
+    static assert(isMultiDimensionalArray!(int[][]) );
+    static assert(!isMultiDimensionalArray!(int[]) );
+    static assert(!isMultiDimensionalArray!(int) );
+    static assert(!isMultiDimensionalArray!(string) );
+    static assert(!isMultiDimensionalArray!(int[][] function()) );
+    static assert(!isMultiDimensionalArray!void);
 }
 
 /**
  * Returns the dimension count of a $(D array).
  */
-size_t dimensionCount(T)()
+template dimensionCount(T)
 if (isArray!T)
 {
-    size_t result = 1;
     static if (isMultiDimensionalArray!T)
     {
         alias DT = typeof(T.init[0]);
-        result += dimensionCount!DT;
+        enum dimensionCount = dimensionCount!DT + 1;
     }
-    return result;
+    else enum dimensionCount = 1;
 }
 ///
 unittest
 {
-    assert(dimensionCount!(int[]) == 1);
-    assert(dimensionCount!(int[][]) == 2);
-    assert(dimensionCount!(int[][][]) == 3);
+    static assert(dimensionCount!(int[]) == 1);
+    static assert(dimensionCount!(int[][]) == 2);
+    static assert(dimensionCount!(int[][][]) == 3);
 }
