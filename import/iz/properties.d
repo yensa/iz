@@ -522,15 +522,17 @@ mixin template PropDescriptorCollector()
         mixin ScopedReachability;
         foreach(member; __traits(allMembers, T))
         static if (isMemberReachable!(T, member))
-        static if (isFieldPrefix(member[0]) && !isCallable!(mixin(getStuff))
-            || isDelegate!(mixin(getStuff)) || isFunctionPointer!(mixin(getStuff)))
+        static if (!isCallable!(mixin(getStuff)) || isDelegate!(mixin(getStuff))
+            || isFunctionPointer!(mixin(getStuff)))
         {
             foreach(attribute; __traits(getAttributes, __traits(getMember, this, member)))
             static if (is(attribute == SetGet)) 
             {
                 alias propType = typeof(__traits(getMember, this, member));
                 auto propPtr = &__traits(getMember, this, member);
+                static if (isFieldPrefix(member[0]))
                 auto propName = member[1..$];
+                else auto propName = member;
                 auto descriptor = propCollectorGet!propType(propName, true);
                 descriptor.define(propPtr, propName);
                 //
