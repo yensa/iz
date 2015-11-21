@@ -101,19 +101,18 @@ enum MaskKind {Byte, Nibble, Bit}
  * Mask, at compile-time, a byte, a nibble or a bit in the argument.
  *
  * Params:
- * index = the position, 0-based, of the element to mask.
- * kind = the kind of the element to mask.
- * value = the value mask.
+ *      index = the position, 0-based, of the element to mask.
+ *      kind = the kind of the element to mask.
+ *      value = the value mask.
  *
  * Returns:
- * The input argument with the element masked.
+ *      The input argument with the element masked.
  */
 auto mask(size_t index, MaskKind kind = MaskKind.Byte, T)(const T value) nothrow
 if (    (kind == MaskKind.Byte && index <= T.sizeof)
     ||  (kind == MaskKind.Nibble && index <= T.sizeof * 2)
     ||  (kind == MaskKind.Bit && index <= T.sizeof * 8))
 {
-    import std.typecons;
     T _mask;
     static if (kind == MaskKind.Byte)
     {
@@ -148,12 +147,12 @@ auto maskBit(size_t index, T)(const T value) nothrow
  * Mask, at run-time, a byte, a nibble or a bit in the argument.
  *
  * Params:
- * index = the position, 0-based, of the element to mask.
- * kind = the kind of the element to mask.
- * value = the value mask.
+ *      index = the position, 0-based, of the element to mask.
+ *      kind = the kind of the element to mask.
+ *      value = the value mask.
  *
  * Returns:
- * The input argument with the element masked.
+ *      The input argument with the element masked.
  */
 auto mask(MaskKind kind = MaskKind.Byte, T)(const T value, size_t index) nothrow
 {
@@ -270,22 +269,30 @@ unittest
  *
  * When the source is an array of character and if assumeDecoded is set to false 
  * then the ArrayRange front type is always dchar because of the UTF decoding.
+ *
+ * The template parameter infinite allows to turn the range in an infinite range
+ * that loops over the elements.
  */
-struct ArrayRange(T, bool assumeDecoded = false)
+struct ArrayRange(T, bool assumeDecoded = false, bool infinite = false)
 {
     static if (!isSomeChar!T || assumeDecoded || is(T==dchar))
     {
         private T* _front, _back;
+        static if(infinite) T* _first;
         ///
         this(ref T[] stuff) 
         {
             _front = stuff.ptr; 
             _back = _front + stuff.length - 1;
+            static if(infinite) _first = _front;
         }      
         ///
         @property bool empty()
         {
-            return _front > _back;
+            static if (infinite)
+                return false;
+            else
+                return _front > _back;
         }     
         ///
         T front()
@@ -301,6 +308,11 @@ struct ArrayRange(T, bool assumeDecoded = false)
         void popFront()
         { 
             ++_front;
+            static if(infinite)
+            {
+                if (_front > _back)
+                    _front = _first;
+            }
         }
         ///
         void popBack()
