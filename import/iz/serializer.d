@@ -31,18 +31,18 @@ interface Serializable
  * A "referenced variable" is typically something that is assigned
  * at the run-time, such as the source of a delegate, a pointer to an Object, etc.
  */
-class SerializableReference: Serializable
+class SerializableReference: Serializable, PropertyPublisher
 {
     private
     {
         char[] _tp;
         char[] _id;
-        mixin PropDescriptorCollector;
+        mixin PropertyPublisherImpl;
     }
     public
     {
         ///
-        this() {propCollectorAll!SerializableReference;}
+        this() {collectPublications!SerializableReference;}
 
         /**
          * Sets the internal fields according to a referenced.
@@ -69,8 +69,8 @@ class SerializableReference: Serializable
         /// Declares the data needed to retrieve the reference associated to this class
         void declareProperties(Serializer serializer)
         {
-            serializer.addProperty(propCollectorGet!(char[])("type"));
-            serializer.addProperty(propCollectorGet!(char[])("id"));
+            serializer.addProperty(publication!(char[])("type"));
+            serializer.addProperty(publication!(char[])("id"));
         }
     }
 }
@@ -276,7 +276,7 @@ alias WantDescriptorEvent = void delegate(IstNode node, ref Ptr descriptor, out 
  * node = The information the callee uses to set the parameter serializable.
  * serializable = the Object the callee has to return.
  */
-alias WantObjectEvent = void delegate(IstNode node, ref Object serializable);
+alias WantObjectEvent = void delegate(IstNode node, ref Object serializable, out bool fromRefererence);
 
 // add double quotes escape 
 private char[] add_dqe(char[] input)
@@ -978,6 +978,8 @@ private:
     /// the Serializable linked to _rootNode
     Serializable _rootSerializable;
 
+    Object  _declarator;
+
     WantDescriptorEvent _onWantDescriptor;
     WantObjectEvent _onWantObject;
 
@@ -1135,22 +1137,39 @@ public:
     /**
      * 
      */
-    void addObjectWithCollectedProp(PropDescriptor!Object* objDescr)
+    void addPropertyPublisher(PropDescriptor!Object* objDescr)
     {
-        PropDescriptorCollection collector;
-        collector = cast(PropDescriptorCollection) objDescr.get();
+        PropertyPublisher publisher;
+        publisher = cast(PropertyPublisher) objDescr.get();
+
         // write/Set object node
         if (!_parentNode) _parentNode = _rootNode;
         else _parentNode = _parentNode.addNewChildren!IstNode;
         _parentNode.setDescriptor(objDescr);
         if (_mustWrite)
             writeFormat(_format)(_parentNode, _stream);
-        // write object memebers   
-        foreach(immutable i; 0 .. collector.propCollectorCount)
+
+        // only store the properties if the object is not a reference.
+        // an object is not a reference when ...
+
+        // reference: if not a PropDescriptorCollection
+        if(!publisher)
+            return;
+
+        // reference: current collector is not owned at all
+        if (_parentNode !is _rootNode && publisher.declarator is null)
+            return;
+
+        // reference: current collector is not owned by the declarator
+        if (_parentNode !is _rootNode && objDescr.declarator !is publisher.declarator)
+            return;
+
+        // not a reference: current collector is owned, write its members
+        foreach(immutable i; 0 .. publisher.publicationCount)
         {
             alias DescType = PropDescriptor!int; 
-            void* descr = collector.propCollectorGetPtrByIndex(i);
-            const RuntimeTypeInfo* rtti = collector.propCollectorGetType(i);
+            void* descr = publisher.publicationFromIndex(i);
+            const RuntimeTypeInfo* rtti = publisher.publicationType(i);
             //
             void addValueProp(T)()
             {
@@ -1176,8 +1195,8 @@ public:
                 case _dchar:  addValueProp!dchar; break;
                 case _object:
                     auto _oldParentNode = _parentNode;
-                    addObjectWithCollectedProp(cast(PropDescriptor!Object*) descr);
-                    _parentNode = _oldParentNode;  
+                    addPropertyPublisher(cast(PropDescriptor!Object*) descr);
+                    _parentNode = _oldParentNode;
                     break;
                 case _delegate:
                     addProperty(cast(PropDescriptor!GenericDelegate*) descr);
@@ -1190,21 +1209,21 @@ public:
     }    
 
     /**
-     * Builds the IST from a PropDescriptorCollection and stores in a Stream,
-     * sequentially, after each single property found in the collection.
+     * Builds the IST from a PropertyPublisher and stores in a Stream,
+     * sequentially, after each single property found in the publications.
      *
-     * Each item in the structure must also be a PropDescriptorCollection.
+     * Each item in the structure must also be a PropertyPublisher.
      * Unlike the methods based on the Serializable interface the objects don't
      * have to declare the values to store. Instead, every property descriptor
-     * found by the PropDescriptorCollector is turned into a declaration.
+     * matching a publication is turned into a declaration.
      *
      * Params:
-     * root = Either a PropDescriptorCollection or an object that's been
-     *       mixed with the PropDescriptorCollector template.
+     * root = Either a PropertyPublisher or an object that's been
+     *       mixed with the PropertyPublisherImpl template.
      * outputStream = The stream where the data are written.
      * format = The format of the serialized data.
      */
-    void collectorToStream(T)(ref T root, Stream outputStream,
+    void publisherToStream(T)(ref T root, Stream outputStream,
         SerializationFormat format = defaultFormat)
     {
         _format = format;
@@ -1216,16 +1235,16 @@ public:
         _previousNode = null;
         _parentNode = null;
         PropDescriptor!Object rootDescr = PropDescriptor!Object(cast(Object*)&root, "root");
-        addObjectWithCollectedProp(&rootDescr);
+        addPropertyPublisher(&rootDescr);
         _serState = SerializationState.none;
         _mustWrite = false;
         _stream = null;
     }
 
     /**
-     * Builds the IST from a PropDescriptorCollection.
+     * Builds the IST from a PropertyPublisher.
      */
-    void collectorToIst(T)(T root)
+    void publisherToIst(T)(T root)
     if (is(T==class) || is(T == struct))
     {
         _serState = SerializationState.store;
@@ -1234,7 +1253,7 @@ public:
         _rootNode.deleteChildren;
         _previousNode = null;
         PropDescriptor!Object rootDescr = PropDescriptor!Object(cast(Object*)&root, "root");
-        addObjectWithCollectedProp(&rootDescr);
+        addPropertyPublisher(&rootDescr);
         _serState = SerializationState.none;
     }
 
@@ -1243,21 +1262,23 @@ public:
 
     /**
      * Fully Restores the IST. Can be called after *streamToIst()*.
-     * The root must be structured in a tree of PropDescriptorCollection. 
+     * The root must be structured in a tree of PropertyPublisher.
      * For each IST node the function tries to find the matching node in the
      * property collection of the current object. If not possible then the
      * onWantDescriptor or the onWantObject events are called.
      */
-    void istToPropCollector(PropDescriptorCollection root)
+    void istToPublisher(PropertyPublisher publisher)
     {
-        void restoreFrom(IstNode node, PropDescriptorCollection target)
+        void restoreFrom(IstNode node, PropertyPublisher target)
         {
+            uint i =0;
             foreach(child; node.children)
             {
-                bool done;  
+                bool done;
                 IstNode childNode = cast(IstNode) child;
-                if (void* t0 = target.propCollectorGetPtrByName(childNode.info.name)) 
+                if (void* t0 = target.publicationFromName(childNode.info.name))
                 {
+                    ++i;
                     PropDescriptor!int* t1 = cast(PropDescriptor!int*)t0;
                     if (t1.rtti.array == childNode.info.isArray && 
                     t1.rtti.type == childNode.info.type)
@@ -1268,12 +1289,30 @@ public:
                         {
                             auto t2 = cast(PropDescriptor!Object*) t1;
                             Object o = t2.get();
+                            bool fromRef;
                             if (!o && _onWantObject)
-                                _onWantObject(childNode, o);
-                            auto t3 = cast(PropDescriptorCollection) o;
-                            if (t3) restoreFrom(childNode, t3); 
+                                _onWantObject(childNode, o, fromRef);
+
+                            if (fromRef || !o)
+                            {
+                                Object* po = ReferenceMan.reference!(Object)(childNode.parentIdentifiers ~ "." ~ childNode.info.name);
+                                if (po)
+                                {
+                                    t2.set(*po);
+                                    done = true;
+                                }
+                            }
+                            else
+                            {
+                                auto t3 = cast(PropertyPublisher) o;
+                                if (t3)
+                                {
+                                    restoreFrom(childNode, t3);
+                                    done = true;
+                                }
+                            }
                         }
-                        done = true;
+                        else done = true;
                     }
                 }
                 if (!done)
@@ -1283,18 +1322,18 @@ public:
                 }
             }
         }
-        restoreFrom(_rootNode, root);
+        restoreFrom(_rootNode, publisher);
     }
 
     /**
      *
      */
-    void streamToPropCollector(T)(Stream inputStream, T root, 
+    void streamToPublisher(T)(Stream inputStream, T root,
         SerializationFormat format = defaultFormat)
     if (is(T==class) || is(T == struct))   
     {
         streamToIst(inputStream, format);
-        istToPropCollector(root); 
+        istToPublisher(root);
     }
 
     /**
@@ -1328,7 +1367,9 @@ public:
         foreach(i; 1 .. unorderNodes.length)
         {
             unorderNodes[i-1].info.isLastChild = 
-              unorderNodes[i].info.level < unorderNodes[i-1].info.level;       
+              unorderNodes[i].info.level < unorderNodes[i-1].info.level ||
+              (isSerObjectType(unorderNodes[i-1].info.type) && unorderNodes[i-1].info.level ==
+                unorderNodes[i].info.level);
         }
         
         parents ~= _rootNode;
@@ -1336,11 +1377,13 @@ public:
         {
             auto node = unorderNodes[i];
             parents[$-1].addChild(node);
+
+            // !!! object wihtout props !!! (e.g reference)
             
-            if (node.info.isLastChild)
+            if (node.info.isLastChild && !isSerObjectType(node.info.type))
                 parents.length -= 1;
              
-            if (isSerObjectType(node.info.type))
+            if (isSerObjectType(node.info.type)  && !node.info.isLastChild )
                 parents ~= node;
         }  
         //
@@ -1564,8 +1607,9 @@ public:
                
             if (!currentSerializable && _onWantObject)
             {
-                Object obj;
-                _onWantObject(propNode, obj);
+                Object obj = void;
+                bool fromRef = void;
+                _onWantObject(propNode, obj, fromRef);
                 if (obj) currentSerializable = cast(Serializable) obj;
                 if (!currentSerializable) return;
             }  
@@ -1751,14 +1795,14 @@ version(unittest)
     
     class ClassB : Serializable
     {
-        mixin PropDescriptorCollector;
+        mixin PropertyPublisherImpl;
         private:
             int[]  _anIntArray;
             float  _aFloat;
             char[] _someChars;
         public:
             this() {
-                propCollectorAll!ClassB;
+                collectPublications!ClassB;
                 _anIntArray = [0, 1, 2, 3];
                 _aFloat = 0.123456f;
                 _someChars = "azertyuiop".dup;
@@ -1774,9 +1818,9 @@ version(unittest)
             mixin(genPropFromField!(typeof(_someChars), "someChars", "_someChars")); 
             
             void declareProperties(Serializer serializer) {
-                serializer.addProperty(propCollectorGet!(typeof(_anIntArray))("anIntArray"));
-                serializer.addProperty(propCollectorGet!(typeof(_aFloat))("aFloat"));
-                serializer.addProperty(propCollectorGet!(typeof(_someChars))("someChars"));
+                serializer.addProperty(publication!(typeof(_anIntArray))("anIntArray"));
+                serializer.addProperty(publication!(typeof(_aFloat))("aFloat"));
+                serializer.addProperty(publication!(typeof(_someChars))("someChars"));
             }
     }
 
@@ -1895,15 +1939,15 @@ version(unittest)
 
         auto node_anIntArray = ser.findNode("Root.anIntArray");
         if(node_anIntArray) ser.restoreProperty(node_anIntArray,
-             b.propCollectorGet!(int[])("anIntArray"));
+             b.publication!(int[])("anIntArray"));
         else assert(0);
         auto node_aFloat = ser.findNode("Root.aFloat");
         if(node_aFloat) ser.restoreProperty(node_aFloat,
-            b.propCollectorGet!float("aFloat"));
+            b.publication!float("aFloat"));
         else assert(0);  
         auto node_someChars = ser.findNode("Root.someChars");
         if(node_someChars) ser.restoreProperty(node_someChars,
-            b.propCollectorGet!(char[])("someChars"));
+            b.publication!(char[])("someChars"));
         else assert(0);
         assert(b.anIntArray == [0, 1, 2, 3]);
         assert(b.aFloat == 0.123456f);
@@ -1915,11 +1959,11 @@ version(unittest)
         {
             immutable string chain = node.parentIdentifiers;
             if (chain == "Root")
-                matchingDescriptor = a.propCollectorGetPtrByName(node.info.name);
+                matchingDescriptor = a.publicationFromName(node.info.name);
             else if (chain == "Root.aB1")
-                matchingDescriptor = a._aB1.propCollectorGetPtrByName(node.info.name);
+                matchingDescriptor = a._aB1.publicationFromName(node.info.name);
             else if (chain == "Root.aB2")
-                matchingDescriptor = a._aB2.propCollectorGetPtrByName(node.info.name);
+                matchingDescriptor = a._aB2.publicationFromName(node.info.name);
         }
 
         str.clear;
@@ -2004,17 +2048,17 @@ version(unittest)
         @GetSet private uint _a = 78;
         @GetSet private char[] _b = "foobar".dup;
 
-        mixin PropDescriptorCollector;
+        mixin PropertyPublisherImpl;
 
         this()
         {
-            propCollectorAll!ErrSer;
+            collectPublications!ErrSer;
         }
 
         void declareProperties(Serializer serializer)
         {
-            serializer.addProperty(propCollectorGet!uint("a"));
-            serializer.addProperty(propCollectorGet!(char[])("b"));
+            serializer.addProperty(publication!uint("a"));
+            serializer.addProperty(publication!(char[])("b"));
         }
     }
 
@@ -2023,17 +2067,17 @@ version(unittest)
         @GetSet private int _c;
         @GetSet private ubyte[] _d;
 
-        mixin PropDescriptorCollector;
+        mixin PropertyPublisherImpl;
 
         this()
         {
-            propCollectorAll!ErrDeSer;
+            collectPublications!ErrDeSer;
         }
         
         void declareProperties(Serializer serializer)
         {
-            serializer.addProperty(propCollectorGet!int("c"));
-            serializer.addProperty(propCollectorGet!(ubyte[])("d"));
+            serializer.addProperty(publication!int("c"));
+            serializer.addProperty(publication!(ubyte[])("d"));
         }
     }
 
@@ -2053,7 +2097,7 @@ version(unittest)
             if (node.info.name == "a")
             {/*will be restored in _c, same size, almost safe*/}
             if (node.info.name == "b")
-            {matchingDescriptor = errdeser.propCollectorGet!(ubyte[])("d");}
+            {matchingDescriptor = errdeser.publication!(ubyte[])("d");}
 
             stop = false;
         }
@@ -2068,98 +2112,127 @@ version(unittest)
 
     // test the RuntimeTypeInfo-based serialization ----+
 
-    class SubCollected: PropDescriptorCollection
+    class SubPublisher: PropertyPublisher
     {
-        mixin PropDescriptorCollector;
+        // fully serialized (initializer is MainPub)
+        mixin PropertyPublisherImpl;
         @SetGet char[] _someChars = "awhyes".dup;
-        this()
-        {
-            propCollectorGetFields!SubCollected;
-        }
+        this(){collectPublicationsFromFields!SubPublisher;}
     }
-    class Collected: PropDescriptorCollection
+    class RefPublisher: PropertyPublisher
     {
-        mixin PropDescriptorCollector;
-        void delegate(uint) staticRef;
+        // only ref is serialized (initializer is not MainPub)
+        mixin PropertyPublisherImpl;
+        this(){collectPublicationsFromFields!RefPublisher;}
+        @SetGet uint _a;
+    }
+    class MainPublisher: PropertyPublisher
+    {
+        mixin PropertyPublisherImpl;
+
+        // target when _subPublisher wont be found
+        SubPublisher _anotherSubPubliser;
+
+        // the sources for the references
+        void delegate(uint) _delegateSource;
+        RefPublisher _refPublisherSource;
         string dgTest;
+
         @SetGet ubyte _a = 12;
         @SetGet byte _b = 21;
-        @SetGet SubCollected _sub;
         @SetGet byte _c = 31;
-        @SetGet void delegate(uint) _d;
-        SubCollected _anothersub;
+        @SetGet void delegate(uint) _delegate;
+
+        @SetGet RefPublisher _refPublisher;
+        @SetGet SubPublisher _subPublisher;
+
         this()
         {
-            _sub = construct!SubCollected;
-            _anothersub = construct!SubCollected;
-            propCollectorGetFields!Collected;
-            staticRef = &dtarget;
-            _d = staticRef;
+            _refPublisherSource = construct!RefPublisher;
+            _subPublisher = construct!SubPublisher;
+            _anotherSubPubliser = construct!SubPublisher;
 
-            auto dDescr = propCollectorGet!GenericDelegate("d");
+            // collect publications before ref are assigned
+            collectPublications!MainPublisher;
 
-            ReferenceMan.storeReference(cast(void*)&staticRef, "collected.at.dtarget");
-            dDescr.referenceID = "collected.at.dtarget";
+            _delegateSource = &delegatetarget;
+            _delegate = _delegateSource;
+            _refPublisher = _refPublisherSource;
 
+            assert(_refPublisher.declarator !is this);
+            assert(_refPublisher.declarator is null);
 
+            auto dDescr = publication!GenericDelegate("delegate", false);
+            assert(dDescr);
+
+            ReferenceMan.storeReference(cast(Object*)&_refPublisherSource, "root.refPublisher");
+            ReferenceMan.storeReference(cast(void*)&_delegateSource, "mainpub.at.delegatetarget");
+            dDescr.referenceID = "mainpub.at.delegatetarget";
         }
         ~this()
         {
-            destruct(_anothersub);
+            destruct(_refPublisherSource);
+            destruct(_anotherSubPubliser);
         }
-        void dtarget(uint param){dgTest = "awyesss";}
+        void delegatetarget(uint param){dgTest = "awyesss";}
         void reset()
         {
             _a = 0; _b = 0; _c = 0;
-            destruct(_sub);_sub = null;
-            _anothersub._someChars = "".dup;
-            _d = null;
-            assert(staticRef);
+            _subPublisher.destruct;
+            _subPublisher = null;
+            _anotherSubPubliser._someChars = "".dup;
+            _delegate = null;
+            _refPublisher = null;
         }
     }
 
     unittest
     {
-        Collected c = construct!Collected;
+        MainPublisher c = construct!MainPublisher;
         Serializer ser = construct!Serializer;
         MemoryStream str = construct!MemoryStream;
         scope(exit) destruct(c, ser, str);
 
-        void objectNotFound(IstNode node, ref Object serializable)
+        void objectNotFound(IstNode node, ref Object serializable, out bool fromReference)
         {
-            if (node.info.name == "sub")
-                serializable = c._anothersub;
+            if (node.info.name == "subPublisher")
+            {
+                serializable = c._anotherSubPubliser;
+            }
+            if (node.info.name == "refPublisher")
+                fromReference = true;
         }
-        ser.onWantObject = &objectNotFound;
 
-        ser.collectorToStream(c, str, SerializationFormat.iztxt);
+        ser.onWantObject = &objectNotFound;
+        ser.publisherToStream(c, str, SerializationFormat.iztxt);
         str.saveToFile(r"test.txt");
 
         c.reset;
         str.position = 0;
-        ser.streamToPropCollector(str, c, SerializationFormat.iztxt);
+        ser.streamToPublisher(str, c, SerializationFormat.iztxt);
 
         assert(c._a == 12);
         assert(c._b == 21);
         assert(c._c == 31);
-        assert(c._anothersub._someChars == "awhyes");
-        assert(c._d);
-        c._d(123);
+        assert(c._refPublisher is c._refPublisherSource);
+        assert(c._anotherSubPubliser._someChars == "awhyes");
+        assert(c._delegate);
+        c._delegate(123);
         assert(c.dgTest == "awyesss");
     }
     //----
 
     // test generic Reference restoring ---+
-    class HasGenRef: PropDescriptorCollection
+    class HasGenRef: PropertyPublisher
     {
         // the source, usually comes from outside
         Object source;
         // what's gonna be assigned
         Object target;
-        mixin PropDescriptorCollector;
+        mixin PropertyPublisherImpl;
         this()
         {
-            propCollectorAll!HasGenRef;
+            collectPublications!HasGenRef;
             source = construct!Object;
             ReferenceMan.storeReference!void(cast(void*)source,"thiswillwork");
             target = source;
@@ -2192,11 +2265,11 @@ version(unittest)
         HasGenRef obj = construct!HasGenRef;
         scope(exit) destruct(ser, str, obj);
 
-        ser.collectorToStream(obj, str);
+        ser.publisherToStream(obj, str);
         str.position = 0;
         obj.target = null;
 
-        ser.streamToPropCollector(str, obj);
+        ser.streamToPublisher(str, obj);
         assert(obj.target == obj.source);
     }
     //----

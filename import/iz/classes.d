@@ -259,10 +259,10 @@ private alias ComponentSubject = CustomSubject!(ComponentNotification, Component
  * collected and is usable directly by a PropertyBinder, by a Serializer or
  * by any other system based on the PropDescriptor system.
  */
-class Component: PropDescriptorCollection
+class Component: PropertyPublisher
 {
 
-    mixin PropDescriptorCollector;
+    mixin PropertyPublisherImpl;
 
 private:
 
@@ -286,7 +286,7 @@ public:
 
     this()
     {
-        propCollectorAll!Component;
+        collectPublications!Component;
         _compSubj = construct!ComponentSubject;
         _owned = construct!(DynamicList!Component);
     }
@@ -435,10 +435,10 @@ unittest
     import iz.serializer, iz.streams;
     MemoryStream str = construct!MemoryStream;
     Serializer ser = construct!Serializer;
-    ser.collectorToStream(c, str);
+    ser.publisherToStream(c, str);
     c.name = "654654".dup;
     str.position = 0;
-    ser.streamToPropCollector(str, c);
+    ser.streamToPublisher(str, c);
     assert(c.name == "whatever");
     destruct(ser, str, c);
 }

@@ -41,7 +41,7 @@ struct PropDescriptor(T)
     {
         PropSetter _setter;
         PropGetter _getter;
-        Object fDeclarator;
+        Object _declarator;
         RuntimeTypeInfo _rtti;
 
         string _referenceID;
@@ -59,7 +59,7 @@ struct PropDescriptor(T)
             _getPtr = null; 
             _setter = null;
             _getter = null;
-            fDeclarator = null;
+            _declarator = null;
             _access = PropAccess.none;
             fName = fName.init;
         }
@@ -162,7 +162,7 @@ struct PropDescriptor(T)
             setter(aSetter);
             getter(aGetter);
             if (aName != "") {name(aName);}
-            fDeclarator = cast(Object) aSetter.ptr;
+            _declarator = cast(Object) aSetter.ptr;
         }
 
         /**
@@ -175,7 +175,7 @@ struct PropDescriptor(T)
             setter(aSetter);
             setDirectSource(aSourceData);
             if (aName != "") {name(aName);}
-            fDeclarator = cast(Object) aSetter.ptr;
+            _declarator = cast(Object) aSetter.ptr;
         }
         /**
          * Defines a property descriptor from a single variable used as source/target
@@ -187,7 +187,7 @@ struct PropDescriptor(T)
             setDirectSource(aData);
             setDirectTarget(aData);
             if (aName != "") {name(aName);}
-            fDeclarator = aDeclarator;
+            _declarator = aDeclarator;
         }
 // ----
 // setter ---------------------------------------------------------------------+
@@ -198,7 +198,7 @@ struct PropDescriptor(T)
         @property void setter(PropSetter aSetter)
         {
             _setter = aSetter;
-            fDeclarator = cast(Object) aSetter.ptr;
+            _declarator = cast(Object) aSetter.ptr;
             updateAccess;
         }
         /// ditto
@@ -226,7 +226,7 @@ struct PropDescriptor(T)
         @property void getter(PropGetter aGetter)
         {
             _getter = aGetter;
-            fDeclarator = cast(Object) aGetter.ptr;
+            _declarator = cast(Object) aGetter.ptr;
             updateAccess;
         }
         /// ditto
@@ -268,14 +268,15 @@ struct PropDescriptor(T)
             return fName;
         }
         /**
-         * Defines the object declaring the property.
+         * The object that declares this property.
+         * The value is set automatically.
          */
         @property void declarator(Object aDeclarator)
         {
-            fDeclarator = aDeclarator;
+            _declarator = aDeclarator;
         }
         /// ditto
-        @property Object declarator(){return fDeclarator;}
+        @property Object declarator(){return _declarator;}
         /**
          * Returns the RuntimeTypeInfo struct for the property type.
          */
@@ -383,51 +384,65 @@ mixin(genStandardPropDescriptors);
  * The methods don't have to be implemented by hand as it's automatically done 
  * when the PropDescriptorCollector template is mixed in a class.
  */
-interface PropDescriptorCollection
+
+interface PropertyPublisher
 {
     /**
      * Returns the count of descriptor the analyzers have created.
      */
-    size_t propCollectorCount();
+    size_t publicationCount();
     /**
      * Returns a pointer to a descriptor according to its name.
      * Similar to the propCollectorGet() function template excepted that the
      * result type has not to be specified.
      */
-    void* propCollectorGetPtrByName(string name);
+    void* publicationFromName(string name);
     /**
      * Returns a pointer an indexed descriptor.
      * index must be with the 0 .. propCollectorCount range.
      */
-    void* propCollectorGetPtrByIndex(size_t index);
+    void* publicationFromIndex(size_t index);
     /**
      * Returns a pointer to the RTTI for the nth descriptor.
      * index must be with the 0 .. propCollectorCount range.
      * This allows to cast properly the result of propCollectorGetPtr.
      */
-    const(RuntimeTypeInfo*) propCollectorGetType(size_t index);
+    const(RuntimeTypeInfo*) publicationType(size_t index);
+    /**
+     * Pointer to the object that has created the descriptor leading to this
+     * publisher instance.
+     */
+    Object declarator(); //acquirer
+    void declarator(Object value);
 }
 
+
 /**
- * When mixed in a class or a struct, two analyzers can be used to create
- * automatically the PropDescriptors for the properties setter and getter pairs
- * anotated with @Set and @Get or the fields annotated with @SetGet.
+ * Default implementation of a PropertyPublisher.
+ *
+ * When mixed in an aggregate type, two analyzers can be used to create
+ * automatically the PropDescriptors that match the setter and getter pairs
+ * anotated with @Set and @Get or that match the fields annotated with @SetGet.
  *
  * The analyzers are usually called in this(). The template has to be mixed in
  * each class generation that introduces new annotated properties.
+ *
  * The analyzers, propCollectorGetPairs and propCollectorGetFields are
  * function templates so they must be instantiated with the type they have
  * to scan (usually typeof(this)). The two analyzers can be called with a
  * third function template: propCollectorAll().
  */
-mixin template PropDescriptorCollector()
+mixin template PropertyPublisherImpl()
 {
     /**
      * Contains the list of izPropDesrcriptors created by the analyzers.
      * propCollectorGet() can be used to correctly cast an item.
      */
-    static if (!__traits(hasMember, typeof(this), "_collectedDescriptors"))
-    protected void*[] _collectedDescriptors;
+    static if (!__traits(hasMember, typeof(this), "_publishedDescriptors"))
+    protected void*[] _publishedDescriptors;
+
+    static if (!__traits(hasMember, typeof(this), "_declarator"))
+    protected Object _declarator;
 
 // virtual methods or PropDescriptorCollection methods
 //
@@ -439,29 +454,37 @@ mixin template PropDescriptorCollector()
     import std.traits: BaseClassesTuple;
     alias ToT = typeof(this);
     // descendant already implements the interface
-    enum BaseHas = is(BaseClassesTuple!ToT[0] : PropDescriptorCollection);
-    enum HasItf = is(ToT : PropDescriptorCollection);
+    enum BaseHas = is(BaseClassesTuple!ToT[0] : PropertyPublisher);
+    enum HasItf = is(ToT : PropertyPublisher);
     // interface must be implemented from this generation, even if methods detected
     enum Base = HasItf & (!BaseHas);
 
-    /// see PropDescriptorCollection
-    static if (!__traits(hasMember, ToT, "propCollectorCount") || Base)
-    public size_t propCollectorCount() {return _collectedDescriptors.length;}
+    /// see PropertyPublisher
+    static if (!__traits(hasMember, ToT, "declarator") || Base)
+    public Object declarator() {return _declarator;}
 
-    /// see PropDescriptorCollection
-    static if (!__traits(hasMember, ToT, "propCollectorGetPtrByName") || Base)
-    protected void* propCollectorGetPtrByName(string name)
-    {return propCollectorGet!size_t(name);}
+    /// ditto
+    static if (!__traits(hasMember, ToT, "declarator") || Base)
+    public void declarator(Object value) {_declarator = value;}
 
-    /// see PropDescriptorCollection
-    static if (!__traits(hasMember, ToT, "propCollectorGetPtrByIndex") || Base)
-    protected void* propCollectorGetPtrByIndex(size_t index)
-    {return _collectedDescriptors[index];}
+    /// see PropertyPublisher
+    static if (!__traits(hasMember, ToT, "publicationCount") || Base)
+    public size_t publicationCount() {return _publishedDescriptors.length;}
 
-    /// see PropDescriptorCollection
-    static if (!__traits(hasMember, ToT, "propCollectorGetType") || Base)
-    protected const(RuntimeTypeInfo*) propCollectorGetType(size_t index)
-    {return (cast(PropDescriptor!int*) _collectedDescriptors[index]).rtti;}
+    /// see PropertyPublisher
+    static if (!__traits(hasMember, ToT, "publicationFromName") || Base)
+    protected void* publicationFromName(string name)
+    {return publication!size_t(name);}
+
+    /// see PropertyPublisher
+    static if (!__traits(hasMember, ToT, "publicationFromIndex") || Base)
+    protected void* publicationFromIndex(size_t index)
+    {return _publishedDescriptors[index];}
+
+    /// see PropertyPublisher
+    static if (!__traits(hasMember, ToT, "publicationType") || Base)
+    protected const(RuntimeTypeInfo*) publicationType(size_t index)
+    {return (cast(PropDescriptor!int*) _publishedDescriptors[index]).rtti;}
 
 // templates: no problem with overrides, instantiated according to class This or That
 
@@ -474,13 +497,13 @@ mixin template PropDescriptorCollector()
      * Returns:
      *      null if the operation fails otherwise a pointer to a PropDescriptor!T.
      */
-    protected PropDescriptor!T * propCollectorGet(T)(string name, bool createIfMissing = false)
+    protected PropDescriptor!T * publication(T)(string name, bool createIfMissing = false)
     {
         PropDescriptor!T * descr;
 
-        for(auto i = 0; i < _collectedDescriptors.length; i++)
+        for(auto i = 0; i < _publishedDescriptors.length; i++)
         {
-            auto maybe = cast(PropDescriptor!T *) _collectedDescriptors[i];
+            auto maybe = cast(PropDescriptor!T *) _publishedDescriptors[i];
             if (maybe.name != name) continue;
             descr = maybe; break;
         }
@@ -489,7 +512,7 @@ mixin template PropDescriptorCollector()
         {
             descr = new PropDescriptor!T;
             descr.name = name;
-            _collectedDescriptors ~= descr;
+            _publishedDescriptors ~= descr;
         }
         return descr;
     }
@@ -497,10 +520,10 @@ mixin template PropDescriptorCollector()
     /**
      * Performs all the possible analysis.
      */
-    protected void propCollectorAll(T)()
+    protected void collectPublications(T)()
     {
-        propCollectorGetFields!T;
-        propCollectorGetPairs!T;
+        collectPublicationsFromPairs!T;
+        collectPublicationsFromFields!T;
     }
 
     /**
@@ -508,7 +531,7 @@ mixin template PropDescriptorCollector()
      * and whose identifier starts with one of these prefixes: underscore, f, F.
      * The .name property of the descriptors don't include the prefix.
      */
-    protected void propCollectorGetFields(T)()
+    protected void collectPublicationsFromFields(T)()
     {
         import iz.types: ScopedReachability;
         import std.traits: isCallable, isDelegate, isFunctionPointer;
@@ -516,8 +539,6 @@ mixin template PropDescriptorCollector()
         bool isFieldPrefix(char c)
         {return c == '_' || c == 'f' || c == 'F';}
         enum getStuff = q{__traits(getMember, T, member)};
-
-        // here 'cast(T)this' work without remixing in sub classes
 
         mixin ScopedReachability;
         foreach(member; __traits(allMembers, T))
@@ -528,13 +549,21 @@ mixin template PropDescriptorCollector()
             foreach(attribute; __traits(getAttributes, __traits(getMember, this, member)))
             static if (is(attribute == SetGet)) 
             {
-                alias propType = typeof(__traits(getMember, this, member));
+                alias Type = typeof(__traits(getMember, this, member));
                 auto propPtr = &__traits(getMember, this, member);
                 static if (isFieldPrefix(member[0]))
                 auto propName = member[1..$];
                 else auto propName = member;
-                auto descriptor = propCollectorGet!propType(propName, true);
+                auto descriptor = publication!Type(propName, true);
                 descriptor.define(propPtr, propName);
+                //
+                static if (is(T : Object)) descriptor.declarator = cast(Object)this;
+                static if (is(Type : Object))
+                {
+                    auto o = *cast(Object*) propPtr;
+                    PropertyPublisher pub = cast(PropertyPublisher) o;
+                    if (pub) pub.declarator = this;
+                }
                 //
                 version(none) writeln(attribute.stringof, " : ", member);
                 break;
@@ -551,16 +580,13 @@ mixin template PropDescriptorCollector()
      * the descriptor created by analysing an ancestor is removed from the
      * collection.
      */
-    protected void propCollectorGetPairs(T)()
+    protected void collectPublicationsFromPairs(T)()
     {
         import iz.types: ScopedReachability, runtimeTypeInfo;
         import std.traits: isCallable, Parameters, ReturnType;
         import std.meta: AliasSeq, staticIndexOf;
         import std.algorithm.mutation: remove;
         import std.algorithm.searching: countUntil;
-
-        // here 'cast(T)this' does not work without remixing in sub classes
-        // because of the '&overload'
 
         mixin ScopedReachability;
         foreach(member; __traits(allMembers, T))
@@ -572,28 +598,37 @@ mixin template PropDescriptorCollector()
             enum setterAttrib = staticIndexOf!(Set, Attributes) != -1;
             enum ungetAttrib = staticIndexOf!(HideGet, Attributes) != -1;
             enum unsetAttrib = staticIndexOf!(HideSet, Attributes) != -1;
-
+            // define the getter
             static if (getterAttrib && !ungetAttrib && isCallable!overload)
             {
                 alias Type = ReturnType!overload;
                 alias DescriptorType = PropDescriptor!Type;
-                auto descriptor = propCollectorGet!(Type)(member, true);
+                auto descriptor = publication!(Type)(member, true);
                 auto dg = &overload;
                 version(assert) if (descriptor.setter) assert (
                     // note: rtti unqalifies the type
                     runtimeTypeInfo!Type == *descriptor.rtti,
                     "setter and getter types mismatch");
                 descriptor.define(descriptor.setter, dg, member);
+                //
+                static if (is(T : Object)) descriptor.declarator = cast(Object)this;
+                static if (is(Type : Object))
+                {
+                    auto o = cast(Object) dg();
+                    PropertyPublisher pub = cast(PropertyPublisher) o;
+                    if (pub) pub.declarator = this;
+                }
                 //   
                 version(none) writeln(attribute.stringof, " < ", member);
             }
+            // define the setter
             else static if (setterAttrib && !unsetAttrib && isCallable!overload)
             {
                 alias Type = Parameters!overload;
                 version(assert) static assert(Type.length == 1,
                     "setter must only have one parameter");
                 alias DescriptorType = PropDescriptor!Type;
-                auto descriptor = propCollectorGet!(Parameters!overload)(member, true);
+                auto descriptor = publication!(Parameters!overload)(member, true);
                 auto dg = &overload;
                 version(assert) if (descriptor.getter) assert (
                     runtimeTypeInfo!Type == *descriptor.rtti,
@@ -602,35 +637,31 @@ mixin template PropDescriptorCollector()
                 //
                 version(none) writeln(attribute.stringof, " > ", member);
             }
+            // hide from this descendant
             else static if ((ungetAttrib | unsetAttrib) && isCallable!overload)
             {
-                auto descr = propCollectorGet!size_t(member, false);
+                auto descr = publication!size_t(member, false);
                 if (descr)
                 {
-                    auto index = countUntil(_collectedDescriptors, descr);
+                    auto index = countUntil(_publishedDescriptors, descr);
                     assert(index != -1);
-                    _collectedDescriptors = remove(_collectedDescriptors, index);
+                    _publishedDescriptors = remove(_publishedDescriptors, index);
                 }
             }
         }
     }
 }
 
-version(unittest)
+unittest
 {
-    unittest
+    // test basic PropertyPublisher features: get descriptors, use them.
+    class Foo: PropertyPublisher
     {
-        mixin ScopedReachability;
-        assert(isMemberReachable!(Foo, "_anUint"));
-    }
-
-    class Foo
-    {
-        mixin PropDescriptorCollector;
+        mixin PropertyPublisherImpl;
         this(A...)(A a)
         {
-            propCollectorGetPairs!Foo;
-            propCollectorGetFields!Foo;
+            collectPublicationsFromFields!Foo;
+            collectPublicationsFromPairs!Foo;
         }
 
         @SetGet private uint _anUint;
@@ -641,53 +672,59 @@ version(unittest)
         @Get uint propA(){return _a;}
         @Set void propA(uint aValue){_a = aValue;}
 
-        @Get uint propB(){return _b;} 
+        @Get uint propB(){return _b;}
         @Set void propB(uint aValue){_b = aValue;}
-        
-        @Get char[] propC(){return _c;} 
+
+        @Get char[] propC(){return _c;}
         @Set void propC(char[] aValue){_c = aValue;}
 
         void use()
         {
             assert(propA == 0);
-            auto aDescriptor = propCollectorGet!uint("propA");
+            auto aDescriptor = publication!uint("propA");
             aDescriptor.setter()(123456789);
             assert(propA == 123456789);
 
             assert(propB == 0);
-            auto bDescriptor = propCollectorGet!uint("propB");
+            auto bDescriptor = publication!uint("propB");
             bDescriptor.setter()(987654321);
             assert(propB == 987654321);
 
             assert(!propC.length);
-            auto cDescriptor = propCollectorGet!(char[])("propC");
+            auto cDescriptor = publication!(char[])("propC");
             cDescriptor.setter()("Too Strange To Be Good".dup);
             assert(propC == "Too Strange To Be Good");
             propC = "Too Good To Be Strange".dup;
-            assert( propCollectorGet!(char[])("propC").getter()() == "Too Good To Be Strange");
+            assert( publication!(char[])("propC").getter()() == "Too Good To Be Strange");
 
             assert(_anUint == 0);
-            auto anUintDescriptor = propCollectorGet!uint("anUint");
+            auto anUintDescriptor = publication!uint("anUint");
             anUintDescriptor.setter()(123456789);
             assert(_anUint == 123456789);
 
             assert(_manyChars == null);
-            auto manyCharsDescriptor = propCollectorGet!(char[])("manyChars");
+            auto manyCharsDescriptor = publication!(char[])("manyChars");
             manyCharsDescriptor.setter()("BimBamBom".dup);
             assert(_manyChars == "BimBamBom");
-            _manyChars = "BomBamBim".dup;  
+            _manyChars = "BomBamBim".dup;
             assert(manyCharsDescriptor.getter()() == "BomBamBim");
         }
     }
+    Foo foo = construct!Foo;
+    foo.use;
+    foo.destruct;
+}
 
+unittest
+{
     class Bar
     {
         size_t _field;
         string info;
-        mixin PropDescriptorCollector;
+        mixin PropertyPublisherImpl;
         this()
         {
-            propCollectorGetPairs!Bar;
+            collectPublicationsFromPairs!Bar;
         }
         @Set void field(size_t aValue)
         {
@@ -699,7 +736,6 @@ version(unittest)
             return _field;
         }
     }
-
     class Baz : Bar
     {
         @Set override void field(size_t aValue)
@@ -714,35 +750,18 @@ version(unittest)
         }
     }
 
-    class Dog
-    {
-        mixin PropDescriptorCollector;
-        @SetGet Object _o;
-        this()
-        {
-            _o = new Object;
-            propCollectorGetFields!Dog;
-        }
-    }
-
-}
-
-unittest
-{
-    auto foo = construct!Foo;
-    foo.use;
-    foo.destruct;
-
-    auto baz = construct!Baz;
-    auto prop = baz.propCollectorGet!size_t("field");
+    // test that the most derived override is used as setter or getter
+    Baz baz = construct!Baz;
+    assert(baz.publicationCount == 1);
+    auto prop = baz.publication!size_t("field");
     prop.set(0);
     assert(baz.info == "BarBaz");
-    assert(baz.propCollectorCount == 1);
+    assert(baz.publicationCount == 1);
     auto a = prop.get;
     assert(baz.info == "most derived");
     baz.destruct;
 
-    writeln("PropDescriptorCollector passed the tests");
+    writeln("PropertyBublisher passed the tests (basic)");
 }
 
 unittest
@@ -750,98 +769,98 @@ unittest
     alias Delegate = void delegate(uint a);
     class Cat
     {
-        mixin PropDescriptorCollector;
+        mixin PropertyPublisherImpl;
         @SetGet Delegate _meaow;
-        this(){propCollectorGetFields!Cat;}
+        this(){collectPublications!Cat;}
     }
 
     class Fly
     {
-        mixin PropDescriptorCollector;
+        mixin PropertyPublisherImpl;
         @GetSet string _bzzz(){return "bzzz";}
-        this(){propCollectorGetFields!Fly;}
+        this(){collectPublications!Fly;}
     }
 
     // test that a delegate is detected as a field
     Cat cat = new Cat;
-    assert(cat.propCollectorCount == 1);
-    auto descr = cast(PropDescriptor!uint*) cat.propCollectorGetPtrByIndex(0);
+    assert(cat.publicationCount == 1);
+    auto descr = cast(PropDescriptor!uint*) cat.publicationFromIndex(0);
     assert(descr);
     assert(descr.rtti.type == RuntimeType._delegate);
     // test that a plain function is not detected as field
     Fly fly = new Fly;
-    assert(fly.propCollectorCount == 0);
+    assert(fly.publicationCount == 0);
 }
 
 unittest
 {
     class Bee
     {
-        mixin PropDescriptorCollector;
-        this(){propCollectorGetPairs!Bee;}
+        mixin PropertyPublisherImpl;
+        this(){collectPublicationsFromPairs!Bee;}
         @Set void delegate(uint) setter;
         @Get int delegate() getter;
     }
     // test that delegates as fields are not detected as set/get pairs
     Bee bee = new Bee;
-    assert(bee.propCollectorCount == 0);
+    assert(bee.publicationCount == 0);
 }
 
 unittest
 {
     class B0
     {
-        mixin PropDescriptorCollector;
-        this(){propCollectorAll!B0;}
+        mixin PropertyPublisherImpl;
+        this(){collectPublications!B0;}
         @SetGet int _a;
     }
     class B1: B0
     {
-        mixin PropDescriptorCollector;
-        this(){propCollectorAll!B1;}
+        mixin PropertyPublisherImpl;
+        this(){collectPublications!B1;}
         @Set void b(int value){}
         @Get int b(){return 0;}
         @SetGet int _c;
     }
     // test that all props are detected in the inheritence list
     auto b1 = new B1;
-    assert(b1.propCollectorCount == 3);
+    assert(b1.publicationCount == 3);
 }
 
 unittest
 {
     class B0
     {
-        mixin PropDescriptorCollector;
-        this(){propCollectorAll!B0;}
+        mixin PropertyPublisherImpl;
+        this(){collectPublications!B0;}
         @Set void b(int value){}
         @Get int b(){return 0;}
     }
     class B1: B0
     {
-        mixin PropDescriptorCollector;
-        this(){propCollectorAll!B1;}
+        mixin PropertyPublisherImpl;
+        this(){collectPublications!B1;}
         @HideGet override int b(){return super.b();}
     }
-    // test that a prop marked with @HideSet/Get are not published anymore
+    // test that a prop marked with @HideSet/Get is not published anymore
     auto b0 = new B0;
-    assert(b0.propCollectorCount == 1);
+    assert(b0.publicationCount == 1);
     auto b1 = new B1;
-    assert(b1.propCollectorCount == 0);
+    assert(b1.publicationCount == 0);
 }
 
 unittest
 {
     struct Bug
     {
-        mixin PropDescriptorCollector;
-        this(uint value){propCollectorAll!Bug;}
+        mixin PropertyPublisherImpl;
+        this(uint value){collectPublications!Bug;}
         @SetGet uint _a;
     }
     // test that the 'static if things' related to 'interface inheritence'
     // dont interfere when mixed in struct
     Bug bug = Bug(0);
-    assert(bug.propCollectorCount == 1);
+    assert(bug.publicationCount == 1);
 }
 
 unittest
@@ -850,8 +869,8 @@ unittest
     enum decl = q{
         class Bug
         {
-            mixin PropDescriptorCollector;
-            this(){propCollectorAll!Bug;}
+            mixin PropertyPublisherImpl;
+            this(){collectPublications!Bug;}
             @Set void b(int value, uint ouch){}
             @Get int b(){return 0;}
         }
@@ -867,8 +886,8 @@ unittest
         bool test;
         class Bug
         {
-            mixin PropDescriptorCollector;
-            this(){propCollectorAll!Bug;}
+            mixin PropertyPublisherImpl;
+            this(){collectPublications!Bug;}
             @Set void b(string value){}
             @Get int b(){return 0;}
         }
@@ -876,6 +895,100 @@ unittest
         catch(Error e) test = true;
         assert(test);
     }
+}
+
+unittest
+{
+    // test initial collector/declarator/ownership
+    class B: PropertyPublisher
+    {
+        mixin PropertyPublisherImpl;
+        this(){collectPublications!B;}
+    }
+    class A: PropertyPublisher
+    {
+        mixin PropertyPublisherImpl;
+        B _owned2;
+        this()
+        {
+            _owned1 = new B;
+            _owned2 = new B;
+            collectPublications!A;
+        }
+        @SetGet uint _a;
+        // ownership is set in getFields
+        @SetGet B _owned1;
+        // ownership is set in getPairs
+        @Get B owned2(){return _owned2;}
+        @Set void owned2(B value){}
+        // ownership is not set because value initially is null
+        @SetGet B _notowned;
+    }
+    auto a1 = new A;
+    auto a2 = new A;
+    a1._notowned = a2._owned1;
+    //
+    assert(a1._owned1.declarator is a1);
+    assert(a1._owned2.declarator is a1);
+    assert(a1._notowned.declarator is a2);
+}
+
+
+class PropertyDescriptorTreeNode: TreeItem
+{
+    mixin TreeItemAccessors;
+
+    private PropDescriptor!Object* _descriptor;
+
+    this(PropDescriptor!Object* root)
+    {
+        _descriptor = root;
+
+        PropertyPublisher pub = cast(PropertyPublisher) root.get();
+        if (pub) for(auto i = 0; i < pub.publicationCount; i++)
+        {
+            if (pub.publicationType(i).type == RuntimeType._object)
+                addNewChildren!PropertyDescriptorTreeNode(
+                    cast(typeof(root))pub.publicationFromIndex(i));
+        }
+    }
+
+    const(PropDescriptor!Object*) descriptor() {return _descriptor;}
+}
+
+union AnyPropDescriptor
+{
+    PropDescriptor!byte*    byteProp;
+    PropDescriptor!ubyte*   ubyteProp;
+}
+
+struct Q
+{
+    auto type() {return any.byteProp.rtti.type;}
+    AnyPropDescriptor any;
+    alias any this;
+}
+
+unittest
+{
+    byte a;
+    ubyte b;
+    PropDescriptor!byte pda = PropDescriptor!byte(&a, "a");
+    PropDescriptor!ubyte pdb = PropDescriptor!ubyte(&b, "b");
+
+    AnyPropDescriptor any = {ubyteProp : &pdb};
+    assert(any.byteProp.rtti.type == RuntimeType._ubyte);
+
+    Q g = Q(any);
+
+    switch (g.type)
+    {
+        case RuntimeType._byte: break;
+        case RuntimeType._ubyte: break;
+        default: break;
+    }
+
+
 }
 
 
