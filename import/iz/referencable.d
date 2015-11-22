@@ -90,6 +90,10 @@ public:
         return (referenceID!RT(aReference) != "");
     }
 
+    /**
+     * Support for the in operator.
+     * Evaluates to true if the variable is referenced otherwise false.
+     */
     static bool opBinaryRight(string op : "in", RT)(RT* aReference)
     {
         return (referenceID!RT(aReference) != "");

@@ -48,7 +48,7 @@ struct Array(T)
         {
             debug { assert (fGranularity != 0); }
 
-            size_t newBlockCount = ((aLength * T.sizeof) / fGranularity) + 1;
+            const size_t newBlockCount = ((aLength * T.sizeof) / fGranularity) + 1;
             if (fBlockCount != newBlockCount)
             {
                 fBlockCount = newBlockCount;
@@ -75,7 +75,7 @@ struct Array(T)
     }
     public
     {
-        
+        ///
         @nogc this(A...)(A someElement) if (someElement.length < ptrdiff_t.max-1)
         {
             initLazy;
@@ -88,6 +88,7 @@ struct Array(T)
                 *rwPtr(++i) = elem;
             }
         }
+        ///
         @nogc this(T[] someElements)
         {
 
@@ -103,6 +104,7 @@ struct Array(T)
         }
         static if (__traits(compiles, to!T(string.init)))
         {
+            ///
             this(string aRepresentation)
             {
                 initLazy;
@@ -617,6 +619,7 @@ class StaticList(T): List!T
     }
     public
     {
+        ///
         this(A...)(A someElements)
         {
             fItems = Array!T(someElements);

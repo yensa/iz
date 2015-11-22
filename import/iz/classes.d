@@ -286,6 +286,7 @@ protected:
 
 public:
 
+    ///
     this()
     {
         collectPublications!Component;
@@ -428,22 +429,6 @@ unittest
     // owned1, owned11 & owned12 are dangling but that's expected.
     // Component instances are designed to be created and declared inside
     // other Components. Escaped refs can be set to null using the Observer system.
-}
-
-unittest
-{
-    // test for fix, PropDescriptor.rtti not set when created from GetPairs.
-    auto c = Component.create!Component(null);
-    c.name = "whatever";
-    import iz.serializer, iz.streams;
-    MemoryStream str = construct!MemoryStream;
-    Serializer ser = construct!Serializer;
-    ser.publisherToStream(c, str);
-    c.name = "654654".dup;
-    str.position = 0;
-    ser.streamToPublisher(str, c);
-    assert(c.name == "whatever");
-    destruct(ser, str, c);
 }
 
 unittest

@@ -701,7 +701,6 @@ private void writeText(IstNode istNode, Stream stream)
 
 private void readText(Stream stream, IstNode istNode)
 {
-    size_t i;
     char[] identifier;  
     // cache the property
     char[] propText;

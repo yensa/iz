@@ -34,6 +34,7 @@ if (is(OT == interface) || is(OT == class))
     }
     public
     {
+        ///
         this()
         {
             _observers = construct!(DynamicList!OT);
@@ -81,6 +82,7 @@ if (is(OT == interface) || is(OT == class))
                 _observers.remove(obs);
         }
 
+        /// list of observers
         DynamicList!OT observers()
         {
             return _observers;
@@ -106,6 +108,7 @@ class ObserverInterconnector
     }
     public
     {
+        ///
         this()
         {
             _observers = construct!(DynamicList!Object);
@@ -242,18 +245,18 @@ version(unittest)
         void max(T aValue);
         void def(T aValue);
     }
-    alias intPropObserver = PropObserver!int;
+    alias IntPropObserver = PropObserver!int;
 
-    class foo: intPropObserver
+    class Foo: IntPropObserver
     {
         int _min, _max, _def;
         void min(int aValue){_min = aValue;}
         void max(int aValue){_max = aValue;}
         void def(int aValue){_def = aValue;}
     }
-    alias uintPropObserver = PropObserver!uint;
+    alias UintPropObserver = PropObserver!uint;
 
-    class bar: uintPropObserver
+    class Bar: UintPropObserver
     {
         uint _min, _max, _def;
         void min(uint aValue){_min = aValue;}
@@ -261,7 +264,7 @@ version(unittest)
         void def(uint aValue){_def = aValue;}
     }
 
-    class intPropSubject : CustomSubject!intPropObserver
+    class IntPropSubject : CustomSubject!IntPropObserver
     {
         int _min = int.min; 
         int _max = int.max;
@@ -269,15 +272,15 @@ version(unittest)
         final override void updateObservers()
         {
             for(auto i = 0; i < _observers.count; i++)
-                (cast(intPropObserver)_observers[i]).min(_min);
+                (cast(IntPropObserver)_observers[i]).min(_min);
             for(auto i = 0; i < _observers.count; i++)
-                (cast(intPropObserver)_observers[i]).max(_max);
+                (cast(IntPropObserver)_observers[i]).max(_max);
             for(auto i = 0; i < _observers.count; i++)
-                (cast(intPropObserver)_observers[i]).def(_def);
+                (cast(IntPropObserver)_observers[i]).def(_def);
         }
     }
 
-    class uintPropSubject : CustomSubject!uintPropObserver
+    class UintPropSubject : CustomSubject!UintPropObserver
     {
         uint _min = uint.min; 
         uint _max = uint.max;
@@ -285,11 +288,11 @@ version(unittest)
         final override void updateObservers()
         {
             for(auto i = 0; i < _observers.count; i++)
-                (cast(uintPropObserver)_observers[i]).min(_min);
+                (cast(UintPropObserver)_observers[i]).min(_min);
             for(auto i = 0; i < _observers.count; i++)
-                (cast(uintPropObserver)_observers[i]).max(_max);
+                (cast(UintPropObserver)_observers[i]).max(_max);
             for(auto i = 0; i < _observers.count; i++)
-                (cast(uintPropObserver)_observers[i]).def(_def);
+                (cast(UintPropObserver)_observers[i]).def(_def);
         }
     }
 
@@ -298,14 +301,14 @@ version(unittest)
         auto nots1 = construct!Object;
         auto nots2 = construct!Object;
         auto inter = construct!ObserverInterconnector;
-        auto isubj = construct!intPropSubject;
-        auto iobs1 = construct!foo;
-        auto iobs2 = construct!foo;
-        auto iobs3 = construct!foo;
-        auto usubj = construct!uintPropSubject;
-        auto uobs1 = construct!bar;
-        auto uobs2 = construct!bar;
-        auto uobs3 = construct!bar;
+        auto isubj = construct!IntPropSubject;
+        auto iobs1 = construct!Foo;
+        auto iobs2 = construct!Foo;
+        auto iobs3 = construct!Foo;
+        auto usubj = construct!UintPropSubject;
+        auto uobs1 = construct!Bar;
+        auto uobs2 = construct!Bar;
+        auto uobs3 = construct!Bar;
 
         scope(exit)
         {
@@ -407,6 +410,7 @@ if (is(E == enum))
     }
     public
     {
+        ///
         this()
         {
             _observers = construct!(DynamicList!ObserverType);

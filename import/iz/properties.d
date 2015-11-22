@@ -302,7 +302,8 @@ struct PropDescriptor(T)
     }
 }
 
-version(unittest)
+
+unittest
 {
     class A
     {
@@ -317,28 +318,23 @@ version(unittest)
         @property Si i(){return fi;}
         @property void i(const Si aValue){fi = aValue;}
     }
-    class propdescrtest
-    {
-        unittest
-        {
-            auto a = construct!A;
-            auto descrAi = PropDescriptor!int(&a.i,&a.i,"I");
-            descrAi.setter()(5);
-            assert(a.i == 5);
-            assert(a.i == descrAi.getter()());
-            assert(descrAi.declarator is a);
 
-            auto refval = Si(1,2,333);
-            auto b = construct!B;
-            auto descrBi = PropDescriptor!Si(&b.i,&b.i,"I");
-            descrBi.setter()(refval);
-            assert(b.i.e == 333);
-            assert(b.i.e == descrBi.getter()().e);
+    auto a = construct!A;
+    auto descrAi = PropDescriptor!int(&a.i,&a.i,"I");
+    descrAi.setter()(5);
+    assert(a.i == 5);
+    assert(a.i == descrAi.getter()());
+    assert(descrAi.declarator is a);
 
-            destruct(a,b);
-            writeln("PropDescriptor(T) passed the tests");
-        }
-    }
+    auto refval = Si(1,2,333);
+    auto b = construct!B;
+    auto descrBi = PropDescriptor!Si(&b.i,&b.i,"I");
+    descrBi.setter()(refval);
+    assert(b.i.e == 333);
+    assert(b.i.e == descrBi.getter()().e);
+
+    destruct(a,b);
+    writeln("PropDescriptor(T) passed the tests");
 }
 
 /// designed to annotate a detectable property setter.
@@ -696,13 +692,13 @@ unittest
         {
             assert(propA == 0);
             auto aDescriptor = publication!uint("propA");
-            aDescriptor.setter()(123456789);
-            assert(propA == 123456789);
+            aDescriptor.setter()(1234_5678);
+            assert(propA == 1234_5678);
 
             assert(propB == 0);
             auto bDescriptor = publication!uint("propB");
-            bDescriptor.setter()(987654321);
-            assert(propB == 987654321);
+            bDescriptor.setter()(8765_4321);
+            assert(propB == 8765_4321);
 
             assert(!propC.length);
             auto cDescriptor = publication!(char[])("propC");
@@ -713,8 +709,8 @@ unittest
 
             assert(_anUint == 0);
             auto anUintDescriptor = publication!uint("anUint");
-            anUintDescriptor.setter()(123456789);
-            assert(_anUint == 123456789);
+            anUintDescriptor.setter()(1234_5678);
+            assert(_anUint == 1234_5678);
 
             assert(_manyChars == null);
             auto manyCharsDescriptor = publication!(char[])("manyChars");

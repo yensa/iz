@@ -280,7 +280,7 @@ struct ArrayRange(T, bool assumeDecoded = false, bool infinite = false)
     static if (!isSomeChar!T || assumeDecoded || is(T==dchar))
     {
         private T* _front, _back;
-        static if(infinite) T* _first;
+        private static if(infinite) T* _first;
         ///
         this(ref T[] stuff) 
         {

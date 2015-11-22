@@ -226,7 +226,7 @@ unittest
 unittest
 {
     import core.memory: GC;
-    import std.math;
+    import std.math: isNaN;
     
     auto f = newPtr!(float,true);
     assert(isNaN(*f));
