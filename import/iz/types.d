@@ -1,7 +1,9 @@
 module iz.types;
 
-import std.c.stdlib;
-import std.traits, std.meta;
+import
+    std.c.stdlib, std.traits, std.meta;
+
+version(unittest) import std.stdio;
 
 /// pointer.
 alias Ptr = void*;

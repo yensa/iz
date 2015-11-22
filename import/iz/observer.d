@@ -1,7 +1,9 @@
 module iz.observer;
 
-import iz.types, iz.memory, iz.containers;
-version(unittest) import std.stdio: writeln;
+import
+    iz.types, iz.memory, iz.containers;
+
+version(unittest) import std.stdio;
 
 /**
  * Subject (one to many) interface.

@@ -9,6 +9,8 @@ import
     iz.types, iz.memory, iz.containers, iz.streams, iz.properties,
     iz.serializer, iz.referencable, iz.observer;
 
+version(unittest) import std.stdio;
+
 /**
  * The SerializableList is a serializable object list.
  *
@@ -197,7 +199,7 @@ version(unittest)
         col.deleteItem(1);
         assert(col.items.count == 1);  
         
-        std.stdio.writeln("SerializableList passed the tests");
+        writeln("SerializableList passed the tests");
     }
 }
 
@@ -347,6 +349,7 @@ public:
     /// Suggests an unique Component name according to base.
     final char[] getUniqueName(in char[] base)
     {
+        import std.conv: to;
         size_t i;
         char[] result = base.dup;
         while (!nameAvailable(result))

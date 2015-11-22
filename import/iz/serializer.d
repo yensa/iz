@@ -1,12 +1,12 @@
 module iz.serializer;
 
-version(unittest) import std.stdio;
-
 import
     std.range, std.typetuple, std.conv, std.traits;
 import
     iz.types, iz.memory, iz.properties, iz.containers, iz.streams,
     iz.referencable, iz.strings;
+
+version(unittest) import std.stdio;
 
 // Serializable types ---------------------------------------------------------+
 

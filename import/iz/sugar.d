@@ -1,7 +1,9 @@
 module iz.sugar;
 
-import std.traits;
-import std.typetuple;
+import
+    std.traits, std.typetuple;
+
+version(unittest) import std.stdio;
 
 /// void version of the init() type function.
 @trusted void reset(T)(ref T t)

@@ -1,7 +1,11 @@
 module iz.properties;
 
-import std.traits;
-import iz.memory, iz.types, iz.containers;
+import
+    std.traits;
+import
+    iz.memory, iz.types, iz.containers;
+
+version(unittest) import std.stdio;
 
 /**
  * Describes the accessibility of a property.
@@ -19,12 +23,14 @@ enum PropAccess
 }   
 
 /**
- * Describes the property of type T of an Object. Its members includes:
- * <li> a setter: either as an PropSetter method or as pointer to the field.</li>
- * <li> a getter: either as an PropGetter method or as pointer to the field.</li>
- * <li> a name: optionally used, according to the context.</li>
- * <li> a declarator: the Object declaring the props. the declarator is automatically set
- *      when the descriptor uses at least one accessor method.</li>
+ * Describes a property declared in an aggregate.
+ *
+ * A property is described by a name, a setter and a getter. Severals constructors
+ * allow to define the descriptor using a setter, a getter but also a pointer to
+ * the targeted field.
+ *
+ * Addional information includes an iz.types.RunTimeTpeINfo structure matching to
+ * the instance specialization.
  */
 struct PropDescriptor(T)
 {
@@ -75,7 +81,7 @@ struct PropDescriptor(T)
             else _access = PropAccess.none;
         }
 
-        /// pseudo setter internally used when a T is directly written.
+        // pseudo setter internally used when a T is directly written.
         void internalSetter(T value)
         {
             alias TT = Unqual!T;
@@ -83,7 +89,7 @@ struct PropDescriptor(T)
             if (value != current) *(cast(TT*)_setPtr) = value;
         }
 
-        /// pseudo getter internally used when a T is directly read
+        // pseudo getter internally used when a T is directly read
         T internalGetter()
         {
             return *_getPtr;
@@ -91,12 +97,10 @@ struct PropDescriptor(T)
     }
     public
     {
-        /// version number that can be used in case of breaking change.
-        static immutable ubyte descriptorFormat = 0;
 
 // constructors ---------------------------------------------------------------+
         /**
-         * Constructs a property descriptor from an PropSetter and an PropGetter method.
+         * Constructs a property descriptor from a PropSetter and a PropGetter.
          */  
         this(PropSetter aSetter, PropGetter aGetter, string aName = "")
         in
@@ -110,7 +114,7 @@ struct PropDescriptor(T)
         }
 
         /**
-         * Constructs a property descriptor from an PropSetterConst and an PropGetter method.
+         * Constructs a property descriptor from a PropSetterConst and a PropGetter.
          */  
         this(PropSetterConst aSetter, PropGetter aGetter, string aName = "")
         in
@@ -124,7 +128,8 @@ struct PropDescriptor(T)
         }
 
         /**
-         * Constructs a property descriptor from an PropSetter method and a direct variable.
+         * Constructs a property descriptor from a PropSetter and as getter
+         * a pointer to a variable.
          */
         this(PropSetter aSetter, T* aSourceData, string aName = "")
         in
@@ -138,7 +143,8 @@ struct PropDescriptor(T)
         }
 
         /**
-         * Constructs a property descriptor from a single variable used as source/target
+         * Constructs a property descriptor from a pointer to a variable used as
+         * a setter and getter.
          */
         this(T* aData, string aName = "")
         in
@@ -153,7 +159,7 @@ struct PropDescriptor(T)
 // define all the members -----------------------------------------------------+
 
         /**
-         * Defines a property descriptor from an PropSetter and an PropGetter.
+         * Defines a property descriptor from a PropSetter and a PropGetter.
          */
         void define(PropSetter aSetter, PropGetter aGetter, string aName = "")
         {
@@ -166,7 +172,8 @@ struct PropDescriptor(T)
         }
 
         /**
-         * Defines a property descriptor from an PropSetter method and a direct variable.
+         * Defines a property descriptor from a PropSetter and as getter
+         * a pointer to a variable.
          */
         void define(PropSetter aSetter, T* aSourceData, string aName = "")
         {
@@ -178,7 +185,8 @@ struct PropDescriptor(T)
             _declarator = cast(Object) aSetter.ptr;
         }
         /**
-         * Defines a property descriptor from a single variable used as source/target
+         * Defines a property descriptor from a pointer to a variable used as
+         * a setter and getter.
          */
         void define(T* aData, string aName = "", Object aDeclarator = null)
         {
@@ -195,10 +203,10 @@ struct PropDescriptor(T)
         /**
          * Sets the property setter using a standard method.
          */
-        @property void setter(PropSetter aSetter)
+        @property void setter(PropSetter value)
         {
-            _setter = aSetter;
-            _declarator = cast(Object) aSetter.ptr;
+            _setter = value;
+            _declarator = cast(Object) value.ptr;
             updateAccess;
         }
         /// ditto
@@ -206,16 +214,16 @@ struct PropDescriptor(T)
         /**
          * Sets the property setter using a pointer to a variable
          */
-        void setDirectTarget(T* aLoc)
+        void setDirectTarget(T* location)
         {
-            _setPtr = aLoc;
+            _setPtr = location;
             _setter = &internalSetter;
             updateAccess;
         }
         /**
          * Sets the property value
          */
-        void set(T aValue) {_setter(aValue);}
+        void set(T value) {_setter(value);}
 
 // ---- 
 // getter ---------------------------------------------------------------------+
@@ -223,10 +231,10 @@ struct PropDescriptor(T)
         /** 
          * Sets the property getter using a standard method.
          */
-        @property void getter(PropGetter aGetter)
+        @property void getter(PropGetter value)
         {
-            _getter = aGetter;
-            _declarator = cast(Object) aGetter.ptr;
+            _getter = value;
+            _declarator = cast(Object) value.ptr;
             updateAccess;
         }
         /// ditto
@@ -234,9 +242,9 @@ struct PropDescriptor(T)
         /** 
          * Sets the property getter using a pointer to a variable
          */
-        void setDirectSource(T* aLoc)
+        void setDirectSource(T* value)
         {
-            _getPtr = aLoc;
+            _getPtr = value;
             _getter = &internalGetter;
             updateAccess;
         }
@@ -249,18 +257,18 @@ struct PropDescriptor(T)
 // misc -----------------------------------------------------------------------+
 
         /** 
-         * Information about the prop accessibility
+         * Information about the property accessibility
          */
         @property const(PropAccess) access()
         {
             return _access;
         }
         /** 
-         * Defines a string used to identify the prop
+         * Defines the string used to identify the property
          */
-        @property void name(string aName)
+        @property void name(string value)
         {
-            fName = aName;
+            fName = value;
         }
         /// ditto
         @property string name()
@@ -269,11 +277,11 @@ struct PropDescriptor(T)
         }
         /**
          * The object that declares this property.
-         * The value is set automatically.
+         * When really needed, this value is set automatically.
          */
-        @property void declarator(Object aDeclarator)
+        @property void declarator(Object value)
         {
-            _declarator = aDeclarator;
+            _declarator = value;
         }
         /// ditto
         @property Object declarator(){return _declarator;}
@@ -282,7 +290,7 @@ struct PropDescriptor(T)
          */
         @property const(RuntimeTypeInfo*) rtti(){return &_rtti;}
         /**
-         * Defines the reference matching to the property value.
+         * Defines the reference that matches the property value.
          * This is only used as a helper when the property value is
          * a fat pointer (e.g a delegate) and to serialiaze.
          */
@@ -296,7 +304,6 @@ struct PropDescriptor(T)
 
 version(unittest)
 {
-    import std.stdio;
     class A
     {
         private int fi;
@@ -349,11 +356,15 @@ struct HideGet;
 
 /**
  * When mixed in an agregate this generates a property. 
- * This property is detectable by a PropDescriptorCollector.
+ * This property is detectable by a PropertyPublisher.
+ *
  * Params:
- * T = the type of the property.
- * propName = the name of the property.
- * propField = the identifier of the existing field of type T.
+ *      T = the type of the property.
+ *      propName = the name of the property.
+ *      propField = the identifier of the existing field of type T.
+ *
+ * Returns:
+ *      a sring to mixin.
  */
 string genPropFromField(T, string propName, string propField)()
 {
@@ -388,29 +399,29 @@ mixin(genStandardPropDescriptors);
 interface PropertyPublisher
 {
     /**
-     * Returns the count of descriptor the analyzers have created.
+     * Returns the count of descriptor this class publishes.
      */
     size_t publicationCount();
     /**
      * Returns a pointer to a descriptor according to its name.
-     * Similar to the propCollectorGet() function template excepted that the
+     * Similar to the publication() function template excepted that the
      * result type has not to be specified.
      */
     void* publicationFromName(string name);
     /**
-     * Returns a pointer an indexed descriptor.
-     * index must be with the 0 .. propCollectorCount range.
+     * Returns a pointer the index-th descriptor.
+     * Index must be within the [0 .. publicationCount] range.
      */
     void* publicationFromIndex(size_t index);
     /**
      * Returns a pointer to the RTTI for the nth descriptor.
-     * index must be with the 0 .. propCollectorCount range.
-     * This allows to cast properly the result of propCollectorGetPtr.
+     * Index must be with the 0 .. propCollectorCount range.
+     * This allows to cast the results of publicationFromName() or publicationFromIndex().
      */
     const(RuntimeTypeInfo*) publicationType(size_t index);
     /**
      * Pointer to the object that has created the descriptor leading to this
-     * publisher instance.
+     * PropertyPublisher instance.
      */
     Object declarator(); //acquirer
     void declarator(Object value);
@@ -427,16 +438,17 @@ interface PropertyPublisher
  * The analyzers are usually called in this(). The template has to be mixed in
  * each class generation that introduces new annotated properties.
  *
- * The analyzers, propCollectorGetPairs and propCollectorGetFields are
- * function templates so they must be instantiated with the type they have
+ * The analyzers, propCollectorGetPairs() and propCollectorGetFields() are
+ * function templates that must be instantiated with the type they have
  * to scan (usually typeof(this)). The two analyzers can be called with a
  * third function template: propCollectorAll().
  */
 mixin template PropertyPublisherImpl()
 {
     /**
-     * Contains the list of izPropDesrcriptors created by the analyzers.
-     * propCollectorGet() can be used to correctly cast an item.
+     * Contains the list of PropDesrcriptors created by the analyzers.
+     * The access to this should be accessed directly but using the functions
+     * publication(), publicationFromName() and publicationFromIndex().
      */
     static if (!__traits(hasMember, typeof(this), "_publishedDescriptors"))
     protected void*[] _publishedDescriptors;
@@ -527,9 +539,11 @@ mixin template PropertyPublisherImpl()
     }
 
     /**
-     * Creates the properties descriptors for each field annotated with @SetGet
-     * and whose identifier starts with one of these prefixes: underscore, f, F.
-     * The .name property of the descriptors don't include the prefix.
+     * Creates the properties descriptors for each field annotated with @SetGet.
+     *
+     * If the field identifier starts with '_', 'f' or 'F' then the descriptor
+     * .name member excludes this prefix, otherwise the descriptor .name is
+     * identical.
      */
     protected void collectPublicationsFromFields(T)()
     {
@@ -577,8 +591,8 @@ mixin template PropertyPublisherImpl()
      *
      * In a class hierarchy, an overriden accessor replaces the ancestor's one.
      * If a setter is annoted with @HideSet or a getter with @HideGet then
-     * the descriptor created by analysing an ancestor is removed from the
-     * collection.
+     * the descriptor created when the ancestor was scanned is removed from the
+     * publications.
      */
     protected void collectPublicationsFromPairs(T)()
     {
@@ -713,6 +727,8 @@ unittest
     Foo foo = construct!Foo;
     foo.use;
     foo.destruct;
+
+    writeln("PropertyPublisher passed the tests (basic)");
 }
 
 unittest
@@ -760,8 +776,6 @@ unittest
     auto a = prop.get;
     assert(baz.info == "most derived");
     baz.destruct;
-
-    writeln("PropertyBublisher passed the tests (basic)");
 }
 
 unittest

@@ -5,7 +5,11 @@ package string typeString(T)()
     return typeid(T).toString;
 }
 
-version(unittest) class TestModuleScope{}
+version(unittest)
+{
+    class TestModuleScope{}
+    import std.stdio;
+}
 
 unittest
 {
@@ -257,7 +261,6 @@ public:
 
 unittest
 {
-    import std.stdio: writeln;
     import iz.memory: construct, destruct;
     
     alias delegate1 = ubyte delegate(long param);

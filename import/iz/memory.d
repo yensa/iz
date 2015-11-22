@@ -1,7 +1,11 @@
 module iz.memory;
 
-import std.traits, std.c.stdlib, std.c.string;
-import iz.types;
+import
+    std.traits, std.c.stdlib, std.c.string;
+import
+    iz.types;
+
+version(unittest) import std.stdio;
 
 /**
  * Like malloc() but for @safe context.
@@ -164,7 +168,7 @@ static void destruct(Objs...)(ref Objs objs)
 
 unittest
 {
-    import std.stdio, core.memory: GC;
+    import core.memory: GC;
 
     auto a = construct!Object;
     a.destruct;
@@ -222,7 +226,7 @@ unittest
 unittest
 {
     import core.memory: GC;
-    import std.stdio, std.math;
+    import std.math;
     
     auto f = newPtr!(float,true);
     assert(isNaN(*f));

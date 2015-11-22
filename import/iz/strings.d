@@ -1,7 +1,11 @@
 module iz.strings;
 
-import std.range, std.traits, std.algorithm.searching;
-import iz.sugar;
+import
+    std.range, std.traits, std.algorithm.searching;
+import
+    iz.sugar;
+
+version(unittest) import std.stdio;
 
 // Character-related-structs --------------------------------------------------+
 

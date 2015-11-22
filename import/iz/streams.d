@@ -1,9 +1,11 @@
 module iz.streams;
 
-import core.exception;
-import std.string, std.range, std.traits;
-import std.digest.md, std.conv: to;
-import iz.types, iz.memory;
+import
+    core.exception;
+import
+    std.string, std.range, std.traits, std.digest.md, std.conv;
+import
+    iz.types, iz.memory;
 
 version(unittest) import std.stdio;
 
@@ -78,7 +80,6 @@ version (Windows)
 version (Posix) 
 {
     import core.sys.posix.fcntl, core.sys.posix.unistd;
-    import std.conv: octal;
     import core.sys.posix.stdio;
 
     public alias StreamHandle = int;

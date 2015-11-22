@@ -1,12 +1,13 @@
 module iz.containers;
 
-import core.exception, std.exception;
-import std.stdio;
-import core.stdc.string;
-import std.string: format, strip;
-import std.traits, std.conv: to;
-import iz.memory, iz.types, iz.streams;
+import
+    core.exception, core.stdc.string;
+import
+    std.exception, std.string, std.traits, std.conv;
+import
+    iz.memory, iz.types, iz.streams;
 
+version(unittest) import std.stdio;
 
 version(X86_64) 
     version(linux) version = Nux64;
