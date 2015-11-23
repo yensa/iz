@@ -237,7 +237,7 @@ class ObserverInterconnector
     }
 }
 
-version(unittest)
+unittest
 {
     interface PropObserver(T)
     {
@@ -266,9 +266,9 @@ version(unittest)
 
     class IntPropSubject : CustomSubject!IntPropObserver
     {
-        int _min = int.min; 
+        int _min = int.min;
         int _max = int.max;
-        int _def = int.init; 
+        int _def = int.init;
         final override void updateObservers()
         {
             for(auto i = 0; i < _observers.count; i++)
@@ -282,9 +282,9 @@ version(unittest)
 
     class UintPropSubject : CustomSubject!UintPropObserver
     {
-        uint _min = uint.min; 
+        uint _min = uint.min;
         uint _max = uint.max;
-        uint _def = uint.init; 
+        uint _def = uint.init;
         final override void updateObservers()
         {
             for(auto i = 0; i < _observers.count; i++)
@@ -296,83 +296,81 @@ version(unittest)
         }
     }
 
-    unittest
+    auto nots1 = construct!Object;
+    auto nots2 = construct!Object;
+    auto inter = construct!ObserverInterconnector;
+    auto isubj = construct!IntPropSubject;
+    auto iobs1 = construct!Foo;
+    auto iobs2 = construct!Foo;
+    auto iobs3 = construct!Foo;
+    auto usubj = construct!UintPropSubject;
+    auto uobs1 = construct!Bar;
+    auto uobs2 = construct!Bar;
+    auto uobs3 = construct!Bar;
+
+    scope(exit)
     {
-        auto nots1 = construct!Object;
-        auto nots2 = construct!Object;
-        auto inter = construct!ObserverInterconnector;
-        auto isubj = construct!IntPropSubject;
-        auto iobs1 = construct!Foo;
-        auto iobs2 = construct!Foo;
-        auto iobs3 = construct!Foo;
-        auto usubj = construct!UintPropSubject;
-        auto uobs1 = construct!Bar;
-        auto uobs2 = construct!Bar;
-        auto uobs3 = construct!Bar;
-
-        scope(exit)
-        {
-            destruct(inter, isubj, usubj);
-            destruct(iobs1, iobs2, iobs3);
-            destruct(uobs1, uobs2, uobs3);
-            destruct(nots1, nots2);
-        }
-            
-        inter.beginUpdate;
-        // add valid entities
-        inter.addSubjects(isubj, usubj);
-        inter.addObservers(iobs1, iobs2, iobs3);
-        inter.addObservers(uobs1, uobs2, uobs3);
-        // add invalid entities
-        inter.addSubjects(nots1, nots2);
-        inter.addObservers(nots1, nots2);
-        // not added twice
-        inter.addSubjects(isubj, usubj);
-        inter.endUpdate;
-
-        // check the subject and observers count
-        assert(inter._subjects.count == 2);
-        assert(inter._observers.count == 8);
-        assert(isubj._observers.count == 3);
-        assert(usubj._observers.count == 3);
-
-        inter.beginUpdate;
-        inter.removeObserver(iobs1);
-        inter.endUpdate;
-
-        assert(inter._subjects.count == 2);
-        assert(inter._observers.count == 7);
-        assert(isubj._observers.count == 2);
-        assert(usubj._observers.count == 3);
-        
-        // update subject
-        isubj._min = -127;
-        isubj._max = 128;
-        isubj.updateObservers;    
-        // iobs1 has been removed
-        assert(iobs1._min != -127);
-        assert(iobs1._max != 128);
-        // check observers
-        assert(iobs2._min == -127);
-        assert(iobs2._max == 128);
-        assert(iobs3._min == -127);
-        assert(iobs3._max == 128);
-        
-        // update subject
-        usubj._min = 2;
-        usubj._max = 256;
-        usubj.updateObservers;
-        // check observers
-        assert(uobs1._min == 2);
-        assert(uobs1._max == 256);
-        assert(uobs2._min == 2);
-        assert(uobs2._max == 256);
-        assert(uobs3._min == 2);
-        assert(uobs3._max == 256);        
-
-        writeln( "ObserverInterconnector passed the tests");
+        destruct(inter, isubj, usubj);
+        destruct(iobs1, iobs2, iobs3);
+        destruct(uobs1, uobs2, uobs3);
+        destruct(nots1, nots2);
     }
+
+    inter.beginUpdate;
+    // add valid entities
+    inter.addSubjects(isubj, usubj);
+    inter.addObservers(iobs1, iobs2, iobs3);
+    inter.addObservers(uobs1, uobs2, uobs3);
+    // add invalid entities
+    inter.addSubjects(nots1, nots2);
+    inter.addObservers(nots1, nots2);
+    // not added twice
+    inter.addSubjects(isubj, usubj);
+    inter.endUpdate;
+
+    // check the subject and observers count
+    assert(inter._subjects.count == 2);
+    assert(inter._observers.count == 8);
+    assert(isubj._observers.count == 3);
+    assert(usubj._observers.count == 3);
+
+    inter.beginUpdate;
+    inter.removeObserver(iobs1);
+    inter.endUpdate;
+
+    assert(inter._subjects.count == 2);
+    assert(inter._observers.count == 7);
+    assert(isubj._observers.count == 2);
+    assert(usubj._observers.count == 3);
+
+    // update subject
+    isubj._min = -127;
+    isubj._max = 128;
+    isubj.updateObservers;
+    // iobs1 has been removed
+    assert(iobs1._min != -127);
+    assert(iobs1._max != 128);
+    // check observers
+    assert(iobs2._min == -127);
+    assert(iobs2._max == 128);
+    assert(iobs3._min == -127);
+    assert(iobs3._max == 128);
+
+    // update subject
+    usubj._min = 2;
+    usubj._max = 256;
+    usubj.updateObservers;
+    // check observers
+    assert(uobs1._min == 2);
+    assert(uobs1._max == 256);
+    assert(uobs2._min == 2);
+    assert(uobs2._max == 256);
+    assert(uobs3._min == 2);
+    assert(uobs3._max == 256);
+
+    writeln( "ObserverInterconnector passed the tests");
 }
+
 
 
 /**

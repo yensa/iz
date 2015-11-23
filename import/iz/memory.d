@@ -63,8 +63,8 @@ version(unittest) import std.stdio;
  * Params:
  * src = the pointer to free.
  */
-@trusted @nogc void freeMem(T)(ref T* src) nothrow
-if (isPointer!(T*) && isBasicType!T)
+@trusted @nogc void freeMem(T)(ref T src) nothrow
+if (isPointer!T && isBasicType!(pointerTarget!T))
 {
     if (src) free(cast(void*)src);
     src = null;
@@ -259,8 +259,7 @@ unittest
     assert(GC.addrOf(ptr) == null);
     ptr.freeMem;
     assert(!ptr);
-    
-    
+
     writeln("newPtr passed the tests");  
 }
 
