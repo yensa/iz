@@ -3,8 +3,12 @@ module iz.serializer;
 import
     std.range, std.typetuple, std.conv, std.traits;
 import
-    iz.types, iz.memory, iz.properties, iz.containers, iz.streams,
-    iz.referencable, iz.strings;
+    iz.memory, iz.containers, iz.strings;
+
+public
+{
+    import iz.types, iz.properties, iz.referencable, iz.streams;
+}
 
 version(unittest) import std.stdio;
 
@@ -242,7 +246,7 @@ private string getSerializableTypeString(T)()
 /// Represents a serializable property without genericity.
 struct SerNodeInfo
 {
-    /// the type pf the property
+    /// the type of the property
     SerializableType type;
     /// a pointer to a PropDescriptor
     Ptr     descriptor;
@@ -274,38 +278,10 @@ alias WantDescriptorEvent = void delegate(IstNode node, ref Ptr descriptor, out 
  * Event triggered when a serializer failed to get an object to deserialize.
  * Params:
  * node = The information the callee uses to set the parameter serializable.
- * serializable = the Object the callee has to return.
+ * serializable = The Object the callee has to return.
+ * fromReference = When set to true, the serializer tries to find the Object using the ReferenceMan.
  */
 alias WantObjectEvent = void delegate(IstNode node, ref Object serializable, out bool fromRefererence);
-
-// add double quotes escape 
-private char[] add_dqe(char[] input)
-{
-    char[] result;
-    foreach(i; 0 .. input.length) {
-        if (input[i] != '"') result ~= input[i];
-        else result ~= "\\\"";
-    }
-    return result;
-}
-
-// remove double quotes escape
-private char[] del_dqe(char[] input)
-{
-    if (input.length < 2) return input;
-    char[] result;
-    size_t i;
-    while(i <= input.length){
-        if (input[i .. i+2] == "\\\"")
-        {
-            result ~= input[i+1];
-            i += 2;
-        }
-        else result ~= input[i++];
-    }
-    result ~= input[i++];
-    return result;
-}    
 
 /// Restores the raw value contained in a SerNodeInfo using the associated setter.
 void nodeInfo2Declarator(const SerNodeInfo* nodeInfo)
@@ -568,7 +544,7 @@ class IstNode : TreeItem
         /**
          * Returns the identifier chain of the parents.
          */
-        string parentIdentifiers()
+        string parentIdentifiersChain()
         {
             if (!level) return "";
             //   
@@ -581,6 +557,14 @@ class IstNode : TreeItem
                 curr = cast(IstNode) curr.parent;
             }
             return items.retro.join(".");
+        }
+        /**
+         * Returns the identifier chain.
+         */
+        string identifiersChain()
+        {
+            if (!level) return info.name;
+            else return parentIdentifiersChain ~ "." ~ info.name;
         }
     }
 }
@@ -709,17 +693,24 @@ private void readText(Stream stream, IstNode istNode)
     while(true)
     {
         // end of stream (error)
-        if (stream.position == stream.size) break;
+        if (stream.position == stream.size && old != '"')
+        {
+            // last char considered as " will miss in the prop value
+            // and convertion may throw or suceeds with a wrong value.
+            istNode.info.isDamaged = true;
+            break;
+        }
         old = curr;
         curr = stream.readChar;
         // regular end of property
         if (old == '"' && curr == '\n')
         {
+            // what should be replaced by an escape sequence is 0x10
             stream.position = stream.position - 1;
             break;
         }
         // end of stream without new line
-        else if (curr == '\n' && stream.position == stream.size)
+        else if (old == '"' && stream.position == stream.size)
             break;
     }
     auto immutable endPos = stream.position;
@@ -728,11 +719,7 @@ private void readText(Stream stream, IstNode istNode)
     stream.read(propText.ptr, propText.length);
     stream.position = endPos + 1;
     // level
-    //bool isLevelIndicator(dchar c)
-    //{return c == ' ' || c == '\t';}
-
     auto isLevelIndicator = (dchar c) => (c == ' ' || c == '\t');
-
     identifier = nextWord(propText, isLevelIndicator);
     istNode.info.level = cast(uint) identifier.length;
     // type
@@ -746,7 +733,7 @@ private void readText(Stream stream, IstNode istNode)
     istNode.info.name = nextWord(propText).idup;
     // name value separator
     identifier = nextWord(propText);
-    assert(identifier == "=");
+    if (identifier != "=") istNode.info.isDamaged = true;
     // value
     skipWordUntil(propText, '"');
     identifier = propText[1..$-1];
@@ -1294,7 +1281,7 @@ public:
 
                             if (fromRef || !o)
                             {
-                                Object* po = ReferenceMan.reference!(Object)(childNode.parentIdentifiers ~ "." ~ childNode.info.name);
+                                Object* po = ReferenceMan.reference!(Object)(childNode.identifiersChain);
                                 if (po)
                                 {
                                     t2.set(*po);
@@ -1695,18 +1682,18 @@ version(unittest)
         {
             char[] asText;
             T v = t;
-            SerNodeInfo inf;
+            SerNodeInfo info;
             PropDescriptor!T descr;
             //
             descr.define(&v, "property");
-            setNodeInfo!T(&inf, &descr);
+            setNodeInfo!T(&info, &descr);
             //
             asText = to!string(v).dup;
-            assert(value2text(&inf) == asText, T.stringof);
+            assert(value2text(&info) == asText, T.stringof);
             static if (!isArray!T) 
-                assert(*cast(T*)(text2value(asText, &inf)).ptr == v, T.stringof);
+                assert(*cast(T*)(text2value(asText, &info)).ptr == v, T.stringof);
             static if (isArray!T) 
-                assert(cast(ubyte[])text2value(asText, &inf)==cast(ubyte[])v, T.stringof);
+                assert(cast(ubyte[])text2value(asText, &info)==cast(ubyte[])v, T.stringof);
         }
 
         struct ImpConv{uint _field; alias _field this;}
@@ -1956,7 +1943,7 @@ version(unittest)
         // decomposed de/serialization phases with event ---+ 
         void wantDescr(IstNode node, ref Ptr matchingDescriptor, out bool stop)
         {
-            immutable string chain = node.parentIdentifiers;
+            immutable string chain = node.parentIdentifiersChain;
             if (chain == "Root")
                 matchingDescriptor = a.publicationFromName(node.info.name);
             else if (chain == "Root.aB1")
@@ -1996,7 +1983,7 @@ version(unittest)
 
         // struct serialized as basicType ---+
 
-        import iz.enumset;
+        import iz.enumset: EnumSet, Set8;
         enum A {a0,a1,a2}
         alias SetofA = EnumSet!(A,Set8);
 
@@ -2203,12 +2190,12 @@ version(unittest)
         }
 
         ser.onWantObject = &objectNotFound;
-        ser.publisherToStream(c, str, SerializationFormat.iztxt);
+        ser.publisherToStream(c, str);
         str.saveToFile(r"test.txt");
 
         c.reset;
         str.position = 0;
-        ser.streamToPublisher(str, c, SerializationFormat.iztxt);
+        ser.streamToPublisher(str, c);
 
         assert(c._a == 12);
         assert(c._b == 21);

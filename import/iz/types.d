@@ -210,7 +210,7 @@ template isMultiDimensionalArray(T)
         enum isMultiDimensionalArray = false;
     else
     {
-        import std.range: hasLength;
+        import std.range.primitives: hasLength;
         alias DT = typeof(T.init[0]);
         enum isMultiDimensionalArray = hasLength!DT || isNarrowString!DT;
     }

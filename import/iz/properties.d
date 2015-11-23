@@ -29,7 +29,7 @@ enum PropAccess
  * allow to define the descriptor using a setter, a getter but also a pointer to
  * the targeted field.
  *
- * Addional information includes an iz.types.RunTimeTpeINfo structure matching to
+ * Addional information includes an iz.types.RunTimeTpeInfo structure matching to
  * the instance specialization.
  */
 struct PropDescriptor(T)
@@ -338,17 +338,17 @@ unittest
 }
 
 /// designed to annotate a detectable property setter.
-struct Set;
+enum Set;
 /// designed to annotate a detectable property getter. 
-struct Get;
+enum Get;
 /// designed to annotate a detectable "direct" field.
-struct SetGet;
+enum SetGet;
 /// ditto
 alias GetSet = SetGet;
 /// designed to make undetectable a property collected in a ancestor.
-struct HideSet;
+enum HideSet;
 /// ditto
-struct HideGet;
+enum HideGet;
 
 /**
  * When mixed in an agregate this generates a property. 
@@ -387,11 +387,12 @@ mixin(genStandardPropDescriptors);
 
 
 /**
- * Interfaces the PropDescriptorCollector methods.
+ * The PropertyPublisher interface allows a class to publish a collection
+ * of properties described using the PropDescriptor format.
+ *
  * The methods don't have to be implemented by hand as it's automatically done 
- * when the PropDescriptorCollector template is mixed in a class.
+ * when the PropertyPusblisherImpl template is mixed in a class.
  */
-
 interface PropertyPublisher
 {
     /**
@@ -434,10 +435,10 @@ interface PropertyPublisher
  * The analyzers are usually called in this(). The template has to be mixed in
  * each class generation that introduces new annotated properties.
  *
- * The analyzers, propCollectorGetPairs() and propCollectorGetFields() are
+ * The analyzers, propCollectorGetPairs() and propCollectorGetFields(), are
  * function templates that must be instantiated with the type they have
  * to scan (usually typeof(this)). The two analyzers can be called with a
- * third function template: propCollectorAll().
+ * third function template: collectPublications().
  */
 mixin template PropertyPublisherImpl()
 {
