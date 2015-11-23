@@ -158,7 +158,7 @@ struct CharMap
     /**
      * Used in the construction process.
      * Params:
-     * a = alist made of character slices, of single characters or
+     *      a = alist made of character slices, of single characters or
      * any other values whose type are implicitly convertible to dchar.
      * Example:
      * ---
@@ -204,7 +204,7 @@ struct CharMap
      * Returns true if a character is within the map.
      *
      * Params:
-     * c = A character or any value convertible to a dchar.
+     *      c = A character or any value convertible to a dchar.
      */
     bool opIn_r(C)(C c) pure nothrow @nogc const @safe 
     {
@@ -251,9 +251,9 @@ immutable CharMap whiteChars = CharMap['\t'..'\r', ' '];
  * Returns a input range to process directly a C-style null terminated string 
  * without converting it to a D string. The front is not decoded.
  * Params:
- * c = a pointer to a character.
+ *      c = a pointer to a character.
  * Returns:
- * A InputRange whose elements type matches c target type.
+ *      A InputRange whose elements type matches c target type.
  */
 auto nullTerminated(C)(C c)
 if (isPointer!C && isSomeChar!(PointerTarget!(C)))
@@ -338,12 +338,12 @@ private bool isCharTester(T)()
  * Returns the next word in the range passed as argument.
  *
  * Params: 
- * range = A character input range. The range is consumed for each word.
- * charTester = Defines the valid characters to make a word.
+ *      range = A character input range. The range is consumed for each word.
+ *      charTester = Defines the valid characters to make a word.
  *
  * Returns:
- * A dstring containing the word. If the result length is null then the
- * range parameter has not been consumed.
+ *      A dstring containing the word. If the result length is null then the
+ *      range parameter has not been consumed.
  */
 auto nextWord(Range, T, bool until = false)(ref Range range, T charTester)
 if (isInputRange!Range && isSomeChar!(ElementType!Range) && isCharTester!T)
@@ -464,7 +464,7 @@ if (isInputRange!Range && isSomeChar!(ElementType!Range) && isCharTester!T)
 
     return result;
 }
-
+///
 unittest
 {
     auto cs1 = "azertyuiopqsdfghjklmwxcvbn";
@@ -501,18 +501,18 @@ unittest
  * Returns the next word in the range passed as argument.
  *
  * Params: 
- * range = A character input range. The range is consumed for each word.
- * charTester = Defines the opposite of the valid characters to make a word. 
+ *      range = A character input range. The range is consumed for each word.
+ *      charTester = Defines the opposite of the valid characters to make a word.
  *
  * Returns:
- * A string containing the word. If the result length is null then the
- * range parameter has not been consumed.
+ *      A string containing the word. If the result length is null then the
+ *      range parameter has not been consumed.
  */
 auto nextWordUntil(Range, T)(ref Range range, T charTester)
 {
     return nextWord!(Range, T, true)(range, charTester);
 }
-
+///
 unittest
 {
     auto src = "azertyuiop
@@ -527,8 +527,8 @@ unittest
  * Skips the next word in the range passed as argument.
  *
  * Params:
- * range = A character input range. The range is consumed for each word.
- * charTester = Defines the valid characters to make a word.
+ *      range = A character input range. The range is consumed for each word.
+ *      charTester = Defines the valid characters to make a word.
  */
 void skipWord(Range, T, bool until = false)(ref Range range, T charTester)
 if (isInputRange!Range && isSomeChar!(ElementType!Range) && isCharTester!T)
@@ -612,7 +612,7 @@ if (isInputRange!Range && isSomeChar!(ElementType!Range) && isCharTester!T)
     }
     else static assert(0, "unsupported charTester argument type in skipWord(): " ~ T.stringof);
 }
-
+///
 unittest
 {
     auto src1 = "\t\t\r\ndd";
@@ -636,7 +636,7 @@ void skipWordUntil(Range, T)(ref Range range, T charTester)
 {
     skipWord!(Range, T, true)(range, charTester);
 }
-
+///
 unittest
 {
     auto src = "dd\r";
@@ -664,7 +664,7 @@ if (isInputRange!Range && isSomeChar!(ElementType!Range) && isIntegral!T)
     
     return result;
 }
-
+///
 unittest
 {
     auto text0 = "012"; 
@@ -710,7 +710,7 @@ if (isInputRange!Range && isSomeChar!(ElementType!Range)
         return startsWith(range, stuff);
     } 
 }
-
+///
 unittest
 {
     auto text0 = "{0}".dup;
@@ -760,7 +760,7 @@ if (isInputRange!Range && isSomeChar!(ElementType!Range))
     }
     return BySlice(range);
 }
-
+///
 unittest
 {
     auto text = "AABBCCDD";
@@ -781,7 +781,7 @@ if (isInputRange!Range && isSomeChar!(ElementType!Range))
     else if (range.canRead('\n')) result = range.nextSlice(1);
     return result;
 }
-
+///
 unittest
 {
     auto text0 = "";
@@ -803,7 +803,7 @@ if (isInputRange!Range && isSomeChar!(ElementType!Range))
     if (range.canRead("\r\n")) range.nextSlice(2);
     else if (range.canRead('\n')) range.nextSlice(1);        
 }
-
+///
 unittest
 {
     auto text0 = "";
@@ -831,7 +831,7 @@ auto nextLine(bool keepTerminator = false, Range)(ref Range range)
     else range.skipEol;
     return result;
 }
-
+///
 unittest
 {
     auto text = "123456\r\n12345\n1234\r\n123\r\n12\r\n1";
@@ -882,7 +882,7 @@ if (isInputRange!Range && isSomeChar!(ElementType!Range))
     }
     return ByLine(range);
 }
-
+///
 unittest
 {
     auto text = "aw\r\nyess";
@@ -903,7 +903,7 @@ size_t lineCount(Range)(Range range)
 {
     return range.byLine.array.length;
 }
-
+///
 unittest
 {
     auto text1= "";
@@ -923,7 +923,7 @@ auto nextWord(Range)(ref Range range)
     skipWord(range, whiteChars);
     return nextWordUntil(range, whiteChars);
 }
-
+///
 unittest
 {
     auto text = " lorem ipsum 123456";
@@ -966,7 +966,7 @@ if (isInputRange!Range && isSomeChar!(ElementType!Range))
     }
     return ByWord(range);
 }
-
+///
 unittest
 {
     auto text = "aw yess, this is so cool";
@@ -989,7 +989,7 @@ size_t wordCount(Range)(Range range)
 {
     return range.byWord.array.length;
 }
-
+///
 unittest
 {
     auto text = "1 2 3 4 5 6 7 8 9 \n 10";
@@ -1013,7 +1013,7 @@ auto nextSeparated(Range, Separators, bool strip = true)(ref Range range, Separa
     }
     return result;
 }
-
+///
 unittest
 {
     auto seps = CharMap[',', '\n'];
@@ -1058,7 +1058,7 @@ if (isInputRange!Range && isSomeChar!(ElementType!Range))
     }
     return BySep(range);
 }
-
+///
 unittest
 {
     auto text = "name = Douglas \n age =27 \n";
@@ -1080,7 +1080,7 @@ auto readDecNumber(Range)(ref Range range)
 {
     return range.nextWord(decimalChars);
 }
-
+///
 unittest
 {
     auto text = "0123456 789";
@@ -1100,7 +1100,7 @@ auto readHexNumber(Range)(ref Range range)
 {
     return range.nextWord(hexChars);
 }
-
+///
 unittest
 {
     auto text1 = "1a2B3C o";
@@ -1118,7 +1118,7 @@ void stripLeftWhites(Range)(ref Range range)
 {
     range.skipWord(whiteChars);
 }
-
+///
 unittest
 {
     auto text = "  \n\r\v bla".dup;
@@ -1126,5 +1126,116 @@ unittest
     rng.stripLeftWhites;
     assert(rng.array == "bla");
 }
+
+
+/**
+ * Escapes certain characters in the input text.
+ *
+ * Params:
+ *      range = The character range to process. The source is not consumed.
+ *      pairs = The pairs of source and target charcater.
+ *      The slash is always unescaped and must not be set as pair.
+ * Returns:
+ *      An array of character whose type matches the range element type.
+ */
+auto escape(Range)(Range range, const char[2][] pairs)
+if (isInputRange!Range && isSomeChar!(ElementType!Range))
+{
+    CharType!Range[] result;
+    dchar front, old;
+    bool done;
+    while (!range.empty)
+    {
+        old = front;
+        front = range.front;
+        done = false;
+        foreach(pair; pairs) if (front == pair[0] && old != '\\')
+        {
+            done = true;
+            result ~= `\` ~ pair[1];
+            range.popFront;
+            break;
+        }
+        if (front == '\\')
+            result ~= front;
+        if (!done)
+        {
+            result ~= front;
+            range.popFront;
+        }
+    }
+    return result;
+}
+///
+unittest
+{
+    assert(`1"`.escape([['"','"']]) == `1\"`);
+    assert(`1"1"11"1`.escape([['"','"']]) == `1\"1\"11\"1`);
+    assert("\n\"1".escape([['"','"'],['\n','n']]) == `\n\"1`);
+    assert(`1\"`.escape([['"','"']]) == `1\\"`);
+    assert(`\`.escape([]) == `\\`);
+}
+
+/**
+ * Un-escapes certain characters in the input text.
+ *
+ * Params:
+ *      range = The character range to process. The source is not consumed.
+ *      pairs = The pairs of target and source charcater.
+ *      The slash is always unescaped and must not be set as pair.
+ * Returns:
+ *      An array of character whose type matches the range element type.
+ *      while invalid, a terminal slash is appended to the result.
+ */
+auto unEscape(Range)(Range range, const char[2][] pairs)
+if (isInputRange!Range && isSomeChar!(ElementType!Range))
+{
+    CharType!Range[] result;
+    dchar front;
+    bool slash;
+    while(!range.empty)
+    {
+        front = range.front;
+        if (slash && front == '\\')
+        {
+            result ~= '\\';
+            slash = false;
+            range.popFront;
+            continue;
+        }
+        if (front == '\\')
+        {
+            slash = true;
+            range.popFront;
+            if (range.empty)
+                result ~= '\\';
+            continue;
+        }
+        if (slash)
+        {
+            foreach(pair; pairs) if (front == pair[1])
+            {
+                result ~= pair[0];
+                slash = false;
+                break;
+            }
+            if (slash) result ~= '\\';
+            slash = false;
+        }
+        else result ~= front;
+        range.popFront;
+    }
+    return result;
+}
+///
+unittest
+{
+    assert( `1\"`.unEscape([['"','"']]) == `1"`);
+    assert(`1\"1\"11\"1`.unEscape([['"','"']]) == `1"1"11"1`);
+    assert(`\n\"1`.unEscape([['"','"'],['\n','n']]) == "\n\"1");
+    assert(`\\\\`.unEscape([]) == `\\`);
+    assert(`\\`.unEscape([]) == `\`);
+}
+
 //------------------------------------------------------------------------------
 
