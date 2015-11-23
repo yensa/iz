@@ -3,7 +3,7 @@ module iz.streams;
 import
     core.exception;
 import
-    std.string, std.range, std.traits, std.digest.md, std.conv;
+    std.string, std.range, std.traits, std.conv;
 import
     iz.types, iz.memory;
 
@@ -1270,134 +1270,133 @@ unittest
     assert(dat3 == "12345678");     
 }
 
-version(unittest)
+unittest
 {
-    class MemoryStreamTest1 : CommonStreamTester!MemoryStream {}
-    class FileStreamTest1: CommonStreamTester!(FileStream, "filestream1.txt"){}
-
-    /*unittest
+    /*auto sz = 0x1_FFFF_FFFFUL;
+    auto huge = construct!FileStream("huge.bin");
+    scope(exit)
     {
-        auto sz = 0x1_FFFF_FFFFUL;
-        auto huge = construct!FileStream("huge.bin");
-        scope(exit)
-        {
-            huge.destruct;
-            std.stdio.remove("huge.bin");
-        }
-        huge.size = sz;
-        huge.position = 0;
-        assert(huge.size == sz);
-    }*/
-
-    class CommonStreamTester(T, A...)
-    {
-        unittest
-        {
-            uint len = 25_000;
-            auto str = construct!T(A);
-            scope (exit)  str.destruct;
-            for (int i = 0; i < len; i++)
-            {
-                str.write(&i, i.sizeof);
-                assert(str.position == (i + 1) * i.sizeof);
-            }
-            str.position = 0;
-            assert(str.size == len * 4);
-            while(str.position < str.size)
-            {
-                int g;
-                auto c = str.read(&g, g.sizeof);
-                assert(g == (str.position - 1) / g.sizeof );
-            }
-            str.clear;
-            assert(str.size == 0);
-            assert(str.position == 0);
-            for (int i = 0; i < len; i++)
-            {
-                str.write(&i, i.sizeof);
-                assert(str.position == (i + 1) * i.sizeof);
-            }   
-            str.position = 0;
-
-            static if (is(T == FileStream))
-            {
-                auto strcpy = construct!T("filestream2.txt");
-            }
-            else auto strcpy = construct!T(A);
-            scope (exit) strcpy.destruct;
-            strcpy.size = 100_000;
-            assert(str.size == len * 4);
-            strcpy.loadFromStream(str);
-            assert(str.size == len * 4);
-            assert(strcpy.size == str.size);
-            strcpy.position = 0;
-            str.position = 0;
-            for (int i = 0; i < len; i++)
-            {
-                auto r0 = str.readInt;
-                auto r1 = strcpy.readInt;
-                assert(r0 == r1);
-            }
-            strcpy.position = 0;
-            str.position = 0;
-            assert(strcpy.size == len * 4);
-
-            str.write("truncate the data".dup.ptr, 17);
-            str.position = 0;
-            strcpy.position = 0;
-            ubyte[] food0, food1;
-            food0.length = cast(size_t) str.size;
-            food1.length = cast(size_t) strcpy.size;
-            str.read(food0.ptr, food0.length);
-            strcpy.read(food1.ptr,food1.length);
-            ubyte[16] md5_0 = md5Of(food0);
-            ubyte[16] md5_1 = md5Of(food1);
-            assert(md5_0 != md5_1);
-            
-            static if (is(T == MemoryStream))
-            {
-                str.saveToFile("memstream.txt");
-                str.clear;
-                str.loadFromFile("memstream.txt");
-                assert(str.size == strcpy.size);
-                std.stdio.remove("memstream.txt");
-            }
-            
-            str.position = 0;
-            strcpy.position = 0;
-            strcpy.saveToStream(str);
-            str.position = 0;
-            strcpy.position = 0;
-            food0.length = cast(size_t) str.size;
-            food1.length = cast(size_t) strcpy.size;
-            str.read(food0.ptr,food0.length);
-            strcpy.read(food1.ptr,food1.length);
-            md5_0 = md5Of(food0);
-            md5_1 = md5Of(food1);
-            assert(md5_0 == md5_1);
-
-            static if (is(T == MemoryStream))
-            {
-              str.clear;
-              for(ubyte i = 0; i < 100; i++) str.write(&i, 1);
-              for(ubyte i = 0; i < 100; i++) assert( str.ubytes[i] == i );
-            }
-
-            static if (is(T == FileStream))
-            {
-                str.closeFile;
-                strcpy.closeFile;
-                std.stdio.remove("filestream1.txt");
-                std.stdio.remove("filestream2.txt");
-            }
-
-            writeln( T.stringof ~ " passed the tests");
-        }
+        huge.destruct;
+        std.stdio.remove("huge.bin");
     }
+    huge.size = sz;
+    huge.position = 0;
+    assert(huge.size == sz);*/
 }
 
 unittest
 {
+    import std.digest.md: md5Of;
+
+    void test(T, A...)(A a)
+    {
+        uint len = 25_000;
+        auto str = construct!T(a);
+        scope (exit)  str.destruct;
+        for (int i = 0; i < len; i++)
+        {
+            str.write(&i, i.sizeof);
+            assert(str.position == (i + 1) * i.sizeof);
+        }
+        str.position = 0;
+        assert(str.size == len * 4);
+        while(str.position < str.size)
+        {
+            int g;
+            auto c = str.read(&g, g.sizeof);
+            assert(g == (str.position - 1) / g.sizeof );
+        }
+        str.clear;
+        assert(str.size == 0);
+        assert(str.position == 0);
+        for (int i = 0; i < len; i++)
+        {
+            str.write(&i, i.sizeof);
+            assert(str.position == (i + 1) * i.sizeof);
+        }
+        str.position = 0;
+
+        static if (is(T == FileStream))
+        {
+            auto strcpy = construct!T("filestream2.txt");
+        }
+        else auto strcpy = construct!T(A);
+        scope (exit) strcpy.destruct;
+        strcpy.size = 100_000;
+        assert(str.size == len * 4);
+        strcpy.loadFromStream(str);
+        assert(str.size == len * 4);
+        assert(strcpy.size == str.size);
+        strcpy.position = 0;
+        str.position = 0;
+        for (int i = 0; i < len; i++)
+        {
+            auto r0 = str.readInt;
+            auto r1 = strcpy.readInt;
+            assert(r0 == r1);
+        }
+        strcpy.position = 0;
+        str.position = 0;
+        assert(strcpy.size == len * 4);
+
+        str.write("truncate the data".dup.ptr, 17);
+        str.position = 0;
+        strcpy.position = 0;
+        ubyte[] food0, food1;
+        food0.length = cast(size_t) str.size;
+        food1.length = cast(size_t) strcpy.size;
+        str.read(food0.ptr, food0.length);
+        strcpy.read(food1.ptr,food1.length);
+        ubyte[16] md5_0 = md5Of(food0);
+        ubyte[16] md5_1 = md5Of(food1);
+        assert(md5_0 != md5_1);
+
+        static if (is(T == MemoryStream))
+        {
+            str.saveToFile("memstream.txt");
+            str.clear;
+            str.loadFromFile("memstream.txt");
+            assert(str.size == strcpy.size);
+            std.stdio.remove("memstream.txt");
+        }
+
+        str.position = 0;
+        strcpy.position = 0;
+        strcpy.saveToStream(str);
+        str.position = 0;
+        strcpy.position = 0;
+        food0.length = cast(size_t) str.size;
+        food1.length = cast(size_t) strcpy.size;
+        str.read(food0.ptr,food0.length);
+        strcpy.read(food1.ptr,food1.length);
+        md5_0 = md5Of(food0);
+        md5_1 = md5Of(food1);
+        assert(md5_0 == md5_1);
+
+        static if (is(T == MemoryStream))
+        {
+          str.clear;
+          for(ubyte i = 0; i < 100; i++) str.write(&i, 1);
+          for(ubyte i = 0; i < 100; i++) assert( str.ubytes[i] == i );
+        }
+
+        static if (is(T == FileStream))
+        {
+            str.closeFile;
+            strcpy.closeFile;
+            std.stdio.remove("filestream1.txt");
+            std.stdio.remove("filestream2.txt");
+        }
+
+        writeln( T.stringof ~ " passed the tests");
+    }
+    test!MemoryStream;
+    test!FileStream("filestream1.txt");
+}
+
+unittest
+{
+    // test ctor with input range
     import std.conv;
     uint a;
     int[2] b = [1,2];
