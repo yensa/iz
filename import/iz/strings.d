@@ -350,7 +350,7 @@ if (isInputRange!Range && isSomeChar!(ElementType!Range) && isCharTester!T)
 {
     alias UT = Unqual!T; 
     CharType!Range[] result;
-    CharType!Range current; 
+    CharType!Range current = void;
 
     static if (is(UT == CharRange) || is(UT == CharMap) || isAssociativeArray!T)
     {
@@ -1134,8 +1134,8 @@ unittest
  * Params:
  *      range = The character range to process. The source is not consumed.
  *      pairs = An array of pair. Each pair (char[2]) defines a source and a
- *      target character. The slash is always escaped and must not be included
- *      in the array.
+ *      target character. The slash is automatically escaped and must not be
+ *      included in the array.
  * Returns:
  *      An array of character whose type matches the range element type.
  */
@@ -1153,7 +1153,7 @@ body
 {
     CharType!Range[] result;
     dchar front;
-    bool done, wasSlash;
+    bool done = void, wasSlash = void;
     while (!range.empty)
     {
         wasSlash = front == '\\';
@@ -1192,8 +1192,8 @@ unittest
  * Params:
  *      range = The character range to process. The source is not consumed.
  *      pairs = An array of pair. Each pair (char[2]) defines a target and a
- *      source character. The slash is always unescaped and must not be included
- *      in the array.
+ *      source character. The slash is automatically unescaped and must not be
+ *      included in the array.
  * Returns:
  *      An array of character whose type matches the range element type.
  *      Even if invalid, a terminal slash is appended to the result.
@@ -1211,7 +1211,7 @@ in
 body
 {
     CharType!Range[] result;
-    dchar front;
+    dchar front = void;
     bool slash;
     while(!range.empty)
     {
