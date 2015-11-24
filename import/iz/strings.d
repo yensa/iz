@@ -1104,15 +1104,15 @@ auto readHexNumber(Range)(ref Range range)
 unittest
 {
     auto text1 = "1a2B3C o";
-    auto text2 = "A897F2f2Ff2fF3c6C9c9Cc9cC9c123 o";
     assert(text1.readHexNumber == "1a2B3C");
     assert(text1 == " o");
+    auto text2 = "A897F2f2Ff2fF3c6C9c9Cc9cC9c123 o";
     assert(text2.readHexNumber == "A897F2f2Ff2fF3c6C9c9Cc9cC9c123");
     assert(text2 == " o");
 }
 
 /**
- * Strips the leading white characters.
+ * Strips leading white characters.
  */
 void stripLeftWhites(Range)(ref Range range)
 {
@@ -1129,27 +1129,37 @@ unittest
 
 
 /**
- * Escapes certain characters in the input text.
+ * Escapes some characters in the input text.
  *
  * Params:
  *      range = The character range to process. The source is not consumed.
- *      pairs = The pairs of source and target charcater.
- *      The slash is always unescaped and must not be set as pair.
+ *      pairs = An array of pair. Each pair (char[2]) defines a source and a
+ *      target character. The slash is always escaped and must not be included
+ *      in the array.
  * Returns:
  *      An array of character whose type matches the range element type.
  */
 auto escape(Range)(Range range, const char[2][] pairs)
 if (isInputRange!Range && isSomeChar!(ElementType!Range))
+in
+{
+    foreach(pair; pairs)
+    {
+        assert(pair[0] != '\\', "the slash (\\) should not be set as pair");
+        assert(pair[1] != '\\', "the slash (\\) should not be set as pair");
+    }
+}
+body
 {
     CharType!Range[] result;
-    dchar front, old;
-    bool done;
+    dchar front;
+    bool done, wasSlash;
     while (!range.empty)
     {
-        old = front;
+        wasSlash = front == '\\';
         front = range.front;
         done = false;
-        foreach(pair; pairs) if (front == pair[0] && old != '\\')
+        foreach(pair; pairs) if (front == pair[0] && !wasSlash)
         {
             done = true;
             result ~= `\` ~ pair[1];
@@ -1177,18 +1187,28 @@ unittest
 }
 
 /**
- * Un-escapes certain characters in the input text.
+ * Un-escapes some characters in the input text.
  *
  * Params:
  *      range = The character range to process. The source is not consumed.
- *      pairs = The pairs of target and source charcater.
- *      The slash is always unescaped and must not be set as pair.
+ *      pairs = An array of pair. Each pair (char[2]) defines a target and a
+ *      source character. The slash is always unescaped and must not be included
+ *      in the array.
  * Returns:
  *      An array of character whose type matches the range element type.
- *      while invalid, a terminal slash is appended to the result.
+ *      Even if invalid, a terminal slash is appended to the result.
  */
 auto unEscape(Range)(Range range, const char[2][] pairs)
 if (isInputRange!Range && isSomeChar!(ElementType!Range))
+in
+{
+    foreach(pair; pairs)
+    {
+        assert(pair[0] != '\\', "the slash (\\) should not be set as pair");
+        assert(pair[1] != '\\', "the slash (\\) should not be set as pair");
+    }
+}
+body
 {
     CharType!Range[] result;
     dchar front;
@@ -1235,6 +1255,7 @@ unittest
     assert(`\n\"1`.unEscape([['"','"'],['\n','n']]) == "\n\"1");
     assert(`\\\\`.unEscape([]) == `\\`);
     assert(`\\`.unEscape([]) == `\`);
+    assert(`\`.unEscape([]) == `\`);
 }
 
 //------------------------------------------------------------------------------

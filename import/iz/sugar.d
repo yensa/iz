@@ -270,7 +270,8 @@ unittest
  * isForwardRange.
  *
  * When the source is an array of character and if assumeDecoded is set to false 
- * then the ArrayRange front type is always dchar because of the UTF decoding.
+ * (the default) then the ArrayRange front type is always dchar because of the
+ * UTF decoding. The parameter can be set to true if the source contains only SBCs.
  *
  * The template parameter infinite allows to turn the range in an infinite range
  * that loops over the elements.
