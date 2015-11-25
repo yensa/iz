@@ -79,6 +79,11 @@ struct RuntimeTypeInfo
     RuntimeType type;
     /// As array
     bool array;
+
+    bool opEquals(RuntimeTypeInfo rhs) const
+    {
+        return (type == rhs.type) & (array == rhs.array);
+    }
 }
 
 /**
@@ -137,6 +142,7 @@ unittest
     RuntimeTypeInfo c_rtti = runtimeTypeInfo(c);
     assert(c_rtti.array);
     assert(c_rtti.type == RuntimeType._char);
+    assert(b_rtti == runtimeTypeInfo!byte);
 }
 
 /**

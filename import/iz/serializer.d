@@ -1138,6 +1138,8 @@ public:
         // only store the properties if the object is not a reference.
         // an object is not a reference when ...
 
+        //TODO-cddoc: formulate clearly why an object is a reference or an owned thing.
+
         // reference: if not a PropDescriptorCollection
         if(!publisher)
             return;
@@ -1150,7 +1152,8 @@ public:
         if (_parentNode !is _rootNode && objDescr.declarator !is publisher.declarator)
             return;
 
-        // not a reference: current collector is owned, write its members
+        // not a reference: current collector is owned (it has initialized the target),
+        // so write its members
         foreach(immutable i; 0 .. publisher.publicationCount)
         {
             alias DescType = PropDescriptor!int; 
@@ -2018,7 +2021,7 @@ version(unittest)
         // but value written is only 1 or 0.
         // solution 1/ put bool at the end of the types list
         // solution 2/ check for implicit convertion in reverse order,
-        // solution 3/ use another template that isImplicitly convertible
+        // solution 3/ use another template that isImplicitlyConvertible
         // solution 4/ statically check that methods fromThis toThat are here and use them.
         //
         assert( bar.set == SetofA(A.a1,A.a2), to!string(bar.set));
@@ -2129,12 +2132,12 @@ version(unittest)
         @SetGet byte _c = 31;
         @SetGet void delegate(uint) _delegate;
 
-        @SetGet RefPublisher _refPublisher;
-        @SetGet SubPublisher _subPublisher;
+        @SetGet RefPublisher _refPublisher; // RAII: initially null, so it's a ref.
+        @SetGet SubPublisher _subPublisher; // RAII: initially assigned so 'this' is the owner.
 
         this()
         {
-            _refPublisherSource = construct!RefPublisher;
+            _refPublisherSource = construct!RefPublisher; // not published
             _subPublisher = construct!SubPublisher;
             _anotherSubPubliser = construct!SubPublisher;
 
@@ -2143,7 +2146,7 @@ version(unittest)
 
             _delegateSource = &delegatetarget;
             _delegate = _delegateSource;
-            _refPublisher = _refPublisherSource;
+            _refPublisher = _refPublisherSource; // e.g assingation during runtime
 
             assert(_refPublisher.declarator !is this);
             assert(_refPublisher.declarator is null);
@@ -2165,7 +2168,7 @@ version(unittest)
         {
             _a = 0; _b = 0; _c = 0;
             _subPublisher.destruct;
-            _subPublisher = null;
+            _subPublisher = null; // wont be found anymore during deser.
             _anotherSubPubliser._someChars = "".dup;
             _delegate = null;
             _refPublisher = null;

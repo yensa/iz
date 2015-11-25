@@ -573,6 +573,7 @@ mixin template PropertyPublisherImpl()
                 {
                     auto o = *cast(Object*) propPtr;
                     PropertyPublisher pub = cast(PropertyPublisher) o;
+                    // RAII: if it's initialized then it's mine
                     if (pub) pub.declarator = this;
                 }
                 //
@@ -627,6 +628,7 @@ mixin template PropertyPublisherImpl()
                 {
                     auto o = cast(Object) dg();
                     PropertyPublisher pub = cast(PropertyPublisher) o;
+                    // RAII: if it's initialized then it's mine
                     if (pub) pub.declarator = this;
                 }
                 //   
@@ -1000,6 +1002,102 @@ unittest
     }
 
 
+}
+
+/**
+ * Binds two property publishers.
+ *
+ * After the call, each property published in target that has a matching property
+ * in source has the same value.
+ *
+ * Params:
+ *      recursive = Indicates if the process is recursive.
+ *      source = The aggregate from where the properties values are copied. Either
+ *      a class or a struct that's mised with PropertyPublisherImpl or a PropertyPublisher.
+ *      target = The aggregate where the propertues values are copied. Same requirements as
+ *      the source.
+ */
+void bindPublications(bool recursive = false, Source, Target)(Source source, Target target)
+if ((__traits(hasMember, Source, "publication") && __traits(hasMember, Target, "publication")) |
+    (is(Source: PropertyPublisher) && is(Target: PropertyPublisher)))
+{
+    PropDescriptor!int* sourceProp, targetProp;
+    foreach(immutable i; 0 .. source.publicationCount)
+    {
+        sourceProp = cast(PropDescriptor!int*) source.publicationFromIndex(i);
+        targetProp = cast(PropDescriptor!int*) target.publicationFromName(sourceProp.name);
+
+        if (!targetProp) continue;
+        if (*sourceProp.rtti != *targetProp.rtti) continue;
+
+        if (sourceProp.rtti.type != RuntimeType._object)
+        {
+            if (!sourceProp.rtti.array)
+                targetProp.set(sourceProp.get);
+            else
+                (cast(PropDescriptor!(int[])*)targetProp)
+                    .set((cast(PropDescriptor!(int[])*)sourceProp).get);
+        }
+        else
+        {
+            // reference
+            if (sourceProp.declarator !is source.declarator
+                && targetProp.declarator !is target.declarator)
+                    targetProp.set(sourceProp.get);
+            // sub object
+            else static if (recursive)
+            {
+                bindPublications!true(
+                    (cast(PropDescriptor!Object*) sourceProp).get(),
+                    (cast(PropDescriptor!Object*) targetProp).get()
+                );
+                continue;
+            }
+        }
+    }
+}
+
+/// ditto
+void bindPublications(bool recursive = false)(Object from, Object to)
+{
+    auto source = cast(PropertyPublisher) from;
+    auto target = cast(PropertyPublisher) to;
+    if (source && target) bindPublications!true(source, target);
+}
+
+unittest
+{
+    class Foo(bool Nested) : PropertyPublisher
+    {
+        mixin PropertyPublisherImpl;
+        this()
+        {
+            static if (Nested)
+                _sub = new Foo!false;
+            collectPublications!Foo;
+        }
+        @SetGet uint _a;
+        @SetGet ulong _b;
+        @SetGet string _c;
+
+        static if (Nested)
+        {
+            @SetGet Foo!false _sub;
+        }
+    }
+
+    Foo!true source = new Foo!true;
+    Foo!true target = new Foo!true;
+    source._a = 8; source._b = ulong.max; source._c = "123";
+    source._sub._a = 8; source._sub._b = ulong.max; source._sub._c = "123";
+    bindPublications!true(source, target);
+
+    assert(target._a == source._a);
+    assert(target._b == source._b);
+    assert(target._c == source._c);
+    assert(target._sub._a == source._sub._a);
+    assert(target._sub._b == source._sub._b);
+    assert(target._sub._c == source._sub._c);
 }
 
 
