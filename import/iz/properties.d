@@ -424,6 +424,45 @@ interface PropertyPublisher
     void declarator(Object value);
 }
 
+/**
+ * Returns true if the argument is a property publisher.
+ */
+bool isPropertyPublisher(T)()
+{
+    bool result = true;
+    static if (is(T : PropertyPublisher))
+        return result;
+    else
+    {
+        foreach(interfaceFun;__traits(allMembers, PropertyPublisher))
+        static if (!__traits(hasMember, T, interfaceFun))
+        {
+            result = false;
+            break;
+        }
+        return result;
+    }
+}
+
+///ditto
+bool isPropertyPublisher(Object o)
+{
+    return (cast(PropertyPublisher) o) !is null;
+}
+
+unittest
+{
+    struct Foo{mixin PropertyPublisherImpl;}
+    class Bar{mixin PropertyPublisherImpl;}
+    class Baz: PropertyPublisher {mixin PropertyPublisherImpl;}
+    static assert(isPropertyPublisher!Foo);
+    static assert(isPropertyPublisher!Bar);
+    static assert(isPropertyPublisher!Baz);
+    auto baz = new Baz;
+    assert( baz.isPropertyPublisher);
+}
+
+
 
 /**
  * Default implementation of a PropertyPublisher.
@@ -1005,10 +1044,51 @@ unittest
 }
 
 /**
+ * Returns true if an Object owns a published sub PropertyPublisher.
+ *
+ * The serializer and the binders use this to determine if a sub object has
+ * to be fully copied / serialized or the reference itself.
+ *
+ * Params:
+ *      t = either a class or a struct mixed with PropertyPublisherImpl or
+ *      a PropertyPublisher.
+ *      descriptor = A pointer to the sub object accessor.
+ */
+bool isObjectOwned(T)(T t, PropDescriptor!Object* descriptor)
+if (__traits(hasMember, T, "publication") || is(T: PropertyPublisher))
+{
+    auto o = cast(PropertyPublisher) descriptor.get();
+    if (o)
+        return o.declarator !is t.declarator;
+    else
+        return false;
+}
+
+unittest
+{
+    class Foo(bool Nested) : PropertyPublisher
+    {
+        mixin PropertyPublisherImpl;
+        this()
+        {
+            static if (Nested) _full = new Foo!false;
+            collectPublications!Foo;
+        }
+
+        @SetGet Foo!false _asref;
+        static if (Nested)
+        @SetGet Foo!false _full;
+    }
+    auto foo = new Foo!true;
+    assert(isObjectOwned(foo, foo.publication!Object("full")));
+    assert(!isObjectOwned(foo, foo.publication!Object("asref")));
+}
+
+/**
  * Binds two property publishers.
  *
  * After the call, each property published in target that has a matching property
- * in source has the same value.
+ * in source has the same value as the source.
  *
  * Params:
  *      recursive = Indicates if the process is recursive.
@@ -1032,6 +1112,8 @@ if ((__traits(hasMember, Source, "publication") && __traits(hasMember, Target, "
 
         if (sourceProp.rtti.type != RuntimeType._object)
         {
+            // note: ABI magic, this works whatever is the property type
+            // but it would be safer to cast properly the PropDescriptor according to its rtti
             if (!sourceProp.rtti.array)
                 targetProp.set(sourceProp.get);
             else
