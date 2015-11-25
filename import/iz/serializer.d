@@ -1158,7 +1158,7 @@ public:
         {
             alias DescType = PropDescriptor!int; 
             void* descr = publisher.publicationFromIndex(i);
-            const RuntimeTypeInfo* rtti = publisher.publicationType(i);
+            const RuntimeTypeInfo rtti = publisher.publicationType(i);
             //
             void addValueProp(T)()
             {

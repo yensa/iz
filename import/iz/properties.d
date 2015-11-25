@@ -288,7 +288,7 @@ struct PropDescriptor(T)
         /**
          * Returns the RuntimeTypeInfo struct for the property type.
          */
-        @property const(RuntimeTypeInfo*) rtti(){return &_rtti;}
+        @property const(RuntimeTypeInfo) rtti(){return _rtti;}
         /**
          * Defines the reference that matches the property value.
          * This is only used as a helper when the property value is
@@ -415,7 +415,7 @@ interface PropertyPublisher
      * Index must be with the 0 .. propCollectorCount range.
      * This allows to cast the results of publicationFromName() or publicationFromIndex().
      */
-    const(RuntimeTypeInfo*) publicationType(size_t index);
+    const(RuntimeTypeInfo) publicationType(size_t index);
     /**
      * Pointer to the object that has created the descriptor leading to this
      * PropertyPublisher instance.
@@ -531,7 +531,7 @@ mixin template PropertyPublisherImpl()
 
     /// see PropertyPublisher
     static if (!__traits(hasMember, ToT, "publicationType") || Base)
-    protected const(RuntimeTypeInfo*) publicationType(size_t index)
+    protected const(RuntimeTypeInfo) publicationType(size_t index)
     {return (cast(PropDescriptor!int*) _publishedDescriptors[index]).rtti;}
 
 // templates: no problem with overrides, instantiated according to class This or That
@@ -658,7 +658,7 @@ mixin template PropertyPublisherImpl()
                 auto dg = &overload;
                 version(assert) if (descriptor.setter) assert (
                     // note: rtti unqalifies the type
-                    runtimeTypeInfo!Type == *descriptor.rtti,
+                    runtimeTypeInfo!Type == descriptor.rtti,
                     "setter and getter types mismatch");
                 descriptor.define(descriptor.setter, dg, member);
                 //
@@ -683,7 +683,7 @@ mixin template PropertyPublisherImpl()
                 auto descriptor = publication!(Parameters!overload)(member, true);
                 auto dg = &overload;
                 version(assert) if (descriptor.getter) assert (
-                    runtimeTypeInfo!Type == *descriptor.rtti,
+                    runtimeTypeInfo!Type == descriptor.rtti,
                     "setter and getter type mismatch");
                 descriptor.define(dg, descriptor.getter, member);
                 //
@@ -1108,7 +1108,7 @@ if ((__traits(hasMember, Source, "publication") && __traits(hasMember, Target, "
         targetProp = cast(PropDescriptor!int*) target.publicationFromName(sourceProp.name);
 
         if (!targetProp) continue;
-        if (*sourceProp.rtti != *targetProp.rtti) continue;
+        if (sourceProp.rtti != targetProp.rtti) continue;
 
         if (sourceProp.rtti.type != RuntimeType._object)
         {
