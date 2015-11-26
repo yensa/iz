@@ -57,7 +57,7 @@ struct PropDescriptor(T)
 
         PropAccess _access;
 
-        string fName;
+        string _name;
 
         void cleanup()
         {
@@ -67,7 +67,7 @@ struct PropDescriptor(T)
             _getter = null;
             _declarator = null;
             _access = PropAccess.none;
-            fName = fName.init;
+            _name = _name.init;
         }
 
         void updateAccess()
@@ -268,12 +268,12 @@ struct PropDescriptor(T)
          */
         @property void name(string value)
         {
-            fName = value;
+            _name = value;
         }
         /// ditto
         @property string name()
         {
-            return fName;
+            return _name;
         }
         /**
          * The object that declares this property.
@@ -337,6 +337,13 @@ unittest
     writeln("PropDescriptor(T) passed the tests");
 }
 
+unittest
+{
+    // the key that allows "safe" cast using iz.types.RunTimeTypeInfo
+    static assert((PropDescriptor!(int)).sizeof == (PropDescriptor!(ubyte[])).sizeof);
+    static assert((PropDescriptor!(string)).sizeof == (PropDescriptor!(ubyte[][][][])).sizeof);
+}
+
 /// designed to annotate a detectable property setter.
 enum Set;
 /// designed to annotate a detectable property getter. 
@@ -355,12 +362,12 @@ enum HideGet;
  * This property is detectable by a PropertyPublisher.
  *
  * Params:
- *      T = the type of the property.
- *      propName = the name of the property.
- *      propField = the identifier of the existing field of type T.
+ *      T = The type of the property.
+ *      propName = The name of the property.
+ *      propField = The identifier that matches the target field.
  *
  * Returns:
- *      a sring to mixin.
+ *      A sring to mixin.
  */
 string genPropFromField(T, string propName, string propField)()
 {
@@ -382,7 +389,7 @@ private string genStandardPropDescriptors()
     return result;
 }
 
-/// Property descriptors for the types defined in the izConstantSizeTypes tuple.
+/// Property descriptors for the types defined in the iz.types.BasicTypes aliases.
 mixin(genStandardPropDescriptors);
 
 
@@ -411,8 +418,8 @@ interface PropertyPublisher
      */
     void* publicationFromIndex(size_t index);
     /**
-     * Returns a pointer to the RTTI for the nth descriptor.
-     * Index must be with the 0 .. propCollectorCount range.
+     * Returns the RTTI for the descriptor at index.
+     * Index must be within the [0 .. publicationCount] range.
      * This allows to cast the results of publicationFromName() or publicationFromIndex().
      */
     const(RuntimeTypeInfo) publicationType(size_t index);
@@ -476,7 +483,7 @@ unittest
  *
  * The analyzers, propCollectorGetPairs() and propCollectorGetFields(), are
  * function templates that must be instantiated with the type they have
- * to scan (usually typeof(this)). The two analyzers can be called with a
+ * to scan (typeof(this)). The two analyzers can be called with a
  * third function template: collectPublications().
  */
 mixin template PropertyPublisherImpl()
@@ -539,11 +546,11 @@ mixin template PropertyPublisherImpl()
     /**
      * Returns a pointer to a descriptor according to its name.
      * Params:
-     *      T = T type of the property.
-     *      name = the identifier used for the setter and the getter.
-     *      createIfMissing = when set to true, the result is never null.
+     *      T = The type of the property.
+     *      name = The identifier used for the setter and the getter.
+     *      createIfMissing = When set to true, the result is never null.
      * Returns:
-     *      null if the operation fails otherwise a pointer to a PropDescriptor!T.
+     *      Null if the operation fails otherwise a pointer to a PropDescriptor!T.
      */
     protected PropDescriptor!T * publication(T)(string name, bool createIfMissing = false)
     {
@@ -985,39 +992,54 @@ unittest
     assert(a1._notowned.declarator is a2);
 }
 
-
-class PropertyDescriptorTreeNode: TreeItem
+/**
+ * Helper union that avoid to cast a generic PropDescriptor.
+ *
+ * iz.properties often declares a "generic" PropDescriptor as a PropDescriptor!int
+ * but such a descriptor as to be casted later according to its rtti value.
+ */
+union PropDescriptorUnion
 {
-    mixin TreeItemAccessors;
-
-    private PropDescriptor!Object* _descriptor;
-
-    this(PropDescriptor!Object* root)
-    {
-        _descriptor = root;
-
-        PropertyPublisher pub = cast(PropertyPublisher) root.get();
-        if (pub) for(auto i = 0; i < pub.publicationCount; i++)
-        {
-            if (pub.publicationType(i).type == RuntimeType._object)
-                addNewChildren!PropertyDescriptorTreeNode(
-                    cast(typeof(root))pub.publicationFromIndex(i));
-        }
-    }
-
-    const(PropDescriptor!Object*) descriptor() {return _descriptor;}
-}
-
-union AnyPropDescriptor
-{
+    PropDescriptor!bool*    boolProp;
     PropDescriptor!byte*    byteProp;
     PropDescriptor!ubyte*   ubyteProp;
+    PropDescriptor!short*   shortProp;
+    PropDescriptor!ushort*  ushortProp;
+    PropDescriptor!int*     intProp;
+    PropDescriptor!uint*    uintProp;
+    PropDescriptor!long*    longProp;
+    PropDescriptor!ulong*   ulongProp;
+    PropDescriptor!float*   floatProp;
+    PropDescriptor!double*  doubleProp;
+    PropDescriptor!double*  realProp;
+    PropDescriptor!char*    charProp;
+    PropDescriptor!wchar*   wcharProp;
+    PropDescriptor!dchar*   dcharProp;
+    PropDescriptor!Object*  objectProp;
+    PropDescriptor!GenericDelegate* delegateProp;
+    PropDescriptor!GenericFunction* functionProp;
+    //
+    PropDescriptor!bool[]*    aboolProp;
+    PropDescriptor!byte[]*    abyteProp;
+    PropDescriptor!ubyte[]*   aubyteProp;
+    PropDescriptor!short[]*   ashortProp;
+    PropDescriptor!ushort[]*  aushortProp;
+    PropDescriptor!int[]*     aintProp;
+    PropDescriptor!uint[]*    auintProp;
+    PropDescriptor!long[]*    alongProp;
+    PropDescriptor!ulong[]*   aulongProp;
+    PropDescriptor!float[]*   afloatProp;
+    PropDescriptor!double[]*  adoubleProp;
+    PropDescriptor!double[]*  arealProp;
+    PropDescriptor!char[]*    acharProp;
+    PropDescriptor!wchar[]*   awcharProp;
+    PropDescriptor!dchar[]*   adcharProp;
 }
-
-struct Q
+/// ditto
+struct AnyPropDescriptor
 {
     auto type() {return any.byteProp.rtti.type;}
-    AnyPropDescriptor any;
+    PropDescriptorUnion any;
     alias any this;
 }
 
@@ -1028,34 +1050,25 @@ unittest
     PropDescriptor!byte pda = PropDescriptor!byte(&a, "a");
     PropDescriptor!ubyte pdb = PropDescriptor!ubyte(&b, "b");
 
-    AnyPropDescriptor any = {ubyteProp : &pdb};
-    assert(any.byteProp.rtti.type == RuntimeType._ubyte);
+    PropDescriptorUnion u = {ubyteProp : &pdb};
+    assert(u.byteProp.rtti.type == RuntimeType._ubyte);
 
-    Q g = Q(any);
-
-    switch (g.type)
-    {
-        case RuntimeType._byte: break;
-        case RuntimeType._ubyte: break;
-        default: break;
-    }
-
-
+    AnyPropDescriptor apd = AnyPropDescriptor(u);
 }
 
 /**
  * Returns true if an Object owns a published sub PropertyPublisher.
  *
  * The serializer and the binders use this to determine if a sub object has
- * to be fully copied / serialized or the reference itself.
+ * to be fully copied / serialized or rather the reference (without members).
  *
  * Params:
- *      t = either a class or a struct mixed with PropertyPublisherImpl or
- *      a PropertyPublisher.
+ *      t = Either a class or a struct mixed with PropertyPublisherImpl or
+ *          a PropertyPublisher.
  *      descriptor = A pointer to the sub object accessor.
  */
 bool isObjectOwned(T)(T t, PropDescriptor!Object* descriptor)
-if (__traits(hasMember, T, "publication") || is(T: PropertyPublisher))
+if (isPropertyPublisher!T)
 {
     auto o = cast(PropertyPublisher) descriptor.get();
     if (o)
@@ -1093,13 +1106,13 @@ unittest
  * Params:
  *      recursive = Indicates if the process is recursive.
  *      source = The aggregate from where the properties values are copied. Either
- *      a class or a struct that's mised with PropertyPublisherImpl or a PropertyPublisher.
- *      target = The aggregate where the propertues values are copied. Same requirements as
- *      the source.
+ *          a class or a struct that's mixed with PropertyPublisherImpl
+ *          or a PropertyPublisher.
+ *      target = The aggregate where the propertues values are copied.
+ *          As for the Target type, same requirment as the source.
  */
 void bindPublications(bool recursive = false, Source, Target)(Source source, Target target)
-if ((__traits(hasMember, Source, "publication") && __traits(hasMember, Target, "publication")) |
-    (is(Source: PropertyPublisher) && is(Target: PropertyPublisher)))
+if (isPropertyPublisher!Source && isPropertyPublisher!Target)
 {
     PropDescriptor!int* sourceProp, targetProp;
     foreach(immutable i; 0 .. source.publicationCount)
@@ -1182,9 +1195,6 @@ unittest
     assert(target._sub._c == source._sub._c);
 }
 
-
-//TODO-cfeature: A PropBinder version based on iz.types.RuntimeTypeInfo
-
 /**
  * A PropertyBinder synchronizes the value of several variables between themselves.
  *
@@ -1192,9 +1202,10 @@ unittest
  * a PropertyBinder stores a list of PropDescriptor with the same types.
  *
  * Params:
- * T = the common type of the properties.
+ *      T = The type of the properties.
+ *      RttiCheck = When set to true, an additional run-time check is performed.
  */
-class PropertyBinder(T)
+class PropertyBinder(T, bool RttiCheck = false)
 {
 
 private:
@@ -1229,13 +1240,22 @@ public:
      * otherwise the descritpor reference will become invalid.
      *
      * Params:
-     * aProp = an PropDescriptor of type T.
-     * isSource = optional boolean indicating if the descriptor is used as the master property.
+     *      aProp = A PropDescriptor of type T.
+     *      isSource = Optional boolean indicating if the descriptor is used as
+     *          master property.
+     *
+     * Returns:
+     *      The index of the descriptor in the binding list.
      */
-    ptrdiff_t addBinding(ref PropDescriptor!T aProp, bool isSource = false)
+    ptrdiff_t addBinding(ref PropDescriptor!T prop, bool isSource = false)
     {
-        if (isSource) _source = &aProp;
-        return _items.add(&aProp);
+        static if (RttiCheck)
+        {
+            if (runtimeTypeInfo!T != aProp.rtti)
+                return -1;
+        }
+        if (isSource) _source = &prop;
+        return _items.add(&prop);
     }
 
     /**
@@ -1243,7 +1263,7 @@ public:
      * The life-time of the new descriptor is handled internally.
      *
      * Returns:
-     * an new PropDescriptor of type T.
+     *      A new PropDescriptor of type T.
      */
     PropDescriptor!T * newBinding()
     {
@@ -1259,11 +1279,11 @@ public:
      * source might be invalidated if it matches the item.
      *
      * Params:
-     * anIndex = the index of the descriptor to remove.
+     *      index = The index of the descriptor to remove.
      */
-    void removeBinding(size_t anIndex)
+    void removeBinding(size_t index)
     {
-        auto itm = _items.extract(anIndex);
+        auto itm = _items.extract(index);
         if (_source && itm == _source) _source = null;
         if (_itemsToDestruct.remove(itm)) destruct(itm);
     }
@@ -1274,15 +1294,15 @@ public:
      * (in the master/source setter).
      *
      * Params:
-     * aValue = a value of type T to send to each slave of the list.
+     *      value = the new value to send to binding.
      */
-    void change(T aValue)
+    void change(T value)
     {
         foreach(item; _items)
         {
             if (item.access == PropAccess.none) continue;
             if (item.access == PropAccess.ro) continue;
-            item.setter()(aValue);
+            item.set(value);
         }
     }
 
@@ -1298,10 +1318,10 @@ public:
     /**
      * Sets the property used as source in updateFromSource().
      * Params:
-     * aSource = the property to be used as source.
+     *      src = The property to be used as source.
      */
-    @property void source(ref PropDescriptor!T aSource)
-    {_source = &aSource;}
+    @property void source(ref PropDescriptor!T src)
+    {_source = &src;}
 
     /**
      * Returns the property used as source in _updateFromSource().
