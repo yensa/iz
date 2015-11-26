@@ -92,7 +92,7 @@ enum SerializableType
     _object = 0x30, _serializable,
     _stream = 0x38,
     _delegate = 0x50, _function
-} 
+}
 
 private struct InvalidSerType{}
 
@@ -440,7 +440,7 @@ void setNodeInfo(T)(SerNodeInfo* nodeInfo, PropDescriptor!T* descriptor)
     }
 
     // arrays types
-    else static if (isSerArrayType!T /*|| isSerArrayStructType!T*/)
+    else static if (isSerArrayType!T)
     {
         nodeInfo.type = text2type[getElemStringOf!T];
         T value = descriptor.get();
@@ -471,7 +471,7 @@ void setNodeInfo(T)(SerNodeInfo* nodeInfo, PropDescriptor!T* descriptor)
             value = className(ser).dup;
             nodeInfo.type = text2type[typeof(ser).stringof];
         } 
-        // Maybe Object implementing PropDescriptorCollection 
+        // Maybe Object implementing PropertyPublisher
         else
         {
             obj = cast(Object) descriptor.get();
@@ -677,7 +677,12 @@ private void writeText(IstNode istNode, Stream stream)
     char[] name_value = " = \"".dup;
     stream.write(name_value.ptr, name_value.length);
     // value
-    char[] value = value2text(istNode.info); // add_dqe
+    char[] value = value2text(istNode.info);
+    with (SerializableType) if (istNode.info.type >= _char &&
+        istNode.info.type <= _dchar && istNode.info.isArray)
+    {
+        value = escape(value, [['\n','n'],['"','"']]);
+    }
     stream.write(value.ptr, value.length);
     char[] eol = "\"\n".dup;
     stream.write(eol.ptr, eol.length);
@@ -705,7 +710,6 @@ private void readText(Stream stream, IstNode istNode)
         // regular end of property
         if (old == '"' && curr == '\n')
         {
-            // what should be replaced by an escape sequence is 0x10
             stream.position = stream.position - 1;
             break;
         }
@@ -737,6 +741,11 @@ private void readText(Stream stream, IstNode istNode)
     // value
     skipWordUntil(propText, '"');
     identifier = propText[1..$-1];
+    with (SerializableType) if (istNode.info.type >= _char &&
+        istNode.info.type <= _dchar && istNode.info.isArray)
+    {
+        identifier = unEscape(identifier, [['\n','n'],['"','"']]);
+    }
     istNode.info.value = text2value(identifier, istNode.info);
 }
 //----
@@ -2130,6 +2139,7 @@ version(unittest)
         @SetGet ubyte _a = 12;
         @SetGet byte _b = 21;
         @SetGet byte _c = 31;
+        @SetGet dchar[] _t = "line1\"inside dq\"\nline2\nline3"d.dup;
         @SetGet void delegate(uint) _delegate;
 
         @SetGet RefPublisher _refPublisher; // RAII: initially null, so it's a ref.
@@ -2166,7 +2176,7 @@ version(unittest)
         void delegatetarget(uint param){dgTest = "awyesss";}
         void reset()
         {
-            _a = 0; _b = 0; _c = 0;
+            _a = 0; _b = 0; _c = 0; _t = _t.init;
             _subPublisher.destruct;
             _subPublisher = null; // wont be found anymore during deser.
             _anotherSubPubliser._someChars = "".dup;
@@ -2203,6 +2213,7 @@ version(unittest)
         assert(c._a == 12);
         assert(c._b == 21);
         assert(c._c == 31);
+        assert(c._t == "line1\"inside dq\"\nline2\nline3");
         assert(c._refPublisher is c._refPublisherSource);
         assert(c._anotherSubPubliser._someChars == "awhyes");
         assert(c._delegate);
@@ -2262,8 +2273,6 @@ version(unittest)
         assert(obj.target == obj.source);
     }
     //----
-
-    //TODO-cfeature: double quote escapes in serialization iztext format
 
     // source errors ---+
     unittest
