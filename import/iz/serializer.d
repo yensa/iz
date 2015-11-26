@@ -406,7 +406,8 @@ ubyte[] text2value(char[] text, const SerNodeInfo* nodeInfo)
         case _char:     return t2v!char;
         case _wchar:    return t2v_2!wchar;
         case _dchar:    return t2v!dchar;
-        case _serializable, _object, _stream, _delegate, _function:
+        case _stream:   return t2v_2!ubyte;
+        case _serializable, _object, _delegate, _function:
                         return cast(ubyte[]) text;
     }
 }
@@ -500,7 +501,6 @@ void setNodeInfo(T)(SerNodeInfo* nodeInfo, PropDescriptor!T* descriptor)
         value.position = 0;
         nodeInfo.value.length = cast(uint) value.size;
         value.read(nodeInfo.value.ptr, cast(uint) value.size);
-        destroy(value);  
         //
         return;   
     }
@@ -1195,6 +1195,9 @@ public:
                     auto _oldParentNode = _parentNode;
                     addPropertyPublisher(cast(PropDescriptor!Object*) descr);
                     _parentNode = _oldParentNode;
+                    break;
+                case _stream:
+                    addProperty(cast(PropDescriptor!Stream*) descr);
                     break;
                 case _delegate:
                     addProperty(cast(PropDescriptor!GenericDelegate*) descr);
@@ -2143,6 +2146,7 @@ version(unittest)
         @SetGet byte _c = 31;
         @SetGet dchar[] _t = "line1\"inside dq\"\nline2\nline3"d.dup;
         @SetGet void delegate(uint) _delegate;
+        MemoryStream _stream;
 
         @SetGet RefPublisher _refPublisher; // RAII: initially null, so it's a ref.
         @SetGet SubPublisher _subPublisher; // RAII: initially assigned so 'this' is the owner.
@@ -2152,6 +2156,13 @@ version(unittest)
             _refPublisherSource = construct!RefPublisher; // not published
             _subPublisher = construct!SubPublisher;
             _anotherSubPubliser = construct!SubPublisher;
+            _stream = construct!MemoryStream;
+            _stream.writeUbyte(0XFE);
+            _stream.writeUbyte(0XFD);
+            _stream.writeUbyte(0XFC);
+            _stream.writeUbyte(0XFB);
+            _stream.writeUbyte(0XFA);
+            _stream.writeUbyte(0XF0);
 
             // collect publications before ref are assigned
             collectPublications!MainPublisher;
@@ -2166,6 +2177,9 @@ version(unittest)
             auto dDescr = publication!GenericDelegate("delegate", false);
             assert(dDescr);
 
+            auto strDesc = publicationFromName("stream");
+            assert(strDesc);
+
             ReferenceMan.storeReference(cast(Object*)&_refPublisherSource, "root.refPublisher");
             ReferenceMan.storeReference(cast(void*)&_delegateSource, "mainpub.at.delegatetarget");
             dDescr.referenceID = "mainpub.at.delegatetarget";
@@ -2174,6 +2188,7 @@ version(unittest)
         {
             destruct(_refPublisherSource);
             destruct(_anotherSubPubliser);
+            destruct(_stream);
         }
         void delegatetarget(uint param){dgTest = "awyesss";}
         void reset()
@@ -2184,6 +2199,17 @@ version(unittest)
             _anotherSubPubliser._someChars = "".dup;
             _delegate = null;
             _refPublisher = null;
+            _stream.size = 0;
+        }
+        @Get Stream stream()
+        {
+            return _stream;
+        }
+        @Set stream(Stream str)
+        {
+            str.position = 0;
+            _stream.loadFromStream(str);
+            _stream.position = 0;
         }
     }
 
@@ -2221,6 +2247,12 @@ version(unittest)
         assert(c._delegate);
         c._delegate(123);
         assert(c.dgTest == "awyesss");
+        assert(c._stream.readUbyte == 0xFE);
+        assert(c._stream.readUbyte == 0xFD);
+        assert(c._stream.readUbyte == 0xFC);
+        assert(c._stream.readUbyte == 0xFB);
+        assert(c._stream.readUbyte == 0xFA);
+        assert(c._stream.readUbyte == 0xF0);
     }
     //----
 
@@ -2276,24 +2308,5 @@ version(unittest)
     }
     //----
 
-    // source errors ---+
-    unittest
-    {
-        Serializer ser = construct!Serializer;
-        MemoryStream str = construct!MemoryStream;
-        Object obj = construct!Object;
-        scope(exit) destruct(ser, str, obj);
-        string source = "Object root  = \"Collected\"
-	                     ubyte a  = \"12\"
-	                     byte b  = \"21\"
-	                     Object sub  = \"SubCollected\"
-		                 char[] someChars  = \"awhyes\"
-	                     byte c  = \"31\"
-	                     GenericDelegate d  = \"71717171\"";
-
-
-    }
-
-    //----
 }
 

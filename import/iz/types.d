@@ -2,6 +2,8 @@ module iz.types;
 
 import
     std.c.stdlib, std.traits, std.meta;
+import
+    iz.streams;
 
 version(unittest) import std.stdio;
 
@@ -60,6 +62,7 @@ enum RuntimeType : ubyte
     _float  = 0x10, _double, _real,
     _char   = 0x20, _wchar, _dchar,
     _object = 0x30,
+    _stream = 0x38,
     _struct = 0x40,
     _delegate = 0x50, _function,
 }
@@ -111,6 +114,8 @@ auto runtimeTypeInfo(T)()
         else static if (is(TT == char))  type = _char;
         else static if (is(TT == wchar)) type = _wchar;
         else static if (is(TT == dchar)) type = _dchar;
+
+        else static if (is(TT : Stream)) type = _stream;
 
         else static if (is(TT == class)) type = _object;
         else static if (is(TT == struct))type = _struct;
