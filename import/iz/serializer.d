@@ -2028,10 +2028,12 @@ version(unittest)
         ser.streamToObject(str, bar, format);
         //TODO-cbetterbugfix: implicit convertion from struct to bool: Set8 <=> bool in size
         // but value written is only 1 or 0.
+
+        // reverse order: JSON exception, Set8 <=> char, but std.json JSON wont convert char to int
+
         // solution 1/ put bool at the end of the types list
         // solution 2/ check for implicit convertion in reverse order,
         // solution 3/ use another template that isImplicitlyConvertible
-        // solution 4/ statically check that methods fromThis toThat are here and use them.
         //
         assert( bar.set == SetofA(A.a1,A.a2), to!string(bar.set));
 
