@@ -79,11 +79,6 @@ struct RuntimeTypeInfo
     RuntimeType type;
     /// As array
     bool array;
-
-    bool opEquals(RuntimeTypeInfo rhs) const
-    {
-        return (type == rhs.type) & (array == rhs.array);
-    }
 }
 
 /**
