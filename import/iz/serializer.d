@@ -12,7 +12,7 @@ public
 
 version(unittest) import std.stdio;
 
-// Serializable types ---------------------------------------------------------+
+// Serializable types validator & misc. ---------------------------------------+
 
 /**
  * Allows an implementer to be serialized by an Serializer.
@@ -241,7 +241,7 @@ private string getSerializableTypeString(T)()
 }
 // -----------------------------------------------------------------------------
 
-// Tree representation ---------------------------------------------------------
+// Tree representation --------------------------------------------------------+
 
 /// Represents a serializable property without genericity.
 struct SerNodeInfo
@@ -264,79 +264,60 @@ struct SerNodeInfo
     bool    isLastChild;
 }
 
-/**
- * Event triggered when a serializer misses a property descriptor.
- * Params:
- * node = The information the callee uses to determine the descriptor to return.
- * descriptor = What the serializer want. If set to null then node is not restored.
- * stop = the callee can set this value to true in order to stop the restoration 
- * process. According to the serialization context, this value can be noop.
- */
-alias WantDescriptorEvent = void delegate(IstNode node, ref Ptr descriptor, out bool stop);
-
-/**
- * Event triggered when a serializer failed to get an object to deserialize.
- * Params:
- * node = The information the callee uses to set the parameter serializable.
- * serializable = The Object the callee has to return.
- * fromReference = When set to true, the serializer tries to find the Object using the ReferenceMan.
- */
-alias WantObjectEvent = void delegate(IstNode node, ref Object serializable, out bool fromRefererence);
-
-/// Restores the raw value contained in a SerNodeInfo using the associated setter.
-void nodeInfo2Declarator(const SerNodeInfo* nodeInfo)
+/// IST node
+class IstNode : TreeItem
 {
-    void toDecl1(T)()  {
-        auto descr = cast(PropDescriptor!T *) nodeInfo.descriptor;
-        descr.set( *cast(T*) nodeInfo.value.ptr );
-    }
-    void toDecl2(T)() {
-        auto descr = cast(PropDescriptor!(T[]) *) nodeInfo.descriptor;
-        descr.set(cast(T[]) nodeInfo.value[]);
-    } 
-    void toDecl(T)() {
-        (!nodeInfo.isArray) ? toDecl1!T : toDecl2!T;
-    }
-    //
-    with (SerializableType) final switch(nodeInfo.type)
+    mixin TreeItemAccessors;
+    private SerNodeInfo _info;
+    public
     {
-        case _invalid, _serializable, _object: break;
-        case _bool: toDecl!bool; break;
-        case _byte: toDecl!byte; break;
-        case _ubyte: toDecl!ubyte; break;
-        case _short: toDecl!short; break;
-        case _ushort: toDecl!ushort; break;
-        case _int: toDecl!int; break;
-        case _uint: toDecl!uint; break;
-        case _long: toDecl!long; break;
-        case _ulong: toDecl!ulong; break;
-        case _float: toDecl!float; break;
-        case _double: toDecl!double; break;
-        case _char: toDecl!char; break;
-        case _wchar: toDecl!wchar; break;
-        case _dchar: toDecl!dchar; break;
-        case _stream:
-            MemoryStream str = construct!MemoryStream;
-            str.write(cast(ubyte*)nodeInfo.value.ptr, nodeInfo.value.length);
-            str.position = 0;
-            auto descr = cast(PropDescriptor!Stream *) nodeInfo.descriptor;
-            descr.set(str);
-            destruct(str);
-            break;
-        case _delegate, _function:
-            char[] refId = cast(char[]) nodeInfo.value[];
-            void* refvoid = ReferenceMan.reference!(void)(refId);
-            void setFromRef(T)()
+        /**
+         * Sets the infomations describing the property associated
+         * to this IST node.
+         */
+        void setDescriptor(T)(PropDescriptor!T* descriptor)
+        {
+            if (descriptor)
+                setNodeInfo!T(&_info, descriptor);
+        }
+        /**
+         * Returns a pointer to the information describing the property
+         * associated to this IST node.
+         */
+        SerNodeInfo* info()
+        {
+            return &_info;
+        }
+        /**
+         * Returns the identifier chain of the parents.
+         */
+        string parentIdentifiersChain()
+        {
+            if (!level) return "";
+            //
+            import std.algorithm: joiner;
+            string[] items;
+            IstNode curr = cast(IstNode) parent;
+            while (curr)
             {
-                auto stuff = *cast(T*) refvoid;
-                auto descr = cast(PropDescriptor!T*) nodeInfo.descriptor;
-                descr.set(stuff);
+                items ~= curr.info.name;
+                curr = cast(IstNode) curr.parent;
             }
-            if (nodeInfo.type == _delegate) setFromRef!GenericDelegate;
-            else setFromRef!GenericFunction;
-            break;
+            return items.retro.join(".");
+        }
+        /**
+         * Returns the identifier chain.
+         */
+        string identifiersChain()
+        {
+            if (!level) return info.name;
+            else return parentIdentifiersChain ~ "." ~ info.name;
+        }
     }
 }
+//----
+
+// Text to ubyte[] converters -------------------------------------------------+
 
 private __gshared static char[] invalidText = "invalid".dup;
 
@@ -409,6 +390,64 @@ ubyte[] text2value(char[] text, const SerNodeInfo* nodeInfo)
         case _stream:   return t2v_2!ubyte;
         case _serializable, _object, _delegate, _function:
                         return cast(ubyte[]) text;
+    }
+}
+//----
+
+// Descriptor to node & node to descriptor ------------------------------------+
+
+/// Restores the raw value contained in a SerNodeInfo using the associated setter.
+void nodeInfo2Declarator(const SerNodeInfo* nodeInfo)
+{
+    void toDecl1(T)()  {
+        auto descr = cast(PropDescriptor!T *) nodeInfo.descriptor;
+        descr.set( *cast(T*) nodeInfo.value.ptr );
+    }
+    void toDecl2(T)() {
+        auto descr = cast(PropDescriptor!(T[]) *) nodeInfo.descriptor;
+        descr.set(cast(T[]) nodeInfo.value[]);
+    }
+    void toDecl(T)() {
+        (!nodeInfo.isArray) ? toDecl1!T : toDecl2!T;
+    }
+    //
+    with (SerializableType) final switch(nodeInfo.type)
+    {
+        case _invalid, _serializable, _object: break;
+        case _bool: toDecl!bool; break;
+        case _byte: toDecl!byte; break;
+        case _ubyte: toDecl!ubyte; break;
+        case _short: toDecl!short; break;
+        case _ushort: toDecl!ushort; break;
+        case _int: toDecl!int; break;
+        case _uint: toDecl!uint; break;
+        case _long: toDecl!long; break;
+        case _ulong: toDecl!ulong; break;
+        case _float: toDecl!float; break;
+        case _double: toDecl!double; break;
+        case _char: toDecl!char; break;
+        case _wchar: toDecl!wchar; break;
+        case _dchar: toDecl!dchar; break;
+        case _stream:
+            MemoryStream str = construct!MemoryStream;
+            scope(exit) destruct(str);
+            str.write(cast(ubyte*)nodeInfo.value.ptr, nodeInfo.value.length);
+            str.position = 0;
+            auto descr = cast(PropDescriptor!Stream*) nodeInfo.descriptor;
+            descr.set(str);
+            break;
+        case _delegate, _function:
+            char[] refId = cast(char[]) nodeInfo.value[];
+            void* refvoid = ReferenceMan.reference!(void)(refId);
+            void setFromRef(T)()
+            {
+                auto stuff = *cast(T*) refvoid;
+                auto descr = cast(PropDescriptor!T*) nodeInfo.descriptor;
+                descr.set(stuff);
+            }
+            if (nodeInfo.type == _delegate) setFromRef!GenericDelegate;
+            else setFromRef!GenericFunction;
+            break;
     }
 }
 
@@ -516,57 +555,19 @@ void setNodeInfo(T)(SerNodeInfo* nodeInfo, PropDescriptor!T* descriptor)
         nodeInfo.value = cast(ubyte[]) descriptor.referenceID;
     }
 }
+//----
 
-/// IST node
-class IstNode : TreeItem
+// Serialization formats ------------------------------------------------------+
+
+/// Enumerates the possible serialization format
+enum SerializationFormat : ubyte
 {
-    mixin TreeItemAccessors;
-    private SerNodeInfo _info;
-    public
-    {
-        /**
-         * Sets the infomations describing the property associated
-         * to this IST node.
-         */
-        void setDescriptor(T)(PropDescriptor!T* descriptor)
-        {
-            if (descriptor)
-                setNodeInfo!T(&_info, descriptor);
-        }
-        /** 
-         * Returns a pointer to the information describing the property
-         * associated to this IST node.
-         */
-        SerNodeInfo* info()
-        {
-            return &_info;
-        }
-        /**
-         * Returns the identifier chain of the parents.
-         */
-        string parentIdentifiersChain()
-        {
-            if (!level) return "";
-            //   
-            import std.algorithm: joiner;
-            string[] items;
-            IstNode curr = cast(IstNode) parent;
-            while (curr)
-            {
-                items ~= curr.info.name;
-                curr = cast(IstNode) curr.parent;
-            }
-            return items.retro.join(".");
-        }
-        /**
-         * Returns the identifier chain.
-         */
-        string identifiersChain()
-        {
-            if (!level) return info.name;
-            else return parentIdentifiersChain ~ "." ~ info.name;
-        }
-    }
+    /// native binary format
+    izbin,
+    /// native readable text format
+    iztxt,
+    /// JSON chunks
+    json
 }
 
 /// Propotype of a function which writes the representation of an IstNode in an izStream.
@@ -858,9 +859,52 @@ private void readBin(Stream stream, IstNode istNode)
 }  
 //----
 
-// High end serializer --------------------------------------------------------+
+/// The serialization format used when not specified.
+alias defaultFormat = SerializationFormat.iztxt;
 
-/// Enumerates the possible state of an Serializer.
+private SerializationWriter writeFormat(SerializationFormat format)
+{
+    with(SerializationFormat) final switch(format)
+    {
+        case izbin: return &writeBin;
+        case iztxt: return &writeText;
+        case json:  return &writeJSON;
+    }
+}
+
+private SerializationReader readFormat(SerializationFormat format)
+{
+    with(SerializationFormat) final switch(format)
+    {
+        case izbin: return &readBin;
+        case iztxt: return &readText;
+        case json:  return &readJSON;
+    }
+}
+//----
+
+// Main Serializer class ------------------------------------------------------+
+
+/**
+ * Prototype of the event triggered when a serializer misses a property descriptor.
+ * Params:
+ * node = The information the callee uses to determine the descriptor to return.
+ * descriptor = What the serializer want. If set to null then node is not restored.
+ * stop = the callee can set this value to true in order to stop the restoration
+ * process. According to the serialization context, this value can be noop.
+ */
+alias WantDescriptorEvent = void delegate(IstNode node, ref Ptr descriptor, out bool stop);
+
+/**
+ * Prototype of the event triggered when a serializer failed to get an object to deserialize.
+ * Params:
+ * node = The information the callee uses to set the parameter serializable.
+ * serializable = The Object the callee has to return.
+ * fromReference = When set to true, the serializer tries to find the Object using the ReferenceMan.
+ */
+alias WantObjectEvent = void delegate(IstNode node, ref Object serializable, out bool fromRefererence);
+
+/// Enumerates the possible state of a Serializer.
 enum SerializationState : ubyte
 {
     /// The serializer is idle.
@@ -895,39 +939,6 @@ enum RestoreMode : ubyte
     random
 }
 
-/// Enumerates the possible serialization format
-enum SerializationFormat : ubyte
-{
-    /// native binary format
-    izbin,
-    /// native readable text format 
-    iztxt,
-    /// JSON chunks
-    json
-}
-
-/// The serialization format used when not specified.
-alias defaultFormat = SerializationFormat.iztxt;
-
-private SerializationWriter writeFormat(SerializationFormat format)
-{
-    with(SerializationFormat) final switch(format)
-    {
-        case izbin: return &writeBin;
-        case iztxt: return &writeText;
-        case json:  return &writeJSON;
-    }
-}
-
-private SerializationReader readFormat(SerializationFormat format)
-{
-    with(SerializationFormat) final switch(format)
-    {
-        case izbin: return &readBin;
-        case iztxt: return &readText;
-        case json:  return &readJSON;
-    }
-}
 
 //TODO-cfeature: Serializer error handling (using isDamaged + format readers errors).
 
