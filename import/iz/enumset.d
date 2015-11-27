@@ -918,7 +918,7 @@ public:
 
         static if (!CallParams.length)
         {
-            for(selectors.SetType i = 0; i < selectors.maxMemberCount; i++)
+            foreach(immutable i; 0 .. selectors.maxMemberCount)
             {
                 if (selectors[i])
                     result[i] = _procs[i]();
@@ -927,7 +927,7 @@ public:
         }
         else static if (!isArray!(CallParams[0]))
         {
-            for(selectors.SetType i = 0; i < selectors.maxMemberCount; i++)
+            foreach(immutable i; 0 .. selectors.maxMemberCount)
             {
                 if (selectors[i])
                     result[i] = _procs[i](prms);
@@ -936,7 +936,7 @@ public:
         }
         else
         {
-            for(selectors.SetType i = 0; i < selectors.maxMemberCount; i++)
+            foreach(immutable i; 0 .. selectors.maxMemberCount)
             {
             // Hard to believe it works ! A unittest HAS to show it can fail.
                 if (selectors[i])

@@ -212,7 +212,7 @@ struct Array(T)
         {
             if (_length == 0) return "[]";
             string result =  "[";
-            for (auto i=0; i<_length-1; i++)
+            foreach (immutable i; 0 .. _length-1)
             {
                 result ~= format("%s, ", *rwPtr(i));
             }
@@ -236,7 +236,7 @@ struct Array(T)
         {
             if (_length != array.length) return false;
             if (_length == 0 && array.length == 0) return true;
-            for (auto i = 0; i < _length; i++)
+            foreach(immutable i; 0 .. _length)
             {
                 if (opIndex(i) != array[i]) return false;
             }
@@ -256,7 +256,7 @@ struct Array(T)
         int opApply(int delegate(ref T) dg)
         {
             int result = 0;
-            for (auto i = 0; i < _length; i++)
+            foreach (immutable i; 0 .. _length)
             {
                 result = dg(*rwPtr(i));
                 if (result) break;
@@ -267,7 +267,7 @@ struct Array(T)
         int opApplyReverse(int delegate(ref T) dg)
         {
             int result = 0;
-            for (ptrdiff_t i = _length-1; i >= 0; i--)
+            foreach_reverse (immutable i; 0 .. _length)
             {
                 result = dg(*rwPtr(i));
                 if (result) break;
@@ -626,7 +626,7 @@ class StaticList(T): List!T
         int opApply(int delegate(T) dg)
         {
             int result = 0;
-            for (auto i = 0; i < _items.length; i++)
+            foreach(immutable i; 0 .. _items.length)
             {
                 result = dg(_items[i]);
                 if (result) break;
@@ -637,7 +637,7 @@ class StaticList(T): List!T
         int opApplyReverse(int delegate(T) dg)
         {
             int result = 0;
-            for (ptrdiff_t i = _items.length-1; i >= 0; i--)
+            foreach_reverse(immutable i; 0 .. _items.length)
             {
                 result = dg(_items[i]);
                 if (result) break;
@@ -658,7 +658,7 @@ class StaticList(T): List!T
         ptrdiff_t find(T item)
         {
             ptrdiff_t result = -1;
-            for (ptrdiff_t i = 0; i < _items.length; i++)
+            foreach(immutable i; 0 .. _items.length)
             {
                 if (_items[i] == item)
                 {
@@ -2071,7 +2071,7 @@ interface TreeItem
     final char[] nodeToTextNative()
     {
         char[] result;
-        for (auto i = 0; i < level; i++) result ~= '\t';
+        foreach(immutable i; 0 .. level) result ~= '\t';
         result ~= format( "Index: %.4d - NodeType: %s", siblingIndex, typeof(this).stringof);
         return result;
     }

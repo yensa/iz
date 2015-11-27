@@ -135,7 +135,7 @@ public:
     static string getIDProposal(RT)(RT* aReference)
     {
         // already stored ? returns current ID
-        const ulong ID = referenceID(aReference);
+        const string ID = referenceID(aReference);
         if (ID != "") return ID;
 
         // not stored ? returns 1
@@ -146,7 +146,7 @@ public:
         }
 
         // try to get an available ID in the existing range
-        for(ulong i = 0; i < fStore[typeString!RT].length; i++)
+        foreach(immutable i; 0 .. fStore[typeString!RT].length)
         {
             import std.string: format;
             if (fStore[typeString!RT][i] == null)
@@ -154,7 +154,7 @@ public:
         }
 
         // otherwise returns the next ID after the current range.
-        for(ulong i = 0; i < ulong.max; i++)
+        foreach(immutable i; 0 .. ulong.max)
         {
             import std.string: format;
             if (i > fStore[typeString!RT].length)

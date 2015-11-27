@@ -1115,7 +1115,7 @@ class MemoryStream: Stream, StreamPersist, FilePersist8
                 size_t tail = sz - blocks * buffsz;
                 
                 size_t pos;
-                for (auto i = 0; i < blocks; i++)
+                foreach(immutable i; 0 .. blocks)
                 {
                     moveMem(target._memory + pos, _memory + pos, buffsz);
                     pos += buffsz;

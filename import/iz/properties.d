@@ -469,8 +469,6 @@ unittest
     assert( baz.isPropertyPublisher);
 }
 
-
-
 /**
  * Default implementation of a PropertyPublisher.
  *
@@ -556,7 +554,7 @@ mixin template PropertyPublisherImpl()
     {
         PropDescriptor!T * descr;
 
-        for(auto i = 0; i < _publishedDescriptors.length; i++)
+        foreach(immutable i; 0 .. _publishedDescriptors.length)
         {
             auto maybe = cast(PropDescriptor!T *) _publishedDescriptors[i];
             if (maybe.name != name) continue;
@@ -1225,7 +1223,7 @@ public:
 
     ~this()
     {
-        for(auto i = 0; i < _itemsToDestruct.count; i++)
+        foreach(immutable i; 0 .. _itemsToDestruct.count)
         {
             auto descr = _itemsToDestruct[i];
             if (descr) destruct(descr);
@@ -1337,163 +1335,159 @@ public:
     {return _items;}
 }
 
-version(unittest)
-private class PropertyBinderTester
+unittest
 {
-    unittest
+    alias intprops = PropertyBinder!int;
+    alias floatprops = PropertyBinder!float;
+
+    class Foo
     {
-        alias intprops = PropertyBinder!int;
-        alias floatprops = PropertyBinder!float;
-
-        class Foo
+        private
         {
-            private
+            int fA;
+            float fB;
+            intprops fASlaves;
+            floatprops fBSlaves;
+        }
+        public
+        {
+            this()
             {
-                int fA;
-                float fB;
-                intprops fASlaves;
-                floatprops fBSlaves;
+                fASlaves = construct!intprops;
+                fBSlaves = construct!floatprops;
             }
-            public
+            ~this()
             {
-                this()
-                {
-                    fASlaves = construct!intprops;
-                    fBSlaves = construct!floatprops;
-                }
-                ~this()
-                {
-                    fASlaves.destruct;
-                    fBSlaves.destruct;
-                }
-                void A(int value)
-                {
-                    if (fA == value) return;
-                    fA = value;
-                    fASlaves.change(fA);
-                }
-                int A(){return fA;}
+                fASlaves.destruct;
+                fBSlaves.destruct;
+            }
+            void A(int value)
+            {
+                if (fA == value) return;
+                fA = value;
+                fASlaves.change(fA);
+            }
+            int A(){return fA;}
 
-                void B(float value)
-                {
-                    if (fB == value) return;
-                    fB = value;
-                    fBSlaves.change(fB);
-                }
-                float B(){return fB;}
+            void B(float value)
+            {
+                if (fB == value) return;
+                fB = value;
+                fBSlaves.change(fB);
+            }
+            float B(){return fB;}
 
-                void addABinding(ref intProp aProp)
-                {
-                    fASlaves.addBinding(aProp);
-                }
+            void addABinding(ref intProp aProp)
+            {
+                fASlaves.addBinding(aProp);
+            }
 
-                void addBBinding(ref floatProp aProp)
-                {
-                    fBSlaves.addBinding(aProp);
-                }
+            void addBBinding(ref floatProp aProp)
+            {
+                fBSlaves.addBinding(aProp);
             }
         }
-
-        class FooSync
-        {
-            private
-            {
-                int fA;
-                float fB;
-            }
-            public
-            {
-                void A(int value){fA = value;}
-                int A(){return fA;}
-                void B(float value){fB = value;}
-                float B(){return fB;}
-            }
-        }
-
-        class Bar
-        {
-            public int A;
-            public float B;
-        }
-
-        // 1 master, 2 slaves
-        auto a0 = construct!Foo;
-        auto a1 = construct!FooSync;
-        auto a2 = construct!FooSync;
-        auto a3 = construct!Bar;
-
-        auto prp1 = intProp(&a1.A,&a1.A);
-        a0.addABinding(prp1);
-
-        auto prp2 = intProp(&a2.A,&a2.A);
-        a0.addABinding(prp2);
-
-        intProp prp3 = intProp(&a3.A);
-        a0.addABinding(prp3);
-
-        auto prpf1 = floatProp(&a1.B,&a1.B);
-        auto prpf2 = floatProp(&a2.B,&a2.B);
-        auto prpf3 = floatProp(&a3.B);
-        a0.addBBinding(prpf1);
-        a0.addBBinding(prpf2);
-        a0.addBBinding(prpf3);
-
-        a0.A = 2;
-        assert( a1.A == a0.A);
-        a1.A = 3;
-        assert( a1.A != a0.A);
-        a0.A = 4;
-        assert( a2.A == a0.A);
-        a0.A = 5;
-        assert( a3.A == a0.A);
-
-        a0.B = 2.5;
-        assert( a1.B == a0.B);
-        a1.B = 3.5;
-        assert( a1.B != a0.B);
-        a0.B = 4.5;
-        assert( a2.B == a0.B);
-        a0.B = 5.5;
-        assert( a3.B == a0.B);
-
-        // interdependent bindings
-        auto m0 = construct!Foo;
-        auto m1 = construct!Foo;
-        auto m2 = construct!Foo;
-
-        intProp mprp0 = intProp(&m0.A, &m0.A);
-        intProp mprp1 = intProp(&m1.A, &m1.A);
-        intProp mprp2 = intProp(&m2.A, &m2.A);
-
-        m0.addABinding(mprp1);
-        m0.addABinding(mprp2);
-
-        m1.addABinding(mprp0);
-        m1.addABinding(mprp2);
-
-        m2.addABinding(mprp0);
-        m2.addABinding(mprp1);
-
-        m0.A = 2;
-        assert( m1.A == m0.A);
-        assert( m2.A == m0.A);
-        m1.A = 3;
-        assert( m0.A == m1.A);
-        assert( m2.A == m1.A);
-        m2.A = 4;
-        assert( m1.A == m2.A);
-        assert( m0.A == m2.A);
-
-        a0.destruct;
-        a1.destruct;
-        a2.destruct;
-        a3.destruct;
-        m0.destruct;
-        m1.destruct;
-        m2.destruct;
-
-        writeln("PropertyBinder(T) passed the tests");
     }
+
+    class FooSync
+    {
+        private
+        {
+            int fA;
+            float fB;
+        }
+        public
+        {
+            void A(int value){fA = value;}
+            int A(){return fA;}
+            void B(float value){fB = value;}
+            float B(){return fB;}
+        }
+    }
+
+    class Bar
+    {
+        public int A;
+        public float B;
+    }
+
+    // 1 master, 2 slaves
+    auto a0 = construct!Foo;
+    auto a1 = construct!FooSync;
+    auto a2 = construct!FooSync;
+    auto a3 = construct!Bar;
+
+    auto prp1 = intProp(&a1.A,&a1.A);
+    a0.addABinding(prp1);
+
+    auto prp2 = intProp(&a2.A,&a2.A);
+    a0.addABinding(prp2);
+
+    intProp prp3 = intProp(&a3.A);
+    a0.addABinding(prp3);
+
+    auto prpf1 = floatProp(&a1.B,&a1.B);
+    auto prpf2 = floatProp(&a2.B,&a2.B);
+    auto prpf3 = floatProp(&a3.B);
+    a0.addBBinding(prpf1);
+    a0.addBBinding(prpf2);
+    a0.addBBinding(prpf3);
+
+    a0.A = 2;
+    assert( a1.A == a0.A);
+    a1.A = 3;
+    assert( a1.A != a0.A);
+    a0.A = 4;
+    assert( a2.A == a0.A);
+    a0.A = 5;
+    assert( a3.A == a0.A);
+
+    a0.B = 2.5;
+    assert( a1.B == a0.B);
+    a1.B = 3.5;
+    assert( a1.B != a0.B);
+    a0.B = 4.5;
+    assert( a2.B == a0.B);
+    a0.B = 5.5;
+    assert( a3.B == a0.B);
+
+    // interdependent bindings
+    auto m0 = construct!Foo;
+    auto m1 = construct!Foo;
+    auto m2 = construct!Foo;
+
+    intProp mprp0 = intProp(&m0.A, &m0.A);
+    intProp mprp1 = intProp(&m1.A, &m1.A);
+    intProp mprp2 = intProp(&m2.A, &m2.A);
+
+    m0.addABinding(mprp1);
+    m0.addABinding(mprp2);
+
+    m1.addABinding(mprp0);
+    m1.addABinding(mprp2);
+
+    m2.addABinding(mprp0);
+    m2.addABinding(mprp1);
+
+    m0.A = 2;
+    assert( m1.A == m0.A);
+    assert( m2.A == m0.A);
+    m1.A = 3;
+    assert( m0.A == m1.A);
+    assert( m2.A == m1.A);
+    m2.A = 4;
+    assert( m1.A == m2.A);
+    assert( m0.A == m2.A);
+
+    a0.destruct;
+    a1.destruct;
+    a2.destruct;
+    a3.destruct;
+    m0.destruct;
+    m1.destruct;
+    m2.destruct;
+
+    writeln("PropertyBinder(T) passed the tests");
 }
 
 unittest

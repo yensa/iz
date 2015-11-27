@@ -171,7 +171,7 @@ class ObserverInterconnector
         {
             beginUpdate;
             _observers.remove(observer);
-            for (auto i = 0; i < _subjects.count; i++)
+            foreach(immutable i; 0 .. _subjects.count)
                 (cast(Subject) _subjects[i]).removeObserver(observer);
             endUpdate;
         }
@@ -222,13 +222,11 @@ class ObserverInterconnector
         void updateObservers()
         {
             fUpdateCount = 0;
-            for(auto subjectIx = 0; subjectIx < _subjects.count; subjectIx++)
+            foreach(immutable subjectIx; 0 .. _subjects.count)
             {
                 auto subject = cast(Subject) _subjects[subjectIx];
-                for(auto observerIx = 0; observerIx < _observers.count; observerIx++)
-                {
+                foreach(immutable observerIx; 0 .. _observers.count)
                     subject.addObserver(_observers[observerIx]);
-                }
             }
         }
 

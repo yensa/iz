@@ -58,7 +58,7 @@ if(isImplicitlyConvertible!(ItemClass, Serializable))
             // in a first time, always re/stores the count.
             serializer.addProperty(&_countDescr);
             // items
-            for(auto i= 0; i < _items.count; i++)
+            foreach(immutable i; 0 .. items.count)
             {
                 auto itm = cast(Object)_items[i];
                 _itmDescr.define(&itm, format("item<%d>",i));
