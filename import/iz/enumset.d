@@ -779,6 +779,12 @@ public:
         return cast(S) rankInfo.count;
     }
 
+    /// Returns the enum count
+    nothrow @safe @nogc const(SetType) container()
+    {
+        return _container;
+    }
+
 //------------------------------------------------------------------------------
 }
 

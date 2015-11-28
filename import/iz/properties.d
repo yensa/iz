@@ -20,7 +20,9 @@ enum PropAccess
     wo,
     /// read & write.
     rw
-}   
+}
+
+alias GenericDescriptor = PropDescriptor!int;
 
 /**
  * Describes a property declared in an aggregate.
@@ -256,6 +258,14 @@ struct PropDescriptor(T)
 // ----     
 // misc -----------------------------------------------------------------------+
 
+        /**
+         *
+         */
+        PropDescriptor!int* genericDescriptor()
+        {
+            return cast(typeof(return)) &this;
+        }
+
         /** 
          * Information about the property accessibility
          */
@@ -344,6 +354,55 @@ unittest
     static assert((PropDescriptor!(string)).sizeof == (PropDescriptor!(ubyte[][][][])).sizeof);
 }
 
+
+/**
+ * Interface for a class that collects and uses some PropDescriptor.
+ * While in most of the case such a client is able to automatically use
+ * the publications of a PropertyPublisher, a client can also visit
+ * the publisher to let him declare more items.
+ */
+interface PropertyPublisherClient
+{
+    /**
+     * Allows to pass a property to the client.
+     * Params:
+     *      T = The property type.
+     *      UseRtti = If set to true, T is ignored and the property type is
+     *          infered from the descriptor rtti.
+     *      property = A pointer to a PropDescriptor!T
+     */
+    // pointless since a PropertyPublisher can alreaduy modify its pub list at runtime.
+    void addGenericProperty(GenericDescriptor* property);
+    /**
+     * Indicates how a client will use the properties.
+     */
+    PropertyPublisherClientState clientState();
+}
+
+enum PropertyPublisherClientState
+{
+    /**
+     * A client will get the value just after a descriptor
+     * is added in the addProperty() method
+     */
+    sequentialGet,
+    /**
+     * A client will set the value right after a descriptor
+     * is added in the addProperty() method
+     */
+    sequentialSet,
+    /**
+     * A client accumulates the descriptors added in the
+     * addProperty() method, after what all the values may be
+     * set or collected.
+     */
+    accumulate,
+    /**
+     * This state shouldn't be visible
+     */
+    idle
+}
+
 /// designed to annotate a detectable property setter.
 enum Set;
 /// designed to annotate a detectable property getter. 
@@ -428,7 +487,13 @@ interface PropertyPublisher
      * PropertyPublisher instance.
      */
     Object declarator(); //acquirer
+    /// ditto
     void declarator(Object value);
+    /**
+     * Called by a PropertyPublisherClient.
+     * Usage is relative to the PropertyPublisherClient implementation
+     */
+    void publisherClientEvent(PropertyPublisherClient client);
 }
 
 /**
@@ -538,6 +603,10 @@ mixin template PropertyPublisherImpl()
     static if (!__traits(hasMember, ToT, "publicationType") || Base)
     protected const(RuntimeTypeInfo) publicationType(size_t index)
     {return (cast(PropDescriptor!int*) _publishedDescriptors[index]).rtti;}
+
+    /// see PropertyPublisher
+    static if (!__traits(hasMember, ToT, "publisherClientEvent") || Base)
+    protected void publisherClientEvent(PropertyPublisherClient client){}
 
 // templates: no problem with overrides, instantiated according to class This or That
 
@@ -998,6 +1067,8 @@ unittest
  */
 union PropDescriptorUnion
 {
+    import iz.streams: Stream;
+
     PropDescriptor!bool*    boolProp;
     PropDescriptor!byte*    byteProp;
     PropDescriptor!ubyte*   ubyteProp;
@@ -1014,24 +1085,25 @@ union PropDescriptorUnion
     PropDescriptor!wchar*   wcharProp;
     PropDescriptor!dchar*   dcharProp;
     PropDescriptor!Object*  objectProp;
+    PropDescriptor!Stream*  streamProp;
     PropDescriptor!GenericDelegate* delegateProp;
     PropDescriptor!GenericFunction* functionProp;
     //
-    PropDescriptor!bool[]*    aboolProp;
-    PropDescriptor!byte[]*    abyteProp;
-    PropDescriptor!ubyte[]*   aubyteProp;
-    PropDescriptor!short[]*   ashortProp;
-    PropDescriptor!ushort[]*  aushortProp;
-    PropDescriptor!int[]*     aintProp;
-    PropDescriptor!uint[]*    auintProp;
-    PropDescriptor!long[]*    alongProp;
-    PropDescriptor!ulong[]*   aulongProp;
-    PropDescriptor!float[]*   afloatProp;
-    PropDescriptor!double[]*  adoubleProp;
-    PropDescriptor!double[]*  arealProp;
-    PropDescriptor!char[]*    acharProp;
-    PropDescriptor!wchar[]*   awcharProp;
-    PropDescriptor!dchar[]*   adcharProp;
+    PropDescriptor!(bool[])*    boolarrayProp;
+    PropDescriptor!(byte[])*    bytearrayProp;
+    PropDescriptor!(ubyte[])*   ubytearrayProp;
+    PropDescriptor!(short[])*   shortarrayProp;
+    PropDescriptor!(ushort[])*  ushortarrayProp;
+    PropDescriptor!(int[])*     intarrayProp;
+    PropDescriptor!(uint[])*    uintarrayProp;
+    PropDescriptor!(long[])*    longarrayProp;
+    PropDescriptor!(ulong[])*   ulongarrayProp;
+    PropDescriptor!(float[])*   floatarrayProp;
+    PropDescriptor!(double[])*  doublearrayProp;
+    PropDescriptor!(double[])*  realarrayProp;
+    PropDescriptor!(char[])*    chararrayProp;
+    PropDescriptor!(wchar[])*   wchararrayProp;
+    PropDescriptor!(dchar[])*   dchararrayProp;
 }
 /// ditto
 struct AnyPropDescriptor
@@ -1055,17 +1127,17 @@ unittest
 }
 
 /**
- * Returns true if an Object owns a published sub PropertyPublisher.
+ * Returns true if the target of a PropDescriptor!Object is owned by another
+ * object.
  *
  * The serializer and the binders use this to determine if a sub object has
  * to be fully copied / serialized or rather the reference (without members).
  *
  * Params:
- *      t = Either a class or a struct mixed with PropertyPublisherImpl or
- *          a PropertyPublisher.
- *      descriptor = A pointer to the sub object accessor.
+ *      descriptor = A pointer to the target accessor.
+ *      t = The potential owner.
  */
-bool isObjectOwned(T)(T t, PropDescriptor!Object* descriptor)
+bool targetObjectOwnedBy(T)(PropDescriptor!Object* descriptor, T t)
 if (isPropertyPublisher!T)
 {
     auto o = cast(PropertyPublisher) descriptor.get();
@@ -1073,6 +1145,24 @@ if (isPropertyPublisher!T)
         return o.declarator !is t.declarator;
     else
         return false;
+}
+
+/**
+ * Constrains the target of a PropDescriptor!Object to be owned
+ * by a particular object.
+ *
+ * Params:
+ *      descriptor = A pointer to the target accessor.
+ *      t = The future owner.
+ */
+void setTargetObjectOwner(T)(PropDescriptor!Object* descriptor, T t)
+if (isPropertyPublisher!T)
+{
+    if (auto o = cast(PropertyPublisher) descriptor.get())
+    {
+        o.declarator = t;
+        descriptor.declarator = t;
+    }
 }
 
 unittest
@@ -1091,8 +1181,26 @@ unittest
         @SetGet Foo!false _full;
     }
     auto foo = new Foo!true;
-    assert(isObjectOwned(foo, foo.publication!Object("full")));
-    assert(!isObjectOwned(foo, foo.publication!Object("asref")));
+    assert(targetObjectOwnedBy(foo.publication!Object("full"), foo));
+    assert(!targetObjectOwnedBy(foo.publication!Object("asref"), foo));
+}
+
+/**
+ * Returns true if two property descriptors are bindable.
+ * To be bindable, the property name must be identical but also their types.
+ * Type checking is based on RTTI and neither source nor target
+ * needs to be passed with the correct type.
+ */
+bool areBindable(S,T)(PropDescriptor!S* source, PropDescriptor!T* target)
+in
+{
+    assert(source);
+    assert(target);
+    assert(target != source);
+}
+body
+{
+    return (source.name == target.name) & (source.rtti == target.rtti);
 }
 
 /**
@@ -1310,7 +1418,7 @@ public:
     void updateFromSource()
     {
         if (!_source) return;
-        change(_source.getter()());
+        change(_source.get());
     }
 
     /**

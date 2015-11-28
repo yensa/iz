@@ -19,6 +19,8 @@ version(unittest) import std.stdio;
  * The serialization is only possible in sequential mode (objectToStream/streamToObject) 
  * because internally the items are described using a single property descriptor.
  */
+
+/+
 class SerializableList(ItemClass): Serializable 
 if(isImplicitlyConvertible!(ItemClass, Serializable))
 {
@@ -202,7 +204,7 @@ version(unittest)
         writeln("SerializableList passed the tests");
     }
 }
-
++/
 /// Enumerates the possible notifications sent to a ComponentObserver
 enum ComponentNotification
 {
@@ -438,3 +440,21 @@ unittest
     assert(ReferenceMan.referenceID(cast(Component*)c) == "a");
 }
 
+
+class PublisherCollection(T): PropertyPublisher
+if (is( T : PropertyPublisher))
+{
+
+    mixin PropertyPublisherImpl;
+
+protected:
+
+    DynamicList!T _items;
+
+public:
+
+    this()
+    {
+    }
+
+}
