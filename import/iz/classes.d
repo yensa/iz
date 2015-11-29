@@ -26,23 +26,9 @@ if(is(ItemClass : PropertyPublisher))
 
     mixin PropertyPublisherImpl;
 
-private:
+protected:
 
-    PropDescriptor!Object _itmDescr;
-    PropDescriptor!uint _countDescr;
     ItemClass[] _items;
-
-    @Get final uint count()
-    {
-        return cast(uint) _items.length;
-    }
-    @Set final void count(uint aValue)
-    {
-        if (_items.length > aValue)
-            while (_items.length != aValue) deleteItem(_items.length-1);
-        else if (_items.length < aValue)
-            while (_items.length != aValue) addItem;
-    }
 
 public:
 
@@ -96,19 +82,38 @@ public:
         if (auto descr = publication!uint(format("item<%d>",index)))
         {
             destruct(descr);
-            // +1: first descriptor matches the count descriptor
+            // +1: first descriptor matches the descriptor for count()
             _publishedDescriptors = _publishedDescriptors.remove(index + 1);
         }
     }
 
     /**
-     * Provides a read only access to the internal container.
+     * Sets or gets the item count.
+     *
+     * Items are automatically created or destroyed when changing this property.
+     * Note that changing the length or items() is a noop, the only way to add
+     * and remove items is to use count(), addItem() or deleteItem().
+     */
+    @Get final uint count()
+    {
+        return cast(uint) _items.length;
+    }
+
+    /// ditto
+    @Set final void count(uint aValue)
+    {
+        if (_items.length > aValue)
+            while (_items.length != aValue) deleteItem(_items.length-1);
+        else if (_items.length < aValue)
+            while (_items.length != aValue) addItem;
+    }
+
+    /**
+     * Provides an access to the items.
      */
     final ItemClass[] items()
     {
-        // should be const: the publications must be in sync with the items
-        // but as usual, const transitivity sucks
-        return _items;
+        return _items.dup;
     }
 
     /**
@@ -116,8 +121,32 @@ public:
      */
     void clear()
     {
-        foreach_reverse(i; 0 .. _items.count)
+        foreach_reverse(immutable i; 0 .. _items.count)
             deleteItem(i);
+    }
+
+    ///
+    ItemClass opIndex(size_t i)
+    {
+        return _items[i];
+    }
+
+    ///
+    int opApply(int delegate(ItemClass) dg)
+    {
+        int result = 0;
+        foreach(immutable i; 0 .. _items.length)
+        {
+            result = dg(_items[i]);
+            if (result) break;
+        }
+        return result;
+    }
+
+    ///
+    ItemClass[] opSlice()
+    {
+        return _items.dup;
     }
 }
 
@@ -146,6 +175,10 @@ unittest
     itm = col.addItem;
     itm.setProps(6u,7u,8u);
 
+    auto collaccess = col.items;
+    collaccess.length = 0;
+    assert(col.items.length == 3);
+
     ser.publisherToStream(col, str, SerializationFormat.iztxt);
     str.position = 0;
     col.clear;
@@ -166,8 +199,151 @@ unittest
     col.deleteItem(0);
     assert(col.items.count == 0);
 
-    writeln("SerializableList passed the tests");
+    writeln("PublishedObjectArray(T) passed the tests");
+}
 
+
+/**
+ * The PublishedAA class template allows to serialize an associative array.
+ *
+ * A Serializer is not able to directly handle AA but this class
+ * does the task automatically by splitting keys and values in two arrays.
+ *
+ * Only basic types are handled.
+ */
+class PublishedAA(AA): PropertyPublisher
+if(isAssociativeArray!AA && isSerializable!(KeyType!AA) &&
+    isSerializable!(ValueType!AA))
+{
+
+    mixin PropertyPublisherImpl;
+
+protected:
+
+    AA* _source;
+    KeyType!AA[] _keys;
+    ValueType!AA[] _values;
+
+    uint _setCount = 0, _getCount = 0;
+
+    void doSet()
+    {
+        if (_setCount++ % 2 == 0 && _setCount > 0)
+            toAA(*_source);
+    }
+
+    void doGet()
+    {
+        if (_getCount++ %  2 == 0)
+            fromAA(*_source);
+    }
+
+    @Set void keys(KeyType!AA[] value)
+    {
+        _keys = value;
+        if (_source) doSet;
+    }
+
+    @Get KeyType!AA[] keys()
+    {
+        if (_source) doGet;
+        return _keys;
+    }
+
+    @Set void values(ValueType!AA[] value)
+    {
+        _values = value;
+        if (_source) doSet;
+    }
+
+    @Get ValueType!AA[] values()
+    {
+        if (_source) doGet;
+        return _values;
+    }
+
+public:
+
+    ///
+    this()
+    {
+        collectPublications!(PublishedAA!AA);
+    }
+
+    /**
+     * Constructs a new instance and sets a reference to the source AA.
+     * Using this constructor, toAA and fromAA has not to be called manually.
+     */
+    this(AA* aa)
+    {
+        _source = aa;
+        collectPublications!(PublishedAA!AA);
+    }
+
+    /**
+     * Copy the content of the associative array aa to the internal containers.
+     *
+     * Typically called before serializing and if the instance is created
+     * using the default constructor.
+     */
+    void fromAA(ref AA aa)
+    {
+        Appender!(KeyType!AA[]) keyApp;
+        Appender!(ValueType!AA[]) valApp;
+
+        keyApp.reserve(aa.length);
+        valApp.reserve(aa.length);
+
+        foreach(k; aa.byKey) keyApp.put(k);
+        foreach(v; aa.byValue) valApp.put(v);
+
+        _keys = keyApp.data;
+        _values = valApp.data;
+    }
+
+    /**
+     * Clears then fills the associative array aa using the internal containers.
+     *
+     * Typically called after serializing and if the instance is created
+     * using the default constructor.
+     */
+    void toAA(ref AA aa)
+    {
+        aa = aa.init;
+        foreach(immutable i; 0 .. _keys.length)
+            aa[_keys[i]] = _values[i];
+    }
+}
+
+unittest
+{
+    alias AAT = uint[float];
+    alias AAC = PublishedAA!AAT;
+
+    uint[float] a = [0.1f: 1u, 0.2f : 2u];
+    AAC aac = construct!AAC;
+    Serializer ser = construct!Serializer;
+    MemoryStream str = construct!MemoryStream;
+
+    aac.fromAA(a);
+    ser.publisherToStream(aac, str);
+    str.position = 0;
+    a = a.init;
+    ser.streamToPublisher(str, aac);
+    aac.toAA(a);
+    assert(a == [0.1f: 1u, 0.2f : 2u]);
+
+
+    str.clear;
+    AAC aac2 = construct!AAC(&a);
+
+    ser.publisherToStream(aac2, str);
+    str.position = 0;
+    a = a.init;
+    ser.streamToPublisher(str, aac2);
+    assert(a == [0.1f: 1u, 0.2f : 2u]);
+
+    writeln("PublishedAA(T) passed the tests");
 }
 
 /// Enumerates the possible notifications sent to a ComponentObserver
@@ -405,21 +581,3 @@ unittest
     assert(ReferenceMan.referenceID(cast(Component*)c) == "a");
 }
 
-
-class PublisherCollection(T): PropertyPublisher
-if (is( T : PropertyPublisher))
-{
-
-    mixin PropertyPublisherImpl;
-
-protected:
-
-    DynamicList!T _items;
-
-public:
-
-    this()
-    {
-    }
-
-}
