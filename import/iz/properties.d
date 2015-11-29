@@ -423,6 +423,7 @@ enum HideGet;
  * Returns:
  *      A sring to mixin.
  */
+deprecated("fields can be annotated with @GetSet instead")
 string genPropFromField(T, string propName, string propField)()
 {
     return
@@ -453,6 +454,15 @@ mixin(genStandardPropDescriptors);
  *
  * The methods don't have to be implemented by hand as it's automatically done 
  * when the PropertyPusblisherImpl template is mixed in a class.
+ *
+ * The semantic used for this interface is inspired by the Object-Pascal
+ * "published" visibility attribute. In pascal, "published" causes the
+ * member (called a property) to have some matching RTTI emitted. They
+ * are used to stream objects, to build IDE inspectors, bindings list, etc.
+ *
+ * This interface (as well as its default implementation) reproduces a similar
+ * system: instead of "published", there are anotations, instead of the RTTI
+ * pointer structure there is an array of PropDescriptor.
  */
 interface PropertyPublisher
 {
