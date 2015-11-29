@@ -1,3 +1,7 @@
+/**
+ * Look up table system for storing and retrieving references
+ * from an unique identifier.
+ */
 module iz.referencable;
 
 package string typeString(T)()

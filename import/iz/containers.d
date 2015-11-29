@@ -1,3 +1,6 @@
+/**
+ * Several implementations of standard containers.
+ */
 module iz.containers;
 
 import

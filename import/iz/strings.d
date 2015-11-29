@@ -1,3 +1,6 @@
+/**
+ * iz string handling functions, mostly related to lexical scanning
+ */
 module iz.strings;
 
 import

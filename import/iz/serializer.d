@@ -1,3 +1,6 @@
+/**
+ * The iz serialization system.
+ */
 module iz.serializer;
 
 import

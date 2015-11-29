@@ -1,3 +1,6 @@
+/**
+ * The iz property descriptor system.
+ */
 module iz.properties;
 
 import
@@ -259,13 +262,16 @@ struct PropDescriptor(T)
 // misc -----------------------------------------------------------------------+
 
         /**
-         *
+         * Returns this descriptor casted as pointer to a GenericDescriptor.
          */
         PropDescriptor!int* genericDescriptor()
         {
             return cast(typeof(return)) &this;
         }
 
+        /**
+         * Returns this descriptor casted as pointer to a descriptor of type A.
+         */
         PropDescriptor!A* typedAs(A)()
         {
             return cast(PropDescriptor!A*) &this;
@@ -455,14 +461,15 @@ mixin(genStandardPropDescriptors);
  * The methods don't have to be implemented by hand as it's automatically done 
  * when the PropertyPusblisherImpl template is mixed in a class.
  *
+ * Inspiration:
  * The semantic used for this interface is inspired by the Object-Pascal
  * "published" visibility attribute. In pascal, "published" causes the
  * member (called a property) to have some matching RTTI emitted. They
  * are used to stream objects, to build IDE inspectors, bindings list, etc.
  *
  * This interface (as well as its default implementation) reproduces a similar
- * system: instead of "published", there are anotations, instead of the RTTI
- * pointer structure there is an array of PropDescriptor.
+ * system. Instead of "published", there are anotations, instead of the RTTI
+ * tree structure there is an array of PropDescriptor.
  */
 interface PropertyPublisher
 {
@@ -499,6 +506,47 @@ interface PropertyPublisher
      * Usage is relative to the PropertyPublisherClient implementation
      */
     void publisherClientEvent(PropertyPublisherClient client);
+}
+///
+unittest
+{
+    import iz.streams;
+    class StuffPublisher: PropertyPublisher
+    {
+        // implements the interface as well as other usefull functions.
+        mixin PropertyPublisherImpl;
+
+        protected:
+            @SetGet char[] _name = "Fantomas".dup;
+            @SetGet ubyte _age = 33;
+            MemoryStream _opaque;
+
+        public:
+            this()
+            {
+                // scans the stuff anotated with @GetSet, @Set, @Get
+                collectPublications!StuffPublisher;
+                _opaque = construct!MemoryStream;
+            }
+            ~this() {destruct(_opaque);}
+
+            @Set opaque(Stream stream)
+            {
+                _opaque.loadFromStream(stream);
+            }
+            @Get Stream opaque()
+            {
+                return _opaque;
+            }
+    }
+
+    StuffPublisher stuffPublisher = construct!StuffPublisher;
+    // 3 publications are available: name, age and opaque.
+    // they will be handled automatically when binding or serializing.
+    assert(stuffPublisher.publicationCount == 3);
+    // One way to access the publications
+    assert(stuffPublisher.publication!(char[])("name").get == "Fantomas");
+    destruct(stuffPublisher);
 }
 
 /**

@@ -1,3 +1,6 @@
+/**
+ * Memory managment utilities.
+ */
 module iz.memory;
 
 import

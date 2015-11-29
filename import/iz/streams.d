@@ -1,3 +1,7 @@
+/**
+ * iz streams, standard streams implementation with several extention related
+ * to D ranges.
+ */
 module iz.streams;
 
 import

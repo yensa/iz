@@ -1,3 +1,6 @@
+/**
+ * Several trivials functions and strucutures
+ */
 module iz.sugar;
 
 import
@@ -449,11 +452,14 @@ unittest
  * Calls a function according to a probability
  *
  * Params:
- * t = The chance to call, in percentage.
- * fun = The function to call. It must be a void function.
- * a = The variadic argument passed to fun.
+ *      t = The chance to call, in percentage.
+ *      fun = The function to call. It must be a void function.
+ *      a = The variadic argument passed to fun.
+ *
+ * Returns:
+ *      false if no luck.
  */
-void pickAndCall(T, Fun, A...)(T t, Fun fun, auto ref A a) @safe
+bool pickAndCall(T, Fun, A...)(T t, Fun fun, auto ref A a)
 if (isNumeric!T && isCallable!Fun && is(ReturnType!Fun == void))
 in
 {
@@ -466,11 +472,12 @@ body
     import std.random: uniform;
     static immutable T min = 0;
     static immutable T max = 100;
-    if (uniform!"[]"(min, max) > max - t)
-        fun(a);
+    bool result = uniform!"[]"(min, max) > max - t;
+    if (result) fun(a);
+    return result;
 }
-
-@safe unittest
+///
+unittest
 {
     uint cnt;
     bool test;

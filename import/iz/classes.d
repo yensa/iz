@@ -19,6 +19,9 @@ version(unittest) import std.stdio;
  * does the task automatically by managing the internal list of publications.
  *
  * The life-time of the objects is automatically handled by the internal container.
+ *
+ * Params:
+ *      ItemClass = The common items type. It has to be a PropertyPublisher descendant.
  */
 class PublishedObjectArray(ItemClass): PropertyPublisher
 if(is(ItemClass : PropertyPublisher))
@@ -26,8 +29,14 @@ if(is(ItemClass : PropertyPublisher))
 
     mixin PropertyPublisherImpl;
 
+private:
+
+    size_t _firstItemsDescrIndex;
+
 protected:
 
+
+    static immutable string _fmtName = "item<%d>";
     ItemClass[] _items;
 
 public:
@@ -44,16 +53,16 @@ public:
     }
 
     /**
-     * Instanciates and returns a new item.
+     * Instantiates and returns a new item.
      * Params:
-     *      a = the variadic list of argument passed to the item __ctor.
+     *      a = the variadic arguments passed to the item $(D __ctor).
      */
     ItemClass addItem(A...)(A a)
     {
         _items ~= construct!ItemClass(a);
 
         PropDescriptor!Object* descr = construct!(PropDescriptor!Object);
-        descr.define(cast(Object*)&_items[$-1], format("item<%d>",_items.length-1), this);
+        descr.define(cast(Object*)&_items[$-1], format(_fmtName,_items.length-1), this);
         _items[$-1].declarator = this;
         _publishedDescriptors ~= descr;
 
@@ -63,7 +72,7 @@ public:
     /**
      * Removes and destroys an item from the internal container.
      * Params:
-     *      t = either the item to delete or its index.
+     *      t = Either the item to delete or its index.
      */
     final void deleteItem(T)(T t)
     if (isIntegral!T || is(Unqual!T == ItemClass))
@@ -77,13 +86,15 @@ public:
             return;
 
         auto itm = _items[index];
-        _items = remove(_items, index);
+        _items = _items.remove(index);
 
-        if (auto descr = publication!uint(format("item<%d>",index)))
+        if (auto descr = publication!uint(format(_fmtName,index)))
         {
+            // find index: a descendant may add descriptors in its this()
+            auto descrIndex = countUntil(_publishedDescriptors, descr);
+            assert(descrIndex != -1);
+            _publishedDescriptors = _publishedDescriptors.remove(descrIndex);
             destruct(descr);
-            // +1: first descriptor matches the descriptor for count()
-            _publishedDescriptors = _publishedDescriptors.remove(index + 1);
         }
     }
 
@@ -91,8 +102,8 @@ public:
      * Sets or gets the item count.
      *
      * Items are automatically created or destroyed when changing this property.
-     * Note that changing the length or items() is a noop, the only way to add
-     * and remove items is to use count(), addItem() or deleteItem().
+     * Note that changing the length or $(D items()) is a noop, the only way to
+     * add and remove items is to use $(D count()), $(D addItem()) or $(D deleteItem()).
      */
     @Get final uint count()
     {
@@ -125,13 +136,13 @@ public:
             deleteItem(i);
     }
 
-    ///
+    /// Support for accessing an indexed item with $(D []).
     ItemClass opIndex(size_t i)
     {
         return _items[i];
     }
 
-    ///
+    /// Support for iterating the items with $(D foreach()).
     int opApply(int delegate(ItemClass) dg)
     {
         int result = 0;
@@ -143,11 +154,34 @@ public:
         return result;
     }
 
-    ///
+    /// Same as $(D items()).
     ItemClass[] opSlice()
     {
         return _items.dup;
     }
+}
+///
+unittest
+{
+    class Item : PropertyPublisher
+    {
+        mixin PropertyPublisherImpl;
+        @SetGet uint _a, _b, _c;
+        // a default ctor is needed.
+        this(){collectPublications!Item;}
+        this(uint a, uint b, uint c)
+        {
+            _a = a; _b = b; _c = c;
+            collectPublications!Item;
+        }
+    }
+
+    auto itemArray = construct!(PublishedObjectArray!Item);
+    itemArray.addItem(1, 2, 3);
+    itemArray.addItem(4, 5, 6);
+    // serializes the object array to a file
+    version(none) publisherToFile(itemArray, "backup.txt");
+    destruct(itemArray);
 }
 
 unittest
@@ -206,10 +240,14 @@ unittest
 /**
  * The PublishedAA class template allows to serialize an associative array.
  *
- * A Serializer is not able to directly handle AA but this class
+ * A Serializer is not able to directly handle $(I AA)s but this class
  * does the task automatically by splitting keys and values in two arrays.
  *
- * Only basic types are handled.
+ * This class template can only instantiated if the $(I AA)s key and value
+ * types are basic (see iz.types.BasicTypes).
+ *
+ * Params:
+ *      AA = The type of the associative array.
  */
 class PublishedAA(AA): PropertyPublisher
 if(isAssociativeArray!AA && isSerializable!(KeyType!AA) &&
@@ -271,8 +309,12 @@ public:
     }
 
     /**
-     * Constructs a new instance and sets a reference to the source AA.
-     * Using this constructor, toAA and fromAA has not to be called manually.
+     * Constructs a new instance and sets a reference to the source $(I AA).
+     * Using this constructor, $(D toAA()) and $(D fromAA()) don't need
+     * to be called manually.
+     *
+     * Params:
+     *      aa = The associative that will be stoted and restored.
      */
     this(AA* aa)
     {
@@ -281,10 +323,13 @@ public:
     }
 
     /**
-     * Copy the content of the associative array aa to the internal containers.
+     * Copy the content of the associative array $(I aa) to the internal containers.
      *
      * Typically called before serializing and if the instance is created
      * using the default constructor.
+     *
+     * Params:
+     *      aa = The associative array to get.
      */
     void fromAA(ref AA aa)
     {
@@ -302,10 +347,13 @@ public:
     }
 
     /**
-     * Clears then fills the associative array aa using the internal containers.
+     * Clears then fills the associative array $(I aa) using the internal containers.
      *
      * Typically called after serializing and if the instance is created
      * using the default constructor.
+     *
+     * Params:
+     *      aa = The associative array to set.
      */
     void toAA(ref AA aa)
     {
@@ -313,6 +361,18 @@ public:
         foreach(immutable i; 0 .. _keys.length)
             aa[_keys[i]] = _values[i];
     }
+}
+///
+unittest
+{
+    uint[char] aa = ['c' : 0u, 'x' : 12u];
+    auto serializableAA = construct!(PublishedAA!(uint[char]));
+    serializableAA.fromAA(aa);
+    aa = aa.init;
+    version(none) publisherToFile(serializableAA, "backup.txt");
+    version(none) fileToPublisher(serializableAA, "backup.txt");
+    serializableAA.toAA(aa);
+    assert(aa == ['c' : 0u, 'x' : 12u]);
 }
 
 unittest

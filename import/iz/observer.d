@@ -1,3 +1,6 @@
+/**
+ * The iz implementation of the observer pattern.
+ */
 module iz.observer;
 
 import

@@ -1,5 +1,7 @@
+/**
+ * Several utilities relates to D enums.
+ */
 module iz.enumset;
-
 
 import std.traits;
 import std.range: isInputRange, ElementType;
