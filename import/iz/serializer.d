@@ -1194,7 +1194,7 @@ public:
      */
     void streamToPublisher(T)(Stream inputStream, T root,
         SerializationFormat format = defaultFormat)
-    if (is(T==class) || is(T == struct))   
+    if (is(T==class) || is(T == struct) || is(T : PropertyPublisher))
     {
         streamToIst(inputStream, format);
         istToPublisher(root);
@@ -1390,6 +1390,49 @@ public:
 
 //----
 
+/**
+ * Serializes a PropertyPublisher to a file.
+ *
+ * This helper function works in pair with fileToPublisher().
+ * It is typically used to load configuration files, sessions backups, etc.
+ *
+ * Params:
+ *      pub = The PropertyPublisher to save.
+ *      filename = The target file, always created or overwritten.
+ *      format = Optional, the serialization format, by default iztext.
+ */
+void publisherToFile(PropertyPublisher pub, in char[] filename,
+    SerializationFormat format = defaultFormat)
+{
+    MemoryStream str = construct!MemoryStream;
+    Serializer ser = construct!Serializer;
+    scope(exit) destruct(str, ser);
+    //
+    ser.publisherToStream(pub, str, format);
+    str.saveToFile(filename);
+}
+
+/**
+ * Deserializes a file to a PropertyPublisher.
+ *
+ * This helper function works in pair with publisherToFile().
+ * It is typically used to load configuration files, sessions backups, etc.
+ *
+ * Params:
+ *      filename = The source file.
+ *      pub = The target PropertyPublisher.
+ *      format = optional, the serialization format, by default iztext.
+ */
+void fileToPublisher(in char[] filename, PropertyPublisher pub,
+    SerializationFormat format = defaultFormat)
+{
+    MemoryStream str = construct!MemoryStream;
+    Serializer ser = construct!Serializer;
+    scope(exit) destruct(str, ser);
+    //
+    str.loadFromFile(filename);
+    ser.streamToPublisher(str, pub, format);
+}
 
 
 version(unittest)
