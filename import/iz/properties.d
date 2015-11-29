@@ -266,6 +266,11 @@ struct PropDescriptor(T)
             return cast(typeof(return)) &this;
         }
 
+        PropDescriptor!A* typedAs(A)()
+        {
+            return cast(PropDescriptor!A*) &this;
+        }
+
         /** 
          * Information about the property accessibility
          */
@@ -364,16 +369,6 @@ unittest
 interface PropertyPublisherClient
 {
     /**
-     * Allows to pass a property to the client.
-     * Params:
-     *      T = The property type.
-     *      UseRtti = If set to true, T is ignored and the property type is
-     *          infered from the descriptor rtti.
-     *      property = A pointer to a PropDescriptor!T
-     */
-    // pointless since a PropertyPublisher can alreaduy modify its pub list at runtime.
-    void addGenericProperty(GenericDescriptor* property);
-    /**
      * Indicates how a client will use the properties.
      */
     PropertyPublisherClientState clientState();
@@ -470,12 +465,12 @@ interface PropertyPublisher
      * Similar to the publication() function template excepted that the
      * result type has not to be specified.
      */
-    void* publicationFromName(string name);
+    GenericDescriptor* publicationFromName(string name);
     /**
      * Returns a pointer the index-th descriptor.
      * Index must be within the [0 .. publicationCount] range.
      */
-    void* publicationFromIndex(size_t index);
+    GenericDescriptor* publicationFromIndex(size_t index);
     /**
      * Returns the RTTI for the descriptor at index.
      * Index must be within the [0 .. publicationCount] range.
@@ -591,18 +586,18 @@ mixin template PropertyPublisherImpl()
 
     /// see PropertyPublisher
     static if (!__traits(hasMember, ToT, "publicationFromName") || Base)
-    protected void* publicationFromName(string name)
-    {return publication!size_t(name);}
+    protected GenericDescriptor* publicationFromName(string name)
+    {return publication!int(name);}
 
     /// see PropertyPublisher
     static if (!__traits(hasMember, ToT, "publicationFromIndex") || Base)
-    protected void* publicationFromIndex(size_t index)
-    {return _publishedDescriptors[index];}
+    protected GenericDescriptor* publicationFromIndex(size_t index)
+    {return cast(GenericDescriptor*) _publishedDescriptors[index];}
 
     /// see PropertyPublisher
     static if (!__traits(hasMember, ToT, "publicationType") || Base)
     protected const(RuntimeTypeInfo) publicationType(size_t index)
-    {return (cast(PropDescriptor!int*) _publishedDescriptors[index]).rtti;}
+    {return (cast(GenericDescriptor*) _publishedDescriptors[index]).rtti;}
 
     /// see PropertyPublisher
     static if (!__traits(hasMember, ToT, "publisherClientEvent") || Base)

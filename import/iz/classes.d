@@ -4,7 +4,7 @@
 module iz.classes;
 
 import
-    std.traits, std.string, std.range, std.algorithm;
+    std.traits, std.string, std.algorithm, std.array, std.range;
 import
     iz.types, iz.memory, iz.containers, iz.streams, iz.properties,
     iz.serializer, iz.referencable, iz.observer;
@@ -12,199 +12,164 @@ import
 version(unittest) import std.stdio;
 
 /**
- * The SerializableList is a serializable object list.
+ * The PublishedObjectArray class template allows to serialize an array of
+ * PropertyPublisher.
+ *
+ * A Serializer is not able to directly handle object arrays but this class
+ * does the task automatically by managing the internal list of publications.
  *
  * The life-time of the objects is automatically handled by the internal container.
- *
- * The serialization is only possible in sequential mode (objectToStream/streamToObject) 
- * because internally the items are described using a single property descriptor.
  */
-
-/+
-class SerializableList(ItemClass): Serializable 
-if(isImplicitlyConvertible!(ItemClass, Serializable))
+class PublishedObjectArray(ItemClass): PropertyPublisher
+if(is(ItemClass : PropertyPublisher))
 {
-    private
-    {
-        PropDescriptor!Object _itmDescr;
-        PropDescriptor!uint _countDescr;
-        DynamicList!ItemClass _items;
 
-        final uint getCount()
-        {
-            return cast(uint) _items.count;
-        }
-        final void setCount(uint aValue)
-        {
-            if (_items.count > aValue)
-                while (_items.count != aValue) _items.remove(_items.last);
-            else
-                while (_items.count != aValue) addItem;                 
-        }
-    }  
-    protected
+    mixin PropertyPublisherImpl;
+
+private:
+
+    PropDescriptor!Object _itmDescr;
+    PropDescriptor!uint _countDescr;
+    ItemClass[] _items;
+
+    @Get final uint count()
     {
-        /**
-         * Serialization handling.
-         */
-        void declareProperties(Serializer serializer)
+        return cast(uint) _items.length;
+    }
+    @Set final void count(uint aValue)
+    {
+        if (_items.length > aValue)
+            while (_items.length != aValue) deleteItem(_items.length-1);
+        else if (_items.length < aValue)
+            while (_items.length != aValue) addItem;
+    }
+
+public:
+
+    ///
+    this()
+    {
+        collectPublications!(PublishedObjectArray!ItemClass);
+    }
+
+    ~this()
+    {
+        clear;
+    }
+
+    /**
+     * Instanciates and returns a new item.
+     * Params:
+     *      a = the variadic list of argument passed to the item __ctor.
+     */
+    ItemClass addItem(A...)(A a)
+    {
+        _items ~= construct!ItemClass(a);
+
+        PropDescriptor!Object* descr = construct!(PropDescriptor!Object);
+        descr.define(cast(Object*)&_items[$-1], format("item<%d>",_items.length-1), this);
+        _items[$-1].declarator = this;
+        _publishedDescriptors ~= descr;
+
+        return _items[$-1];
+    }
+
+    /**
+     * Removes and destroys an item from the internal container.
+     * Params:
+     *      t = either the item to delete or its index.
+     */
+    final void deleteItem(T)(T t)
+    if (isIntegral!T || is(Unqual!T == ItemClass))
+    {
+        long index;
+        static if(is(Unqual!T == ItemClass))
+            index = _items.countUntil(t);
+        else index = t;
+
+        if (_items.count == 0 || index > _items.count-1 || index < 0)
+            return;
+
+        auto itm = _items[index];
+        _items = remove(_items, index);
+
+        if (auto descr = publication!uint(format("item<%d>",index)))
         {
-            if (serializer.state == SerializationState.store && serializer.storeMode == StoreMode.bulk)
-            {
-                assert(0, "SerializableList cant be stored in bulk mode");
-            }
-            else if (serializer.state == SerializationState.restore && serializer.restoreMode == RestoreMode.random)
-            {
-                assert(0, "SerializableList cant be restored in random mode");
-            }
-            // in a first time, always re/stores the count.
-            serializer.addProperty(&_countDescr);
-            // items
-            foreach(immutable i; 0 .. items.count)
-            {
-                auto itm = cast(Object)_items[i];
-                _itmDescr.define(&itm, format("item<%d>",i));
-                serializer.addProperty(&_itmDescr);
-            }
+            destruct(descr);
+            // +1: first descriptor matches the count descriptor
+            _publishedDescriptors = _publishedDescriptors.remove(index + 1);
         }
     }
 
-    public
+    /**
+     * Provides a read only access to the internal container.
+     */
+    final ItemClass[] items()
     {
-        /// Constructs a new instance
-        this()
-        {
-            _items = construct!(DynamicList!ItemClass);
-            _countDescr.define(&setCount, &getCount, "Count");
-        }
+        // should be const: the publications must be in sync with the items
+        // but as usual, const transitivity sucks
+        return _items;
+    }
 
-        ~this()
-        {
-            clear;
-            _items.destruct;
-        }
-
-        /**
-         * Instanciates and returns a new item.
-         * Params:
-         * a = the variadic list of argument passed to the item __ctor.
-         */
-        ItemClass addItem(A...)(A a)
-        {
-            return _items.addNewItem(a);
-        }
-        
-        /**
-         * Removes and destroys an item from the inernal container.
-         * Params:
-         * item = either the item to delete or its index.
-         */
-        void deleteItem(T)(T item)
-        if (isIntegral!T || is(T == ItemClass))
-        {
-            static if(is(T == ItemClass))
-            {
-                auto immutable i = _items.find(item);
-                if (i == -1) return;
-                _items.remove(item);
-                destruct(item);
-            }   
-            else
-            {
-                if (_items.count == 0 || item > _items.count-1 || item < 0) 
-                    return;
-                auto itm = _items[item];
-                _items.remove(itm);
-                destruct(itm);
-            }
-        }      
-        
-        /**
-         * Provides an access to the internal container.
-         * The access is mostly provided to reorganize or read the items.
-         */
-        DynamicList!ItemClass items(){return _items;}
-        
-        /**
-         * Clears the internal container and destroys the items.
-         */
-        void clear()
-        {
-            foreach_reverse(i; 0 .. _items.count)
-            {
-                auto itm = _items[i];
-                if(itm) destruct(itm);
-            }
-            _items.clear;
-        }
+    /**
+     * Clears the internal container and destroys the items.
+     */
+    void clear()
+    {
+        foreach_reverse(i; 0 .. _items.count)
+            deleteItem(i);
     }
 }
 
-version(unittest)
+unittest
 {
-    private class ItmTest: Serializable
+    class Item : PropertyPublisher
     {
-        private
-        {
-            int field1, field2, field3;
-            PropDescriptor!int descr1, descr2, descr3;
-        }
-        public
-        {
-            this()
-            {
-                descr1.define(&field1, "prop1");
-                descr2.define(&field2, "prop2");
-                descr3.define(&field3, "prop3");
-            }
-            override void declareProperties(Serializer serializer)
-            {
-                serializer.addProperty!int(&descr1);
-                serializer.addProperty!int(&descr2);
-                serializer.addProperty!int(&descr3);
-            }
-            void setProps(uint f1, uint f2, uint f3)
-            {
-                field1 = f1;
-                field2 = f2;
-                field3 = f3;
-            }
-        }
+        mixin PropertyPublisherImpl;
+        @SetGet uint _a, _b, _c;
+        this(){collectPublications!Item;}
+        void setProps(uint a, uint b, uint c)
+        {_a = a; _b = b; _c = c;}
     }
-    unittest
-    {    
-        auto col = construct!(SerializableList!ItmTest);
-        auto str = construct!MemoryStream;
-        auto ser = construct!Serializer;
-        scope(exit) destruct(col, ser, str);
 
-        ItmTest itm = col.addItem();
-        itm.setProps(0u,1u,2u);
-        itm = col.addItem;
-        itm.setProps(3u,4u,5u);
-        itm = col.addItem;
-        itm.setProps(6u,7u,8u);
+    alias ItemCollection = PublishedObjectArray!Item;
 
-        ser.objectToStream(col, str, SerializationFormat.iztxt);
-        str.position = 0;
-        col.clear;
-        assert(col.items.count == 0);
+    auto col = construct!ItemCollection;
+    auto str = construct!MemoryStream;
+    auto ser = construct!Serializer;
+    scope(exit) destruct(col, ser, str);
 
-        ser.streamToObject(str, col, SerializationFormat.iztxt);
-        assert(col.items.count == 3);
-        assert(col.items[1].field3 == 5u);
-        assert(col.items[2].field3 == 8u);
+    Item itm = col.addItem();
+    itm.setProps(0u,1u,2u);
+    itm = col.addItem;
+    itm.setProps(3u,4u,5u);
+    itm = col.addItem;
+    itm.setProps(6u,7u,8u);
 
-        auto todelete = col.items[0];
-        col.deleteItem(todelete);
-        assert(col.items.count == 2);
-        col.deleteItem(1);
-        assert(col.items.count == 1);  
-        
-        writeln("SerializableList passed the tests");
-    }
+    ser.publisherToStream(col, str, SerializationFormat.iztxt);
+    str.position = 0;
+    col.clear;
+    assert(col.items.count == 0);
+
+    ser.streamToPublisher(str, col, SerializationFormat.iztxt);
+    assert(col._publishedDescriptors.count == 4); // 3 + count descr
+    col.deleteItem(0);
+    assert(col._publishedDescriptors.count == 3); // 2 + count descr
+    assert(col.items.count == 2);
+    assert(col.items[0]._c == 5u);
+    assert(col.items[1]._c == 8u);
+    col.items[1]._c = 7u;
+
+    auto todelete = col.items[0];
+    col.deleteItem(todelete);
+    assert(col.items.count == 1);
+    col.deleteItem(0);
+    assert(col.items.count == 0);
+
+    writeln("SerializableList passed the tests");
+
 }
-+/
+
 /// Enumerates the possible notifications sent to a ComponentObserver
 enum ComponentNotification
 {
