@@ -839,29 +839,24 @@ alias WantObjectEvent = void delegate(IstNode node, ref Object serializable, out
  * Native serializer.
  *
  * A Serializer is specialized to store and restore a structure of Objects.
- * Two ways of serializing are available.
  *
- * The first is based on classes that implement the Serializable interface.
- * A Serializable arbitrarily exposes some properties to serialize
- * using the PropDescriptor format.
+ * A Serializer can only serializes trees of classes that implements the
+ * PropertyPublisher interface. Their publications defines what is saved or
+ * restored.
  *
- * The second is based on classes that implement the PropDescriptorCollection
- * interface. Contrary to the first way the declarations are not arbritrary but
- * instead they are based on a collection of descriptor build using compile-time
- * reflection and anotations (see iz.properties PropDescriptorCollector).
- *
- * The serializer uses an intermediate serialization tree (IST) that ensure a 
- * certain flexibilty against a traditional single-shot serialization.
+ * The serializer uses an intermediate serialization tree (IST) that ensures a 
+ * certain flexibilty against a traditional single-shot sequential serialization.
  * 
  * As expected for a serializer, object trees can be stored or restored by
- * a simple and single call (objectToStream() in pair with streamToObject() or
- * collectorToStream() in pair with streamToCollector) but the IST also allows
- * to convert a stream or to find and restores a specific property.
+ * a simple and single call to $(D publisherToStream()) in pair with
+ * $(D streamToPublisher()) but the IST also allows to convert a Stream or
+ * to find and restores a specific property.
  * 
- * At last but not least, two events (onWantDescriptor and onWantObject)
- * allows to handle the errors that could be encountered when restoring.
- * They free the target object of any modification risk that would prevent an old
- * stream to be restored in the new versions (for example if a prop is deleted).
+ * At last but not least, two events ($(D onWantDescriptor) and  $(DonWantObject))
+ * allow to handle the errors that could be encountered when restoring.
+ * They allow a PropertyPublisher to be modified without any risk of deserialization
+ * failure. Data saved from an older version can be recovered, converted or
+ * deserialized in a temporary property.
  */
 class Serializer: PropertyPublisherClient
 {
@@ -890,7 +885,6 @@ private:
 
     bool _mustWrite;
     bool _mustRead;
-
 
     void addIstNodeForDescriptor(T)(PropDescriptor!T * descriptor)
     if (isSerializable!T && !isSerObjectType!T)
@@ -939,57 +933,6 @@ private:
         return true;
     }
 
-public:
-
-    ///
-    this()
-    {
-        _rootNode = construct!IstNode;
-    }
-    ///
-    ~this()
-    {
-        _rootNode.deleteChildren;
-        destruct(_rootNode);
-    }
-
-//---- serialization ----------------------------------------------------------+
-
-    /** 
-     * Saves the IST to a stream. 
-     * The data are grabbed in bulk therefore the descriptor linked to each
-     * tree node cannot be re-used.
-     * Params:
-     * outputStream = The stream where te data are written.
-     * format = The format of the serialized data.
-     */
-    void istToStream(Stream outputStream, SerializationFormat format = defaultFormat)
-    {
-        _format = format;
-        _stream = outputStream;
-        _mustWrite = true;
-        _clientState = PropertyPublisherClientState.accumulate;
-        //
-        void writeNodesFrom(IstNode parent)
-        {
-            writeFormat(_format)(parent, _stream); 
-            foreach(node; parent.children)
-            {
-                auto child = cast(IstNode) node;
-                if (isSerObjectType(child.info.type))
-                    writeNodesFrom(child);
-                else writeFormat(_format)(child, _stream); 
-            }
-        }
-        writeNodesFrom(_rootNode);
-        //
-        _mustWrite = false;
-        _stream = null;
-    }
-
-    /**
-     * 
-     */
     void addPropertyPublisher(PropDescriptor!Object* objDescr)
     {
         PropertyPublisher publisher;
@@ -1067,22 +1010,66 @@ public:
                     break;
             }
         }
-    }    
+    }
 
-    /**
-     * Builds the IST from a PropertyPublisher and stores in a Stream,
-     * sequentially, after each single property found in the publications.
-     *
-     * Each item in the structure must also be a PropertyPublisher.
-     * Unlike the methods based on the Serializable interface the objects don't
-     * have to declare the values to store. Instead, every property descriptor
-     * matching a publication is turned into a declaration.
+public:
+
+    ///
+    this()
+    {
+        _rootNode = construct!IstNode;
+    }
+    ///
+    ~this()
+    {
+        _rootNode.deleteChildren;
+        destruct(_rootNode);
+    }
+
+//---- serialization ----------------------------------------------------------+
+
+    /** 
+     * Saves the IST to a Stream.
      *
      * Params:
-     * root = Either a PropertyPublisher or an object that's been
-     *       mixed with the PropertyPublisherImpl template.
-     * outputStream = The stream where the data are written.
-     * format = The format of the serialized data.
+     *      outputStream = The stream where te data are written.
+     *      format = The data format.
+     */
+    void istToStream(Stream outputStream, SerializationFormat format = defaultFormat)
+    {
+        _format = format;
+        _stream = outputStream;
+        _mustWrite = true;
+        _clientState = PropertyPublisherClientState.accumulate;
+        //
+        void writeNodesFrom(IstNode parent)
+        {
+            writeFormat(_format)(parent, _stream); 
+            foreach(node; parent.children)
+            {
+                auto child = cast(IstNode) node;
+                if (isSerObjectType(child.info.type))
+                    writeNodesFrom(child);
+                else writeFormat(_format)(child, _stream); 
+            }
+        }
+        writeNodesFrom(_rootNode);
+        //
+        _mustWrite = false;
+        _stream = null;
+    }
+
+    /**
+     * Builds the IST from a PropertyPublisher and stores each publication
+     * found in the publisher in a stream.
+     *
+     * Storage is performed just after a publication is detected.
+     *
+     * Params:
+     *      root = Either a PropertyPublisher or an object that's been mixed
+     *      with the PropertyPublisherImpl template.
+     *      outputStream = The stream where the data are written.
+     *      format = The serialized data format.
      */
     void publisherToStream(T)(ref T root, Stream outputStream,
         SerializationFormat format = defaultFormat)
@@ -1121,7 +1108,7 @@ public:
 //---- deserialization --------------------------------------------------------+
 
     /**
-     * Fully Restores the IST. Can be called after *streamToIst()*.
+     * Fully Restores the IST. Can be called after streamToIst().
      * The root must be structured as a tree of PropertyPublisher.
      * For each IST node the function tries to find the matching node in the
      * property collection of the current object. If not possible then the
@@ -1193,7 +1180,10 @@ public:
     }
 
     /**
+     * Builds the IST from a Stream and restores from root.
      *
+     * This method actually call successively streamToIst() then
+     * istToPublisher().
      */
     void streamToPublisher(T)(Stream inputStream, T root,
         SerializationFormat format = defaultFormat)
@@ -1268,9 +1258,9 @@ public:
     /**
      * Finds the tree node matching to a property names chain.
      * Params:
-     * descriptorName = The property names chain which identifies the node.
+     *      descriptorName = The property names chain which identifies the node.
      * Returns:
-     * A reference to the node that matches the property or nulll.
+     *      A reference to the node that matches the property or nulll.
      */ 
     IstNode findNode(in char[] descriptorName)
     {
@@ -1347,7 +1337,7 @@ public:
      * Params:
      *      node = An IstNode. Can be determined by a call to findNode()
      *      descriptor = The PropDescriptor whose setter is used to restore the node data.
-     * I    if not specified then the onWantDescriptor event may be called.
+     *      if not specified then the onWantDescriptor event may be called.
      */
     void restoreProperty(T)(IstNode node, PropDescriptor!T* descriptor = null)
     {
@@ -1397,7 +1387,7 @@ public:
  * Serializes a PropertyPublisher to a file.
  *
  * This helper function works in pair with fileToPublisher().
- * It is typically used to load configuration files, sessions backups, etc.
+ * It is typically used to load configuration files, session backups, etc.
  *
  * Params:
  *      pub = The PropertyPublisher to save.
@@ -1419,7 +1409,7 @@ void publisherToFile(PropertyPublisher pub, in char[] filename,
  * Deserializes a file to a PropertyPublisher.
  *
  * This helper function works in pair with publisherToFile().
- * It is typically used to load configuration files, sessions backups, etc.
+ * It is typically used to load configuration files, session backups, etc.
  *
  * Params:
  *      filename = The source file.
@@ -2090,7 +2080,8 @@ version(unittest)
             target = cast(Object) ReferenceMan.reference!void(value);
         }
 
-        //TODO-cdecision: maybe delete the code related to delegate serialization, the mechanism used in this unittest looks better
+        // TODO-cdecision: maybe delete the code related to delegate serialization,
+        // the mechanism used in this unittest looks better
 
     }
 
