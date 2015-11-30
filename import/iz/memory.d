@@ -117,7 +117,7 @@ if(is(ST==struct) || is(ST==union))
  *      T = A class type or a struct pointer type, likely to be infered by the *instance* parameter
  *      instance = An instance of type T.
  */
-void destruct(T)(ref T instance) 
+void destruct(T)(auto ref T instance)
 if (is(T == class) || (isPointer!T && is(PointerTarget!T == struct))
     || (isPointer!T && is(PointerTarget!T == union)))
 {
@@ -162,7 +162,7 @@ if (is(T == class) || (isPointer!T && is(PointerTarget!T == struct))
  * Params:
  *      objs = Variadic list of Object instances.
  */
-static void destruct(Objs...)(ref Objs objs)
+static void destruct(Objs...)(auto ref Objs objs)
 {
     foreach(ref obj; objs)
         obj.destruct;
