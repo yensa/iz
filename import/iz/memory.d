@@ -13,7 +13,7 @@ version(unittest) import std.stdio;
 /**
  * Like malloc() but for @safe context.
  */
-@trusted @nogc Ptr getMem(size_t size) nothrow
+Ptr getMem(size_t size) nothrow @trusted @nogc
 {
     auto result = malloc(size);
     assert(result, "Out of memory");
@@ -23,7 +23,7 @@ version(unittest) import std.stdio;
 /**
  * Like realloc() but for @safe context.
  */
-@trusted @nogc Ptr reallocMem(ref Ptr src, size_t newSize) nothrow
+Ptr reallocMem(ref Ptr src, size_t newSize) nothrow @trusted @nogc
 {
     auto result = realloc(src, newSize);
     assert(result, "Out of memory");
@@ -33,10 +33,11 @@ version(unittest) import std.stdio;
 /**
  * Like memmove() but for @safe context.
  * dst and src can overlap.
+ *
  * Params:
- * dst = the data source.
- * src = the data destination.
- * count = the count of byte to move from src to dst. 
+ *      dst = The data source.
+ *      src = The data destination.
+ *      count = The count of byte to move from src to dst.
  */
 @trusted @nogc void moveMem(ref Ptr dst, ref Ptr src, size_t count) nothrow
 {
@@ -47,14 +48,15 @@ version(unittest) import std.stdio;
 /**
  * Like memmove() but for @safe context.
  * dst and src can overlap.
+ *
  * Params:
- * dst = the data source.
- * src = the data destination.
- * count = the count of byte to meove from src to dst.
+ *      dst = The data source.
+ *      src = The data destination.
+ *      count = The count of byte to meove from src to dst.
  * Returns:
- * the pointer to the destination, (same as dst). 
+ *      the pointer to the destination, (same as dst).
  */
-@trusted @nogc Ptr moveMem(Ptr dst, Ptr src, size_t count) nothrow
+Ptr moveMem(Ptr dst, Ptr src, size_t count) nothrow @trusted @nogc
 {
     import std.c.string : memmove;
     return memmove(dst, src, count);
@@ -63,10 +65,11 @@ version(unittest) import std.stdio;
 /**
  * Frees a manually allocated pointer to a basic type. 
  * Like free() but for @safe context.
+ *
  * Params:
- * src = the pointer to free.
+ *      src = The pointer to free.
  */
-@trusted @nogc void freeMem(T)(ref T src) nothrow
+void freeMem(T)(auto ref T src) nothrow @trusted @nogc
 if (isPointer!T && isBasicType!(pointerTarget!T))
 {
     if (src) free(cast(void*)src);
@@ -75,75 +78,70 @@ if (isPointer!T && isBasicType!(pointerTarget!T))
 
 /**  
  * The static function construct returns a new, GC-free, class instance.
+ *
  * Params:
- * CT = a class type.
- * a = variadic parameters passed to the constructor.
+ *      CT = A class type.
+ *      a = Variadic parameters passed to the constructor.
  */
-@trusted CT construct(CT, A...)(A a) 
+CT construct(CT, A...)(A a) @trusted
 if (is(CT == class))
 {
-    version(none) {
-        // based on D wiki
-        import std.conv : emplace;
-        auto size = __traits(classInstanceSize, CT);
-        auto memory = getMem(size)[0 .. size];
-        return emplace!(CT, A)(memory, a);
-    } else {
-        // based on D-Runtime - lifetime.d 
-        auto memory = getMem(typeid(CT).init.length);
-        memory[0 .. typeid(CT).init.length] = typeid(CT).init[];
-        static if (__traits(hasMember, CT, "__ctor"))
-            (cast(CT) (memory)).__ctor(a);    
-        return cast(CT) memory;
-    }
+    auto memory = getMem(typeid(CT).init.length);
+    memory[0 .. typeid(CT).init.length] = typeid(CT).init[];
+    static if (__traits(hasMember, CT, "__ctor"))
+        (cast(CT) (memory)).__ctor(a);
+    return cast(CT) memory;
 }
 
 /**  
  * The static function construct returns a new, GC-free, pointer to a struct.
+ *
  * Params:
- * ST = a struct type.
- * a = variadic parameters passed to the constructor.
+ *      ST = A struct type.
+ *      a = Variadic parameters passed to the constructor.
  */
-@trusted ST * construct(ST, A...)(A a)
+ST * construct(ST, A...)(A a) @trusted
 if(is(ST==struct) || is(ST==union))
 {
-    version(all) {
-        import std.conv : emplace;
-        auto size = ST.sizeof;
-        auto memory = getMem(size)[0 .. size];
-        return emplace!(ST, A)(memory, a);
-    } else {
-        assert(0, "this does not work");
-        auto memory = getMem(ST.sizeof);
-        memory[0 .. ST.sizeof] = typeid(ST).init[];
-        static if (A.length &&  __traits(hasMember, ST, "__ctor"))
-            (cast(ST*) (memory)).__ctor(a);    
-        return cast(ST*) memory;
-    }
+    import std.conv : emplace;
+    auto size = ST.sizeof;
+    auto memory = getMem(size)[0 .. size];
+    return emplace!(ST, A)(memory, a);
 }
        
 /** 
  * Destructs or frees a class instance or a struct pointer 
  * previously constructed with construct().
+ *
  * Params:
- * T = a class type or a struct pointer type, likely to be infered by the *instance* parameter
- * instance = an instance of type *T*.
+ *      T = A class type or a struct pointer type, likely to be infered by the *instance* parameter
+ *      instance = An instance of type T.
  */
 void destruct(T)(ref T instance) 
 if (is(T == class) || (isPointer!T && is(PointerTarget!T == struct))
     || (isPointer!T && is(PointerTarget!T == union)))
 {
+
     if (!instance) return;
     destroy(instance);
+
+    /*static if (is(typeof(T.__dtor)))
+        instance.__dtor();
+    static if (is(typeof(T.__xdtor)))
+        instance.__xdtor();*/
+
+    freeMem(cast(void*)instance);
+
     instance = null;
 }   
 
 /**
  * Returns a pointer to a new, GC-free, basic variable.
  * Any variable allocated using this function must be manually freed with freeMem.
+ *
  * Params:
- * T = the type of the pointer to return.
- * preFill = optional boolean indicating if the result has to be initialized.
+ *      T = The type of the pointer to return.
+ *      preFill = Optional boolean indicating if the result has to be initialized.
  */
 @trusted @nogc T * newPtr(T, bool preFill = false)() if (isBasicType!T)
 {
@@ -159,9 +157,10 @@ if (is(T == class) || (isPointer!T && is(PointerTarget!T == struct))
 
 /** 
  * Frees and invalidates a list of classes instances or struct pointers. 
- * *destruct()* is called for each item.
+ * $(D destruct()) is called for each item.
+ *
  * Params:
- * objs = variadic list of Object instances.
+ *      objs = Variadic list of Object instances.
  */
 static void destruct(Objs...)(ref Objs objs)
 {
@@ -196,7 +195,7 @@ unittest
     assert( GC.addrOf(cast(void*)foo) == null );
     assert( GC.addrOf(cast(void*)bar) != null );
     foo.destruct;
-    bar.destruct;
+    bar.destroy;
     
     struct Foo{size_t a,b,c;}
     Foo * foos = construct!Foo(1,2,3);
@@ -207,21 +206,21 @@ unittest
     assert( GC.addrOf(cast(void*)foos) == null );
     assert( GC.addrOf(cast(void*)bars) != null );   
     foos.destruct;
-    bars.destruct;   
+    bars.destroy;
     assert(!foos);
     foos.destruct;
     assert(!foos);
-    
+
     union Uni{bool b; ulong ul;}
     Uni * uni0 = construct!Uni();
     Uni * uni1 = new Uni();
     assert( GC.addrOf(cast(void*)uni0) == null );
-    assert( GC.addrOf(cast(void*)uni1) != null );   
+    assert( GC.addrOf(cast(void*)uni1) != null );
     uni0.destruct;
-    uni1.destruct;   
+    uni1.destroy;
     assert(!uni0);
     uni0.destruct;
-    assert(!uni0);    
+    assert(!uni0);
 
     writeln("construct/destruct passed the tests");
 }
@@ -263,6 +262,6 @@ unittest
     ptr.freeMem;
     assert(!ptr);
 
-    writeln("newPtr passed the tests");  
+    writeln("newPtr passed the tests");
 }
 
