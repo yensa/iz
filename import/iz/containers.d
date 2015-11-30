@@ -1362,7 +1362,7 @@ unittest
 
         for (auto i = 0; i < arrayOfC.length; i++)
         {
-            arrayOfC[i] = new C;
+            arrayOfC[i] = construct!C;
             arrayOfC[i].a = i;
             cList.add( arrayOfC[i] );
             assert( cList[i] is arrayOfC[i]);
@@ -2231,32 +2231,32 @@ private class Foo: TreeItem
     {
 
         Foo[20] foos;
-        Foo Driver;
+        Foo conductor;
 
-        foos[0] = new Foo;
-        Driver = foos[0];
+        foos[0] = construct!Foo;
+        conductor = foos[0];
         for (auto i =1; i < foos.length; i++)
         {
-            foos[i] = new Foo;
-            if (i>0) Driver.addSibling( foos[i] );
+            foos[i] = construct!Foo;
+            if (i>0) conductor.addSibling( foos[i] );
             assert( foos[i].siblingIndex == i );
-            assert( Driver.siblings[i].siblingIndex == i );
-            assert( Driver.siblings[i] == foos[i] );
+            assert( conductor.siblings[i].siblingIndex == i );
+            assert( conductor.siblings[i] == foos[i] );
             if (i>0) assert( foos[i].prevSibling.siblingIndex == i-1 );
-            assert(Driver.lastSibling.siblingIndex == i);
+            assert(conductor.lastSibling.siblingIndex == i);
         }
-        assert(Driver.siblingCount == foos.length);
+        assert(conductor.siblingCount == foos.length);
 
         assert(foos[1].nextSibling.siblingIndex == 2);
         assert(foos[1].prevSibling.siblingIndex == 0);
 
-        Driver.exchangeSibling(foos[10],foos[16]);
-        assert(Driver.siblingCount == foos.length);
+        conductor.exchangeSibling(foos[10],foos[16]);
+        assert(conductor.siblingCount == foos.length);
         assert( foos[10].siblingIndex == 16);
         assert( foos[16].siblingIndex == 10);
 
-        Driver.exchangeSibling(foos[10],foos[16]);
-        assert(Driver.siblingCount == foos.length);
+        conductor.exchangeSibling(foos[10],foos[16]);
+        assert(conductor.siblingCount == foos.length);
         assert( foos[10].siblingIndex == 10);
         assert( foos[16].siblingIndex == 16);
 
@@ -2266,130 +2266,132 @@ private class Foo: TreeItem
         //assert( foos[4].siblingIndex == 5); // when siblingIndex() calls remove/insert
         //assert( foos[4].siblingIndex == 8); // when siblingIndex() calls exchangeSibling.
 
-        assert( Driver.siblings[16] == foos[16]);
-        assert( Driver.siblings[10] == foos[10]);
-        Driver.siblings[16] = foos[10]; // exchg
-        assert(Driver.siblingCount == foos.length);
-        Driver.siblings[16] = foos[16]; // exchg
-        assert(Driver.siblingCount == foos.length);
+        assert( conductor.siblings[16] == foos[16]);
+        assert( conductor.siblings[10] == foos[10]);
+        conductor.siblings[16] = foos[10]; // exchg
+        assert(conductor.siblingCount == foos.length);
+        conductor.siblings[16] = foos[16]; // exchg
+        assert(conductor.siblingCount == foos.length);
         assert( foos[16].siblingIndex == 16);
         assert( foos[10].siblingIndex == 10);
 
 
-        auto C = new Foo;
-        Driver.siblings[10] = C;
-        Driver.siblings[16] = foos[10];
+        auto C = construct!Foo;
+        conductor.siblings[10] = C;
+        conductor.siblings[16] = foos[10];
         assert( foos[16].siblingIndex == 0);
         assert( foos[10].siblingIndex == 16);
         assert( C.siblingIndex == 10);
 
-        assert(Driver.findSibling(foos[18]) > -1);
-        assert(Driver.findSibling(foos[0]) > -1);
+        assert(conductor.findSibling(foos[18]) > -1);
+        assert(conductor.findSibling(foos[0]) > -1);
 
         // remember that "item" type is the interface not its implementer.
-        foreach(TreeItem item; Driver.siblings)
+        foreach(TreeItem item; conductor.siblings)
         {
-            assert(Driver.findSibling(item) == item.siblingIndex);
+            assert(conductor.findSibling(item) == item.siblingIndex);
             assert( cast(Foo) item);
         }
-        foreach_reverse(item; Driver.siblings)
+        foreach_reverse(item; conductor.siblings)
         {
-            assert(Driver.findSibling(item) == item.siblingIndex);
+            assert(conductor.findSibling(item) == item.siblingIndex);
         }
 
-        Driver.removeSibling(19);
-        assert(Driver.siblingCount == foos.length -1);
-        Driver.removeSibling(18);
-        assert(Driver.siblingCount == foos.length -2);
-        Driver.removeSibling(foos[13]);
-        assert(Driver.siblingCount == foos.length -3);
-        //Driver[0] = null; // exception because Driver[0] = Driver
-        assert(Driver.siblingCount == foos.length -3);
-        Driver.siblings[1] = null;
-        assert(Driver.siblingCount == foos.length -4);
+        conductor.removeSibling(19);
+        assert(conductor.siblingCount == foos.length -1);
+        conductor.removeSibling(18);
+        assert(conductor.siblingCount == foos.length -2);
+        conductor.removeSibling(foos[13]);
+        assert(conductor.siblingCount == foos.length -3);
+        //conductor[0] = null; // exception because conductor[0] = conductor
+        assert(conductor.siblingCount == foos.length -3);
+        conductor.siblings[1] = null;
+        assert(conductor.siblingCount == foos.length -4);
 
-        assert(Driver.changeMonitor);
-        assert(Driver.getMonitor);
+        assert(conductor.changeMonitor);
+        assert(conductor.getMonitor);
 
         //
 
-        Foo[20] Items1;
-        Foo[4][20] Items2;
+        Foo[20] items1;
+        Foo[4][20] items2;
 
-        assert( Items1[12] is null);
-        assert( Items2[12][0] is null);
-        assert( Items2[18][3] is null);
+        assert( items1[12] is null);
+        assert( items2[12][0] is null);
+        assert( items2[18][3] is null);
 
-        Foo Root;
-        Root = new Foo;
-        assert(Root.level == 0);
-        for (auto i=0; i < Items1.length; i++)
+        Foo root;
+        root = construct!Foo;
+        assert(root.level == 0);
+        for (auto i=0; i < items1.length; i++)
         {
-            Items1[i] = new Foo;
-            Root.addChild(Items1[i]);
-            assert(Root.childrenCount == 1 + i);
-            assert(Items1[i].parent is Root);
-            assert(Items1[i].siblingCount == 1 + i);
-            assert(Items1[i].level == 1);
+            items1[i] = construct!Foo;
+            root.addChild(items1[i]);
+            assert(root.childrenCount == 1 + i);
+            assert(items1[i].parent is root);
+            assert(items1[i].siblingCount == 1 + i);
+            assert(items1[i].level == 1);
+            assert(items1[i].siblingIndex == i);
         }
-        Root.clearChildren(true);
-        assert(Root.childrenCount == 0);
-        for (auto i=0; i < Items1.length; i++)
+        root.clearChildren(true);
+        assert(root.childrenCount == 0);
+        for (auto i=0; i < items1.length; i++)
         {
-            Root.addChild(Items1[i]);
+            root.addChild(items1[i]);
+            assert(items1[i].siblingIndex == i);
         }
 
-        for( auto i = 0; i < Items2.length; i++)
-            for( auto j = 0; j < Items2[i].length; j++)
+        for( auto i = 0; i < items2.length; i++)
+            for( auto j = 0; j < items2[i].length; j++)
             {
-                Items2[i][j] = new Foo;
-                Items1[i].addChild(Items2[i][j]);
-                assert(Items2[i][j].level == 2);
-                assert(Items1[i].childrenCount == 1 + j);
-                assert(Items2[i][j].siblingCount == 1 + j);
+                items2[i][j] = construct!Foo;
+                items1[i].addChild(items2[i][j]);
+                assert(items2[i][j].level == 2);
+                assert(items1[i].childrenCount == 1 + j);
+                assert(items2[i][j].siblingCount == 1 + j);
             }
 
-        Root.deleteChildren;
+        root.deleteChildren;
     /*
         // this is an expected behavior:
 
         // original refs are dangling
-        assert( Items1[12] is null);
-        assert( Items2[12][0] is null);
-        assert( Items2[18][3] is null);
+        assert( items1[12] is null);
+        assert( items2[12][0] is null);
+        assert( items2[18][3] is null);
         // A.V: 'cause the items are destroyed
-        writeln( Items1[12].level );
+        writeln( items1[12].level );
     */
 
         // the clean-way:
-        Root.addNewChildren!Foo();
-            Root.children[0].addNewChildren!Foo();
-            Root.children[0].addNewChildren!Foo();
-            Root.children[0].addNewChildren!Foo();
-        Root.addNewChildren!Foo();
-            Root.children[1].addNewChildren!Foo();
-            Root.children[1].addNewChildren!Foo();
-            Root.children[1].addNewChildren!Foo();
-            Root.children[1].addNewChildren!Foo();
-                Root.children[1].children[3].addNewChildren!Foo();
-                Root.children[1].children[3].addNewChildren!Foo();
-                Root.children[1].children[3].addNewChildren!Foo();
+        root.addNewChildren!Foo();
+            root.children[0].addNewChildren!Foo();
+            root.children[0].addNewChildren!Foo();
+            root.children[0].addNewChildren!Foo();
+        root.addNewChildren!Foo();
+            root.children[1].addNewChildren!Foo();
+            root.children[1].addNewChildren!Foo();
+            root.children[1].addNewChildren!Foo();
+            root.children[1].addNewChildren!Foo();
+                root.children[1].children[3].addNewChildren!Foo();
+                root.children[1].children[3].addNewChildren!Foo();
+                root.children[1].children[3].addNewChildren!Foo();
 
-        assert(Root.childrenCount == 2);
-        assert(Root.children[0].childrenCount == 3);
-        assert(Root.children[1].childrenCount == 4);
-        assert(Root.children[1].children[3].childrenCount == 3);
-        assert(Root.children[1].children[3].children[0].level == 3);
+        assert(root.childrenCount == 2);
+        assert(root.children[0].childrenCount == 3);
+        assert(root.children[1].childrenCount == 4);
+        assert(root.children[1].children[3].childrenCount == 3);
+        assert(root.children[1].children[3].children[0].level == 3);
         
-        assert(Root.children[1].children[3].children[0].root is Root);
-        assert(Root.children[1].children[3].root is Root);
+        assert(root.children[1].children[3].children[0].root is root);
+        assert(root.children[1].children[3].root is root);
 
         auto str = construct!MemoryStream;
-        Root.saveToStream(str);
+        root.saveToStream(str);
         //str.saveToFile("izTreeNodes.txt");
         str.destruct;
 
-        Root.deleteChildren;
+        root.deleteChildren;
 
         writeln("TreeItem passed the tests");
     }
