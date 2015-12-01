@@ -323,7 +323,6 @@ struct PropDescriptor(T)
     }
 }
 
-
 unittest
 {
     class A
@@ -365,44 +364,6 @@ unittest
     static assert((PropDescriptor!(string)).sizeof == (PropDescriptor!(ubyte[][][][])).sizeof);
 }
 
-
-/**
- * Interface for a class that collects and uses some PropDescriptor.
- * While in most of the case such a client is able to automatically use
- * the publications of a PropertyPublisher, a client can also visit
- * the publisher to let him declare more items.
- */
-interface PropertyPublisherClient
-{
-    /**
-     * Indicates how a client will use the properties.
-     */
-    PropertyPublisherClientState clientState();
-}
-
-enum PropertyPublisherClientState
-{
-    /**
-     * A client will get the value just after a descriptor
-     * is added in the addProperty() method
-     */
-    sequentialGet,
-    /**
-     * A client will set the value right after a descriptor
-     * is added in the addProperty() method
-     */
-    sequentialSet,
-    /**
-     * A client accumulates the descriptors added in the
-     * addProperty() method, after what all the values may be
-     * set or collected.
-     */
-    accumulate,
-    /**
-     * This state shouldn't be visible
-     */
-    idle
-}
 
 /// designed to annotate a detectable property setter.
 enum Set;
@@ -501,11 +462,6 @@ interface PropertyPublisher
     Object declarator(); //acquirer
     /// ditto
     void declarator(Object value);
-    /**
-     * Called by a PropertyPublisherClient.
-     * Usage is relative to the PropertyPublisherClient implementation
-     */
-    void publisherClientEvent(PropertyPublisherClient client);
 }
 ///
 unittest
@@ -656,10 +612,6 @@ mixin template PropertyPublisherImpl()
     static if (!__traits(hasMember, ToT, "publicationType") || Base)
     protected const(RuntimeTypeInfo) publicationType(size_t index)
     {return (cast(GenericDescriptor*) _publishedDescriptors[index]).rtti;}
-
-    /// see PropertyPublisher
-    static if (!__traits(hasMember, ToT, "publisherClientEvent") || Base)
-    protected void publisherClientEvent(PropertyPublisherClient client){}
 
 // templates: no problem with overrides, instantiated according to class This or That
 

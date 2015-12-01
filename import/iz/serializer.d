@@ -23,8 +23,13 @@ version(unittest) import std.stdio;
  * The reference must be stored in the ReferenceMan.
  *
  * A "referenced variable" is typically something that is assigned
- * at the run-time, such as a delegate, a pointer to an Object, etc.
+ * at the run-time but not owned by the entity that want to keep track of it,
+ * or that is serialized by another entity.
+ *
+ * Note that this class is not needed to serialize a reference to an object or to
+ * a delegate, since those reference types are automatically handled by the serializer.
  */
+// class inherited from the old serialization system, not really needed anymore.
 class SerializableReference: PropertyPublisher
 {
 
@@ -32,8 +37,42 @@ class SerializableReference: PropertyPublisher
 
 protected:
 
-    @SetGet char[] _tp;
-    @SetGet char[] _id;
+    ubyte _cnt;
+    char[] _id, _tp;
+    void delegate(Object) _onRestored;
+
+    void doSet()
+    {
+        _cnt++;
+        if (_cnt == 2)
+        {
+            _cnt = 0;
+            if (_onRestored)
+                _onRestored(this);
+        }
+    }
+
+    @Get char[] type()
+    {
+        return _tp;
+    }
+
+    @Set void type(char[] value)
+    {
+        _tp = value;
+        doSet;
+    }
+
+    @Get char[] identifier()
+    {
+         return _id;
+    }
+
+    @Set void identifier(char[] value)
+    {
+        _id = value;
+        doSet;
+    }
 
 public:
 
@@ -52,11 +91,27 @@ public:
 
     /**
      * Returns the reference according to the internal fields.
-     * Usually called after the deserialization.
+     * Usually called after the deserialization of after the
+     * the reference owner is notified by onRestored().
      */
     RT* restoreReference(RT)()
     {
         return ReferenceMan.reference!RT(_id);
+    }
+
+    /**
+     * Defines the event called when the the identifier string and the
+     * type string are restored, so that the reference owner can
+     * retrieve the matching reference in the RefMan.
+     */
+    void onRestored(void delegate(Object) value)
+    {
+        _onRestored = value;
+    }
+    /// ditto
+    void delegate(Object) onRestored()
+    {
+        return _onRestored;
     }
 }
 
@@ -858,7 +913,7 @@ alias WantObjectEvent = void delegate(IstNode node, ref Object serializable, out
  * failure. Data saved from an older version can be recovered, converted or
  * deserialized in a temporary property.
  */
-class Serializer: PropertyPublisherClient
+class Serializer
 {
 
 private:
@@ -878,7 +933,6 @@ private:
     WantObjectEvent _onWantObject;
 
     SerializationFormat _format;
-    PropertyPublisherClientState _clientState;
     
     Stream _stream;
     PropDescriptor!Object _rootDescr;
@@ -962,9 +1016,6 @@ private:
         if (_parentNode !is _rootNode && objDescr.declarator !is publisher.declarator)
             return;
 
-        // custom props
-        publisher.publisherClientEvent(this);
-
         // not a reference: current collector is owned (it has initialized the target),
         // so write its members
         foreach(immutable i; 0 .. publisher.publicationCount)
@@ -1040,7 +1091,6 @@ public:
         _format = format;
         _stream = outputStream;
         _mustWrite = true;
-        _clientState = PropertyPublisherClientState.accumulate;
         //
         void writeNodesFrom(IstNode parent)
         {
@@ -1076,7 +1126,6 @@ public:
     {
         _format = format;
         _stream = outputStream;
-        _clientState = PropertyPublisherClientState.sequentialGet;
         _mustWrite = true; 
         _rootNode.deleteChildren;
         _previousNode = null;
@@ -1093,7 +1142,6 @@ public:
     void publisherToIst(T)(T root)
     if (is(T==class) || is(T == struct))
     {
-        _clientState = PropertyPublisherClientState.sequentialGet;
         _mustWrite = false;
         _rootNode.deleteChildren;
         _previousNode = null;
@@ -1116,12 +1164,8 @@ public:
      */
     void istToPublisher(PropertyPublisher publisher)
     {
-        _clientState = PropertyPublisherClientState.sequentialSet;
         void restoreFrom(IstNode node, PropertyPublisher target)
         {
-            // custom
-            target.publisherClientEvent(this);
-
             foreach(child; node.children)
             {
                 bool done;
@@ -1375,8 +1419,6 @@ public:
     /// ditto
     @property void onWantObject(WantObjectEvent value){_onWantObject = value;}
 
-    PropertyPublisherClientState clientState(){return _clientState;}
-
 //------------------------------------------------------------------------------
 
 }
@@ -1505,28 +1547,33 @@ version(unittest)
     {
         mixin PropertyPublisherImpl;
 
-        PropDescriptor!Object fRefDescr;
         SerializableReference fSerRef;
         Referenced1 * fRef;
+
+        void doRestore(Object sender)
+        {
+            fRef = fSerRef.restoreReference!Referenced1;
+        }
     
         this()
         {
-            collectPublications!ReferencedUser;
             fSerRef = construct!SerializableReference;
-            fRefDescr.define(cast(Object*)&fSerRef, "theReference", this);
-            setTargetObjectOwner(&fRefDescr,this);
-
-            _publishedDescriptors ~= cast(void*)&fRefDescr;
+            fSerRef.onRestored = &doRestore;
+            collectPublications!ReferencedUser;
         }
 
         ~this() {destruct(fSerRef);}
-        
-        override void publisherClientEvent(PropertyPublisherClient client)
+
+        @Get SerializableReference theReference()
         {
-            if (client.clientState == PropertyPublisherClientState.sequentialGet)
-                fSerRef.storeReference!Referenced1(fRef);
-            if (client.clientState == PropertyPublisherClientState.sequentialSet)
-                fRef = fSerRef.restoreReference!Referenced1;
+            fSerRef.storeReference!Referenced1(fRef);
+            return fSerRef;
+        }
+        @Set void theReference(SerializableReference value)
+        {
+            // when a sub publisher is owned the setter is a noop.
+            // actually the serializer use the descriptor getter
+            // to knwo where the members of the sub pub. are located.
         }
     }
     
@@ -1546,7 +1593,7 @@ version(unittest)
                 aB1descr.define(cast(Object*)&_aB1, "aB1", this);
                 aB2descr.define(cast(Object*)&_aB2, "aB2", this);
 
-                // manually add publications
+                // add publications by hand.
                 _publishedDescriptors ~= cast(void*) &aB1descr;
                 _publishedDescriptors ~= cast(void*) &aB2descr;
 
@@ -1564,35 +1611,27 @@ version(unittest)
                 _aB1.reset;
                 _aB2.reset;
             }
-            override void publisherClientEvent(PropertyPublisherClient client)
-            {
-                //client.addGenericProperty(aB1descr.genericDescriptor);
-                //client.addGenericProperty(aB2descr.genericDescriptor);
-            }
     }
     
     class ClassB : PropertyPublisher
     {
         mixin PropertyPublisherImpl;
         private:
-            int[]  _anIntArray;
-            float  _aFloat;
-            char[] _someChars;
+            @SetGet int[]  anIntArray;
+            @SetGet float  aFloat;
+            @SetGet char[] someChars;
         public:
             this() {
                 collectPublications!ClassB;
-                _anIntArray = [0, 1, 2, 3];
-                _aFloat = 0.123456f;
-                _someChars = "azertyuiop".dup;
+                anIntArray = [0, 1, 2, 3];
+                aFloat = 0.123456f;
+                someChars = "azertyuiop".dup;
             }
             void reset() {
-                _anIntArray = _anIntArray.init; 
-                _aFloat = 0.0f;
-                _someChars = _someChars.init;
+                anIntArray = anIntArray.init;
+                aFloat = 0.0f;
+                someChars = someChars.init;
             }
-            mixin(genPropFromField!(typeof(_anIntArray), "anIntArray", "_anIntArray"));
-            mixin(genPropFromField!(typeof(_aFloat), "aFloat", "_aFloat"));
-            mixin(genPropFromField!(typeof(_someChars), "someChars", "_someChars"));
     }
 
     // by format only use the system based on manual declarations
@@ -1676,6 +1715,7 @@ version(unittest)
         str.clear;
         usrr.fRef = &ref1;
         ser.publisherToStream(usrr, str, format);
+        str.saveToFile("sdf.txt");
 
         usrr.fRef = &ref2;
         assert(*usrr.fRef is ref2);
@@ -1969,7 +2009,7 @@ version(unittest)
 
         ser.onWantObject = &objectNotFound;
         ser.publisherToStream(c, str);
-        str.saveToFile(r"test.txt");
+        //str.saveToFile(r"test.txt");
 
         c.reset;
         str.position = 0;
@@ -1990,61 +2030,6 @@ version(unittest)
         assert(c._stream.readUbyte == 0xFB);
         assert(c._stream.readUbyte == 0xFA);
         assert(c._stream.readUbyte == 0xF0);
-    }
-    //----
-
-    //---+
-    unittest
-    {/*
-        class Item: PropertyPublisher
-        {
-            mixin PropertyPublisherImpl;
-            this()
-            {
-                collectPublications!Item;
-            }
-            @SetGet uint _a;
-            @SetGet ushort _b;
-        }
-        class Main: PropertyPublisher
-        {
-            @SetGet Item[] _items;
-            mixin PropertyPublisherImpl;
-            this()
-            {
-                _items ~= new Item; _items[$-1].declarator = this;
-                _items ~= new Item; _items[$-1].declarator = this;
-                _items ~= new Item; _items[$-1].declarator = this;
-                collectPublications!Main;
-            }
-
-            void serWantObj(IstNode node, ref Object serializable, out bool fromRefererence)
-            {
-                writeln(node.info.name);
-                if (node.info.name[0..12] == "items_item_")
-                {
-                    auto index= to!uint(node.info.name[12..$]);
-                    writeln(index);
-                    if (index == 0) serializable = _items[0];
-                    if (index == 1) serializable = _items[1];
-                    if (index == 2) serializable = _items[2];
-                }
-            }
-        }
-
-        Serializer ser = construct!Serializer;
-        MemoryStream str = construct!MemoryStream;
-        Main root = construct!Main;
-        scope(exit) destruct(ser, str, root);
-
-        ser.publisherToStream(root, str);
-        str.saveToFile("test_collection.txt");
-
-        str.position = 0;
-        ser.onWantObject = &root.serWantObj;
-        ser.streamToPublisher(str, root);
-        writeln("test_collection");
-*/
     }
     //----
 
@@ -2079,10 +2064,6 @@ version(unittest)
             // ID -> Reference -> assign the variable
             target = cast(Object) ReferenceMan.reference!void(value);
         }
-
-        // TODO-cdecision: maybe delete the code related to delegate serialization,
-        // the mechanism used in this unittest looks better
-
     }
 
     unittest
