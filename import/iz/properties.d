@@ -780,6 +780,8 @@ mixin template PropertyPublisherImpl()
                 }
             }
         }
+        //TODO-csafety: check if invalid descriptors have been created.
+        //e.g invalid @Set @Get pair, descriptor without setter or getter.
     }
 }
 
