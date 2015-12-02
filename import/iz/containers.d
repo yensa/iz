@@ -12,7 +12,7 @@ import
 
 version(unittest) import std.stdio;
 
-version(X86_64) 
+version(X86_64)
     version(linux) version = Nux64;
 
 /**
@@ -301,7 +301,7 @@ struct Array(T)
                 moveMem( rwPtr(old), someElements.ptr , T.sizeof * someElements.length);
             }
             else assert(0, "operator not implemented");
-        }    
+        }
         /// ditto
         void opOpAssign(string op)(T aElement) @nogc
         {
@@ -311,7 +311,7 @@ struct Array(T)
                 opIndexAssign(aElement,_length-1);
             }
             else assert(0, "operator not implemented");
-        }      
+        }
         /// ditto
         Array!T opSlice() @nogc
         {
@@ -470,13 +470,13 @@ interface List(T)
 {
     /// support for the array syntax
     T opIndex(ptrdiff_t i);
-    
+
     /// support for the array syntax
     void opIndexAssign(T item, size_t i);
-    
+
     /// support for the foreach operator
     int opApply(int delegate(T) dg);
-    
+
     /// support for the foreach_reverse operator
     int opApplyReverse(int delegate(T) dg);
 
@@ -534,11 +534,11 @@ interface List(T)
      * Returns 0 when the operation is successful otherwise -1.
      */
     ptrdiff_t add(T item);
-    
+
     /**
      * Adds someItems at the end of list.
      * Returns the index of the last item when the operation is successful otherwise -1.
-     */    
+     */
     ptrdiff_t add(T[] items);
 
     /**
@@ -682,11 +682,11 @@ class StaticList(T): List!T
             _items[$-1] = item;
             return _items.length - 1;
         }
-        
+
         ptrdiff_t add(T[] items)
         {
             _items ~= items;
-            return _items.length - 1;  
+            return _items.length - 1;
         }
 
         /**
@@ -929,8 +929,8 @@ private template dlistPayload(T)
 /**
  * A List implementation, slow to be iterated, fast to be reorganized.
  * This is a standard doubly linked list, with GC-free heap allocations.
- * 
- * While using the array syntax for looping should be avoided, foreach() 
+ *
+ * While using the array syntax for looping should be avoided, foreach()
  * processes with some acceptable performances.
  */
 class DynamicList(T): List!T
@@ -1003,7 +1003,7 @@ class DynamicList(T): List!T
             }
             return result;
         }
-    
+
         int opApplyReverse(int delegate(T) dg) @trusted
         {
             int result = 0;
@@ -1016,7 +1016,7 @@ class DynamicList(T): List!T
             }
             return result;
         }
-        
+
         void opSliceAssign(T[] elems) @trusted @nogc
         {
             clear;
@@ -1033,7 +1033,7 @@ class DynamicList(T): List!T
         {
             return payload.getData(_first);
         }
- 
+
         ptrdiff_t find(T item) @trusted
         {
             void* current = _first;
@@ -1047,7 +1047,7 @@ class DynamicList(T): List!T
             }
             return -1;
         }
-      
+
         ptrdiff_t add(T item) @trusted @nogc
         {
             if (!_first)
@@ -1060,14 +1060,14 @@ class DynamicList(T): List!T
                 return _count++;
             }
         }
-        
+
         ptrdiff_t add(T[] items) @trusted @nogc
         {
             foreach (item; items)
                 add(item);
-            return _count - 1;   
+            return _count - 1;
         }
-  
+
         ptrdiff_t insert(T item) @trusted @nogc
         {
             auto _pld = payload.newPld(null, _first, item);
@@ -1114,7 +1114,7 @@ class DynamicList(T): List!T
             payload.setData(_pld2, _data1);
         }
 
-        void swapIndexes(size_t index1, size_t index2) @trusted 
+        void swapIndexes(size_t index1, size_t index2) @trusted
         {
             auto _pld1 = getPayloadFromIx(index1);
             if (_pld1 == null) return;
@@ -1192,7 +1192,7 @@ class DynamicList(T): List!T
             return result;
         }
 
-        void clear() @trusted @nogc 
+        void clear() @trusted @nogc
         {
             auto current = _first;
             while(current)
@@ -1210,32 +1210,32 @@ class DynamicList(T): List!T
         {
             return _count;
         }
-        
+
         Range opSlice()
         {
             return Range(_first, _last);
         }
-        
+
         Range opSlice(size_t lo, size_t hi) @trusted
         {
             return Range(getPayloadFromIx(lo), getPayloadFromIx(hi));
         }
-        
+
         alias length = count;
-        
+
         alias put = add;
-        
+
         struct Range
         {
             private void* _begin;
             private void* _end;
-    
+
             private this(void* b, void* e)
             {
                 _begin = b;
                 _end = e;
             }
-    
+
             /**
              * Returns $(D true) if the range is _empty
              */
@@ -1243,7 +1243,7 @@ class DynamicList(T): List!T
             {
                 return _begin is null;
             }
-    
+
             /**
              * Returns the first element in the range
              */
@@ -1251,7 +1251,7 @@ class DynamicList(T): List!T
             {
                 return payload.getData(_begin);
             }
-    
+
             /**
              * Returns the last element in the range
              */
@@ -1259,7 +1259,7 @@ class DynamicList(T): List!T
             {
                 return payload.getData(_end);
             }
-    
+
             /**
              * pop the front element from the range
              *
@@ -1269,7 +1269,7 @@ class DynamicList(T): List!T
             {
                 _begin = payload.getNext(_begin);
             }
-    
+
             /**
              * pop the back element from the range
              *
@@ -1279,16 +1279,16 @@ class DynamicList(T): List!T
             {
                 _end = payload.getPrev(_end);
             }
-    
+
             /**
              * Trivial _save implementation, needed for $(D isForwardRange).
              */
             @property Range save()
             {
                 return this;
-            }        
-            
-            
+            }
+
+
             @property size_t length()
             {
                 size_t result;
@@ -1297,7 +1297,7 @@ class DynamicList(T): List!T
                 {
                     cur = payload.getNext(cur);
                     ++result;
-                } 
+                }
                 return result;
             }
         }
@@ -1466,14 +1466,14 @@ interface TreeItem
     private struct TreeItemSiblings
     {
         public:
-        
+
             TreeItem item;
 
         public:
-        
+
             /**
              * Provides the array syntax.
-             * WHen all the items must be accessed in a loop 
+             * WHen all the items must be accessed in a loop
              * foreach() should be prefered since it's actually a linked list.
              */
             final TreeItem opIndex(ptrdiff_t i) @safe
@@ -1488,7 +1488,7 @@ interface TreeItem
                 }
                 return old;
             }
-            
+
             /// Provides the array syntax.
             final void opIndexAssign(TreeItem anItem, size_t i)
             {
@@ -1513,7 +1513,7 @@ interface TreeItem
                     }
                 }
             }
-            
+
             /// Support for the foreach() operator.
             final int opApply(int delegate(ref TreeItem) dg)
             {
@@ -1528,7 +1528,7 @@ interface TreeItem
                 }
                 return result;
             }
-            
+
             /// Support for the foreach_reverse() operator.
             final int opApplyReverse(int delegate(ref TreeItem) dg)
             {
@@ -1625,7 +1625,7 @@ interface TreeItem
         assert(aSibling);
     }
     body
-    {  
+    {
         if (aSibling.hasSibling)
         {
             if (aSibling.prevSibling !is null)
@@ -1654,7 +1654,7 @@ interface TreeItem
         assert(aSibling);
     }
     body
-    {  
+    {
         if (aSibling.hasSibling)
         {
             if (aSibling.prevSibling !is null)
@@ -1687,7 +1687,7 @@ interface TreeItem
         assert(aSibling);
     }
     body
-    {  
+    {
         if (aSibling.hasSibling)
         {
             if (aSibling.prevSibling !is null)
@@ -1851,7 +1851,7 @@ interface TreeItem
             old.insertSibling(aPosition,this);
         }
     }
-    
+
     /**
      * Indicates if the item has any neighboor.
      */
@@ -1860,7 +1860,7 @@ interface TreeItem
         return ((prevSibling !is null) | (nextSibling !is null));
     }
 
-// -----------------------------------------------------------------------------    
+// -----------------------------------------------------------------------------
 // children -------------------------------------------------------------------+
 
     /**
@@ -1889,7 +1889,7 @@ interface TreeItem
         }
         return result;
     }
-    
+
     /**
      * Returns the root.
      */
@@ -1899,7 +1899,7 @@ interface TreeItem
         while(current.parent)
             current = current.parent;
         return current;
-    }    
+    }
 
     /**
      * Returns the children count.
@@ -2054,9 +2054,8 @@ interface TreeItem
 
             current.deleteChildren;
             current.parent = null;
-
-            //current.destruct;
-            delete current;
+            auto asObj = cast(Object)current;
+            asObj.destruct;
 
             treeChanged(ContainerChangeKind.change, null);
         }
@@ -2080,7 +2079,7 @@ interface TreeItem
         foreach(c; children)
             c.saveToStream(stream);
     }
-// -----------------------------------------------------------------------------    
+// -----------------------------------------------------------------------------
 
 }
 
@@ -2092,7 +2091,7 @@ mixin template TreeItemAccessors()
     private:
         TreeItem fPrevSibling, fNextSibling, fFirstChild, fParent;
         TreeItemSiblings fSiblings, fChild;
-    
+
     public:
         /**
          * Called by a TreeItem to set the link to the previous TreeItem.
@@ -2357,7 +2356,7 @@ private class Foo: TreeItem
     */
 
         // the clean-way:
-     /*   root.addNewChildren!Foo();
+        root.addNewChildren!Foo();
             root.children[0].addNewChildren!Foo();
             root.children[0].addNewChildren!Foo();
             root.children[0].addNewChildren!Foo();
@@ -2375,7 +2374,7 @@ private class Foo: TreeItem
         assert(root.children[1].childrenCount == 4);
         assert(root.children[1].children[3].childrenCount == 3);
         assert(root.children[1].children[3].children[0].level == 3);
-        
+
         assert(root.children[1].children[3].children[0].root is root);
         assert(root.children[1].children[3].root is root);
 
@@ -2384,9 +2383,10 @@ private class Foo: TreeItem
         //str.saveToFile("izTreeNodes.txt");
         str.destruct;
 
-        root.deleteChildren;*/
+        root.deleteChildren;
 
         writeln("TreeItem passed the tests");
     }
 }
+
 
