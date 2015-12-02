@@ -39,7 +39,7 @@ Ptr reallocMem(ref Ptr src, size_t newSize) nothrow @trusted @nogc
  *      src = The data destination.
  *      count = The count of byte to move from src to dst.
  */
-@trusted @nogc void moveMem(ref Ptr dst, ref Ptr src, size_t count) nothrow
+void moveMem(ref Ptr dst, ref Ptr src, size_t count) nothrow @trusted @nogc
 {
     import std.c.string : memmove;
     dst = memmove(dst, src, count);
@@ -77,7 +77,7 @@ if (isPointer!T && isBasicType!(pointerTarget!T))
 }
 
 /**  
- * The static function construct returns a new, GC-free, class instance.
+ * Returns a new, GC-free, class instance.
  *
  * Params:
  *      CT = A class type.
@@ -94,7 +94,7 @@ if (is(CT == class))
 }
 
 /**  
- * The static function construct returns a new, GC-free, pointer to a struct.
+ * Returns a new, GC-free, pointer to a struct.
  *
  * Params:
  *      ST = A struct type.
@@ -110,12 +110,15 @@ if(is(ST==struct) || is(ST==union))
 }
        
 /** 
- * Destructs or frees a class instance or a struct pointer 
- * previously constructed with construct().
+ * Destructs a class or a struct that's been previously
+ * constructed with $(D construct()).
+ *
+ * The function calls the destructor and, when passed as reference,
+ * set the the instance to null.
  *
  * Params:
- *      T = A class type or a struct pointer type, likely to be infered by the *instance* parameter
- *      instance = An instance of type T.
+ *      T = A class type or a struct type, likely to be infered.
+ *      instance = A $(D T) instance.
  */
 void destruct(T)(auto ref T instance)
 if (is(T == class) || (isPointer!T && is(PointerTarget!T == struct))
@@ -125,15 +128,34 @@ if (is(T == class) || (isPointer!T && is(PointerTarget!T == struct))
     if (!instance) return;
     destroy(instance);
 
-    /*static if (is(typeof(T.__dtor)))
+    /*static if (__traits(hasMember, T, "__dtor"))
         instance.__dtor();
-    static if (is(typeof(T.__xdtor)))
+    static if (__traits(hasMember, T, "__xdtor"))
         instance.__xdtor();*/
 
     freeMem(cast(void*)instance);
 
     instance = null;
-}   
+}
+
+/**
+ * Destructs the object from where an interface has been extracted.
+ *
+ * The function retrieve the Object and call the other $(destruct I)
+ * overload. When passed as reference, the instance is null after the
+ * call.
+ *
+ * Params:
+ *      I = An interface type, likely to be infered.
+ *      instance = A $(D I) instance.
+ */
+void destruct(I)(auto ref I instance)
+if (is(I == interface))
+{
+    if (Object obj = cast(Object) instance)
+        obj.destruct;
+    instance = null;
+}
 
 /**
  * Returns a pointer to a new, GC-free, basic variable.
@@ -141,9 +163,10 @@ if (is(T == class) || (isPointer!T && is(PointerTarget!T == struct))
  *
  * Params:
  *      T = The type of the pointer to return.
- *      preFill = Optional boolean indicating if the result has to be initialized.
+ *      preFill = Optional, boolean indicating if the result has to be initialized.
  */
-@trusted @nogc T * newPtr(T, bool preFill = false)() if (isBasicType!T)
+T * newPtr(T, bool preFill = false)() @trusted @nogc
+if (isBasicType!T)
 {
     static if(!preFill)
         return cast(T*) getMem(T.sizeof);
