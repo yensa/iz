@@ -456,15 +456,7 @@ unittest
 }
 
 /**
- * ContainerChangeKind represents the message kinds a container
- * can emit (either by assignable event or by over-ridable method).
- */
-enum ContainerChangeKind {add, change, remove}
-
-/**
  * List interface.
- * It uses the Pascal semantic (add(), remove(), etc)
- * but are usable as range by std.algorithm using opSlice.
  */
 interface List(T)
 {
@@ -548,8 +540,8 @@ interface List(T)
     ptrdiff_t insert(T item);
 
     /**
-     * Inserts anItem before the one standing at aPosition.
-     * If aPosition is greater than count than anItem is added to the end of list.
+     * Inserts anItem before the one standing at position.
+     * If position is greater than count than anItem is added to the end of list.
      * Returns the index of the last item when the operation is successful otherwise -1.
      */
     ptrdiff_t insert(size_t position, T item);
@@ -570,7 +562,7 @@ interface List(T)
     bool remove(T item);
 
     /**
-     * Tries to extract the anIndex-nth item from the list.
+     * Tries to extract the index-nth item from the list.
      * Returns the item or null if the removal fails.
      */
     T extract(size_t index);
@@ -1421,137 +1413,289 @@ unittest
     test!(DynamicList);
 }
 
+
 /**
- * TreeItem interface turn its implementer into a tree item.
- * Most of the methods are pre-implemented so that an interfacer just needs
- * to override the payload accessors.
+ * TreeItemSiblings is an input range that allows to
+ * iterate over the children of a TreeItem.
  */
-interface TreeItem
+struct TreeItemChildren(T)
 {
-    /**
-     * The following methods must be implemented in an TreeItem interfacer.
-     * They provide the links between the tree items.
-     *
-     * Note that the mixin template TreeItemAccessors provides a standard
-     * way to achieve the task.
-     */
-    @safe @nogc TreeItem prevSibling();
-    /// ditto
-    @safe @nogc TreeItem nextSibling();
-    /// ditto
-    @safe @nogc TreeItem parent();
-    /// ditto
-    @safe @nogc TreeItem firstChild();
-    /// ditto
-    @safe @nogc void prevSibling(TreeItem anItem);
-    /// ditto
-    @safe @nogc void nextSibling(TreeItem anItem);
-    /// ditto
-    @safe @nogc void parent(TreeItem anItem);
-    /// ditto
-    @safe @nogc void firstChild(TreeItem anItem);
-    /// ditto
-    @safe @nogc TreeItemSiblings siblings();
-    /// ditto
-    @safe @nogc TreeItemSiblings children();
-    /**
-     * treeChanged() notifies the implementer about the modification of the list.
-     * It's also injected by TreeItemAccessors. This method is necessary because
-     * most of the methods of the interface can't be overriden, for example to
-     * call a particular updater when a node is added or removed.
-     */
-    @safe void treeChanged(ContainerChangeKind aChangeKind, TreeItem involvedItem);
 
-    /// Encapsulates the operators for accessing to the siblings/children.
-    private struct TreeItemSiblings
+private:
+
+    T _front;
+
+public:
+
+    /// See $(D initialize()).
+    this(T t) @safe
     {
-        public:
+        initialize(t);
+    }
 
-            TreeItem item;
+    /// Initializes the range from a parent.
+    void initialize(T t) @safe @nogc
+    {
+        _front = t.firstChild;
+    }
 
-        public:
+    ///
+    T front() @safe @nogc
+    {
+        return _front;
+    }
 
-            /**
-             * Provides the array syntax.
-             * WHen all the items must be accessed in a loop
-             * foreach() should be prefered since it's actually a linked list.
-             */
-            final TreeItem opIndex(ptrdiff_t i) @safe
+    ///
+    void popFront() @safe @nogc
+    {
+        _front = _front.nextSibling;
+    }
+
+    ///
+    bool empty() @safe @nogc
+    {
+        return _front is null;
+    }
+
+    /**
+     * Support for the array syntax.
+     * Should be avoided in for loops.
+     */
+    T opIndex(ptrdiff_t index) @safe @nogc
+    in
+    {
+        assert(_front);
+    }
+    body
+    {
+        T result = _front;
+        ptrdiff_t cnt = 0;
+        while(true)
+        {
+            if (cnt++ == index || !result)
+                return result;
+            result = result.nextSibling;
+        }
+    }
+
+    /// Support the array syntax.
+    void opIndexAssign(T item, size_t i)
+    in
+    {
+        assert(_front);
+        assert(item);
+    }
+    body
+    {
+        auto old = opIndex(i);
+        if (!old)
+            _front.addSibling(item);
+        else
+        {
+            if (_front.findSibling(item) != -1)
+                _front.exchangeSibling(item,old);
+            else
             {
-                if (!item) return null;
-                auto old = item.firstSibling;
-                ptrdiff_t cnt = 0;
-                while(cnt < i)
-                {
-                    old = old.nextSibling;
-                    cnt++;
-                }
-                return old;
+                _front.removeSibling(old);
+                _front.insertSibling(i,item);
             }
+        }
+    }
+}
 
-            /// Provides the array syntax.
-            final void opIndexAssign(TreeItem anItem, size_t i)
+/**
+ * TreeItemSiblings is an input range that allows to
+ * iterate over the siblings of a TreeItem.
+ */
+struct TreeItemSiblings(T)
+{
+
+private:
+
+    T _front;
+
+public:
+
+    /// See $(D initialize()).
+    this(T t) @safe @nogc
+    {
+        initialize(t);
+    }
+
+    /// Initializes the range from one of the siblings.
+    void initialize(T t) @safe @nogc
+    {
+        if (t.parent)
+            _front = t.parent.firstChild;
+        else
+        {
+            while (t.prevSibling !is null)
             {
-                if (!item) return;
-                if (anItem is null)
-                {
-                    if (opIndex(i) != item) item.removeSibling(i);
-                    else throw new Exception("cannot remove this from this");
-                }
+                t = t.prevSibling;
+            }
+            _front = t;
+        }
+    }
+
+    ///
+    T front() @safe @nogc
+    {
+        return _front;
+    }
+
+    ///
+    void popFront() @safe @nogc
+    {
+        _front = _front.nextSibling;
+    }
+
+    ///
+    bool empty() @safe @nogc
+    {
+        return _front is null;
+    }
+
+    /**
+     * Support for the array syntax.
+     * Should be avoided in for loops.
+     */
+    T opIndex(ptrdiff_t index) @safe
+    in
+    {
+        assert(_front);
+    }
+    body
+    {
+        T result = _front;
+        ptrdiff_t cnt = 0;
+        while(true)
+        {
+            if (cnt++ == index || !result)
+                return result;
+            result = result.nextSibling;
+        }
+    }
+
+    /// Support for the array syntax.
+    void opIndexAssign(T item, size_t i)
+    in
+    {
+        assert(_front);
+    }
+    body
+    {
+        if (!item)
+            _front.removeSibling(i);
+        else
+        {
+            auto old = opIndex(i);
+            if (!old)
+                _front.addSibling(item);
+            else
+            {
+                if (_front.findSibling(item) != -1)
+                    _front.exchangeSibling(item,old);
                 else
                 {
-                    auto old = opIndex(i);
-                    if (!old) item.addSibling(anItem);
-                    else
-                    {
-                        if (item.findSibling(anItem) > -1) item.exchangeSibling(anItem,old);
-                        else
-                        {
-                            item.removeSibling(old);
-                            item.insertSibling(i,anItem);
-                        }
-                    }
+                    _front.removeSibling(old);
+                    _front.insertSibling(i,item);
                 }
             }
+        }
+    }
+}
 
-            /// Support for the foreach() operator.
-            final int opApply(int delegate(ref TreeItem) dg)
-            {
-                int result = 0;
-                if (!item) return result;
-                auto old = item.firstSibling;
-                while (old)
-                {
-                    result = dg(old);
-                    if (result) break;
-                    old = old.nextSibling;
-                }
-                return result;
-            }
+/**
+ * The TreeItem mixin turns its implementer into a tree item.
+ */
+mixin template TreeItem()
+{
 
-            /// Support for the foreach_reverse() operator.
-            final int opApplyReverse(int delegate(ref TreeItem) dg)
-            {
-                int result = 0;
-                if (!item) return result;
-                auto old = item.lastSibling;
-                while (old)
-                {
-                    result = dg(old);
-                    if (result) break;
-                    old = old.prevSibling;
-                }
-                return result;
-            }
+protected:
 
+    enum isStruct = is(typeof(this) == struct);
+    static if (isStruct)
+        alias TreeItemType = typeof(this)*;
+    else
+        alias TreeItemType = typeof(this);
+
+    TreeItemType _prevSibling, _nextSibling, _firstChild, _parent;
+    TreeItemSiblings!TreeItemType _siblings;
+    TreeItemChildren!TreeItemType _children;
+
+    import iz.streams: Stream, writeArray;
+
+public:
+
+    /// Returns $(D this) when mixed in a class or $(D &this) in a struct.
+    TreeItemType self() @safe @nogc
+    {
+        static if (isStruct)
+            return &this;
+        else
+            return this;
+    }
+
+    /**
+     * Returns the previous TreeItem.
+     */
+    TreeItemType prevSibling() @safe @nogc
+    {
+        return _prevSibling;
+    }
+
+    /**
+     * Returns the next TreeItem.
+     */
+    TreeItemType nextSibling() @safe @nogc
+    {
+        return _nextSibling;
+    }
+
+    /**
+     * Retuens the parent.
+     */
+    TreeItemType parent() @safe @nogc
+    {
+        return _parent;
+    }
+
+    /**
+     * Returns the first child.
+     */
+    TreeItemType firstChild() @safe @nogc
+    {
+        return _firstChild;
+    }
+
+    /**
+     * Return an input range that allows to iterate the siblings.
+     * The array syntax is also supported.
+     */
+    TreeItemSiblings!TreeItemType siblings() @safe @nogc
+    {
+        _siblings.initialize(self);
+        return _siblings;
+    }
+
+    /**
+     * Return an input range that allows to iterate the children.
+     * The array syntax is also supported.
+     */
+    TreeItemChildren!TreeItemType children() @safe @nogc
+    {
+        _children.initialize(self);
+        return _children;
     }
 
 // siblings -------------------------------------------------------------------+
+
     /**
      * Allocates, adds to the back, and returns a new sibling of type IT.
      * This method should be preferred over addSibling/insertSibling if deleteChildren() is used.
      */
-    final IT addNewSibling(IT, A...)(A a) if (is(IT : TreeItem))
+    IT addNewSibling(IT, A...)(A a) @trusted
+    if (is(IT : TreeItemType))
     {
         auto result = construct!IT(a);
         addSibling(result);
@@ -1562,10 +1706,10 @@ interface TreeItem
      * Returns the last item.
      * The value returned is never null.
      */
-    final TreeItem lastSibling() @safe
+    TreeItemType lastSibling() @safe @nogc
     {
-        TreeItem result;
-        result = this;
+        TreeItemType result;
+        result = self;
         while(result.nextSibling)
         {
             result = result.nextSibling;
@@ -1577,41 +1721,47 @@ interface TreeItem
      * Returns the first item.
      * The value returned is never null.
      */
-    final TreeItem firstSibling()@safe
+    TreeItemType firstSibling() @safe @nogc
     {
-        TreeItem result;
-        result = this;
-        while(result.prevSibling)
+        if (_parent)
+            return _parent._firstChild;
+        else
         {
-            result = result.prevSibling;
+            TreeItemType result;
+            result = self;
+            while(result.prevSibling)
+            {
+                result = result.prevSibling;
+            }
+            return result;
         }
-        return result;
     }
 
     /**
-     * Returns the index of aSibling if it's found otherwise -1.
+     * Returns the index of sibling if it's found otherwise -1.
      */
-    final ptrdiff_t findSibling(TreeItem aSibling) @safe
+    ptrdiff_t findSibling(TreeItemType sibling) @safe @nogc
+    in
     {
-        assert(aSibling);
-
-        auto current = this;
+        assert(sibling);
+    }
+    body
+    {
+        auto current = self;
         while(current)
         {
-            if (current is aSibling) break;
+            if (current is sibling) break;
             current = current.prevSibling;
         }
-
         if(!current)
         {
-            current = this;
+            current = self;
             while(current)
             {
-                if (current is aSibling) break;
+                if (current is sibling) break;
                 current = current.nextSibling;
             }
         }
-
         if (!current) return -1;
         return current.siblingIndex;
     }
@@ -1619,104 +1769,100 @@ interface TreeItem
     /**
      * Adds an item at the end of list.
      */
-    final void addSibling(TreeItem aSibling) @safe
+    void addSibling(TreeItemType sibling) @safe @nogc
     in
     {
-        assert(aSibling);
+        assert(sibling);
     }
     body
     {
-        if (aSibling.hasSibling)
+        if (sibling.hasSibling)
         {
-            if (aSibling.prevSibling !is null)
-                aSibling.prevSibling.removeSibling(aSibling);
+            if (sibling.prevSibling !is null)
+                sibling.prevSibling.removeSibling(sibling);
             else
-                aSibling.nextSibling.removeSibling(aSibling);
+                sibling.nextSibling.removeSibling(sibling);
         }
 
         auto oldlast = lastSibling;
         assert(oldlast);
-        oldlast.nextSibling = aSibling;
-        aSibling.prevSibling = oldlast;
-        aSibling.nextSibling = null;
-        aSibling.parent = parent;
-
-        if (parent)
-            parent.treeChanged(ContainerChangeKind.add, aSibling);
+        oldlast._nextSibling = sibling;
+        sibling._prevSibling = oldlast;
+        sibling._nextSibling = null;
+        sibling._parent = parent;
     }
 
     /**
      * Inserts an item at the beginning of the list.
      */
-    final void insertSibling(TreeItem aSibling) @safe
+    void insertSibling(TreeItemType sibling) @safe @nogc
     in
     {
-        assert(aSibling);
+        assert(sibling);
     }
     body
     {
-        if (aSibling.hasSibling)
+        if (sibling.hasSibling)
         {
-            if (aSibling.prevSibling !is null)
-                aSibling.prevSibling.removeSibling(aSibling);
+            if (sibling.prevSibling !is null)
+                sibling.prevSibling.removeSibling(sibling);
             else
-                aSibling.nextSibling.removeSibling(aSibling);
+                sibling.nextSibling.removeSibling(sibling);
         }
 
         auto oldfirst = firstSibling;
         assert(oldfirst);
-        oldfirst.prevSibling = aSibling;
-        aSibling.nextSibling = oldfirst;
-        aSibling.parent = parent;
+        oldfirst._prevSibling = sibling;
+        sibling._nextSibling = oldfirst;
+        sibling._parent = parent;
 
         if (parent)
         {
-            parent.firstChild = aSibling;
+            parent._firstChild = sibling;
         }
-
-        treeChanged(ContainerChangeKind.add, aSibling);
     }
 
     /**
-     * Inserts aSibling before aPosition.
-     * If aPosition is greater than count than aSibling is added to the end of list.
+     * Inserts a sibling.
+     *
+     * Params:
+     *      index = The position where to insert.
+     *      sibling = the item to insert.
      */
-    final void insertSibling(size_t aPosition, TreeItem aSibling) @safe
+    void insertSibling(size_t index, TreeItemType sibling) @safe @nogc
     in
     {
-        assert(aSibling);
+        assert(sibling);
     }
     body
     {
-        if (aSibling.hasSibling)
+        if (sibling.hasSibling)
         {
-            if (aSibling.prevSibling !is null)
-                aSibling.prevSibling.removeSibling(aSibling);
+            if (sibling.prevSibling !is null)
+                sibling.prevSibling.removeSibling(sibling);
             else
-                aSibling.nextSibling.removeSibling(aSibling);
+                sibling.nextSibling.removeSibling(sibling);
         }
 
         size_t cnt = siblingCount;
-        if (aPosition == 0) insertSibling(aSibling);
-        else if (aPosition >= cnt) addSibling(aSibling);
+        if (index == 0) insertSibling(sibling);
+        else if (index >= cnt) addSibling(sibling);
         else
         {
             size_t result = 1;
             auto old = firstSibling;
             while(old)
             {
-                if (result == aPosition)
+                if (result == index)
                 {
                     auto item1oldprev = old.prevSibling;
                     auto item1oldnext = old.nextSibling;
-                    aSibling.prevSibling = old;
-                    aSibling.nextSibling = item1oldnext;
-                    old.nextSibling = aSibling;
-                    item1oldnext.prevSibling = aSibling;
-                    aSibling.parent = parent;
-                    assert( aSibling.siblingIndex == aPosition);
-
-                    treeChanged(ContainerChangeKind.add,aSibling);
+                    sibling._prevSibling = old;
+                    sibling._nextSibling = item1oldnext;
+                    old._nextSibling = sibling;
+                    item1oldnext._prevSibling = sibling;
+                    sibling._parent = parent;
+                    assert(sibling.siblingIndex == index);
 
                     return;
                 }
@@ -1727,75 +1873,82 @@ interface TreeItem
     }
 
     /**
-     * Permutes aSibling1 and aSibling2 positions in the list.
+     * Exchanges the position of two siblings.
      */
-    final void exchangeSibling(TreeItem aSibling1, TreeItem aSibling2) @safe
+    void exchangeSibling(TreeItemType sibling1, TreeItemType sibling2) @safe
     in
     {
-        assert(aSibling1);
-        assert(aSibling2);
+        assert(sibling1);
+        assert(sibling2);
+        assert(sibling1._parent is sibling2._parent);
     }
     body
     {
-        auto item1oldprev = aSibling1.prevSibling;
-        auto item1oldnext = aSibling1.nextSibling;
-        auto item2oldprev = aSibling2.prevSibling;
-        auto item2oldnext = aSibling2.nextSibling;
-        aSibling1.prevSibling = item2oldprev;
-        aSibling1.nextSibling = item2oldnext;
-        if (item1oldprev) item1oldprev.nextSibling = aSibling2;
-        if (item1oldnext) item1oldnext.prevSibling = aSibling2;
-        aSibling2.prevSibling = item1oldprev;
-        aSibling2.nextSibling = item1oldnext;
-        if (item2oldprev) item2oldprev.nextSibling = aSibling1;
-        if (item2oldnext) item2oldnext.prevSibling = aSibling1;
+        auto item1oldprev = sibling1._prevSibling;
+        auto item1oldnext = sibling1._nextSibling;
+        auto item2oldprev = sibling2._prevSibling;
+        auto item2oldnext = sibling2._nextSibling;
+        sibling1._prevSibling = item2oldprev;
+        sibling1._nextSibling = item2oldnext;
+        if (item1oldprev) item1oldprev._nextSibling = sibling2;
+        if (item1oldnext) item1oldnext._prevSibling = sibling2;
+        sibling2._prevSibling = item1oldprev;
+        sibling2._nextSibling = item1oldnext;
+        if (item2oldprev) item2oldprev._nextSibling = sibling1;
+        if (item2oldnext) item2oldnext._prevSibling = sibling1;
 
-        if (aSibling1.parent && aSibling1.firstChild is aSibling1)
+        if (sibling1.parent && sibling1.firstChild is sibling1)
         {
-                aSibling1.firstChild = aSibling2;
+                sibling1._firstChild = sibling2;
         }
-
-        treeChanged(ContainerChangeKind.change,null);
     }
 
     /**
-     * Tries to removes aSibling from the list.
+     * Removes an item.
+     *
+     * Params:
+     *      sibling = The item to remove.
+     * Returns:
+     *      true if the item is a sibling otherwise false.
      */
-    final bool removeSibling(TreeItem aSibling) @safe
+    bool removeSibling(TreeItemType sibling) @safe @nogc
     in
     {
-        assert(aSibling);
+        assert(sibling);
     }
     body
     {
-        ptrdiff_t i = findSibling(aSibling);
+        ptrdiff_t i = findSibling(sibling);
         if (i != -1) removeSibling(i);
         return i != -1;
     }
 
     /**
-     * Tries to extract the anIndex-nth sibling from this branch.
+     * Removes the nth sibling.
+     *
+     * Params:
+     *      index = the index of the sibling to remove.
+     *  Returns:
+     *      The item if the index is valid, otherwise null.
      */
-    final TreeItem removeSibling(size_t anIndex) @safe
+    TreeItemType removeSibling(size_t index) @safe @nogc
     {
-        auto result = siblings[anIndex];
+        auto result = siblings[index];
         if (result)
         {
-            auto oldprev = result.prevSibling;
-            auto oldnext = result.nextSibling;
-            if (oldprev) oldprev.nextSibling(oldnext);
-            if (oldnext) oldnext.prevSibling(oldprev);
+            auto oldprev = result._prevSibling;
+            auto oldnext = result._nextSibling;
+            if (oldprev) oldprev._nextSibling = oldnext;
+            if (oldnext) oldnext._prevSibling = oldprev;
 
             if (result.parent && result.firstChild is result)
             {
-                result.firstChild(result.nextSibling);
+                result._firstChild = result._nextSibling;
             }
 
-            result.prevSibling = null;
-            result.nextSibling = null;
-            result.parent = null;
-
-            treeChanged(ContainerChangeKind.remove, result);
+            result._prevSibling = null;
+            result._nextSibling = null;
+            result._parent = null;
         }
         return result;
     }
@@ -1804,19 +1957,19 @@ interface TreeItem
      * Returns the count of sibling in the branch.
      * The value returned is always greater than 0.
      */
-    final size_t siblingCount() @safe
+    size_t siblingCount() @safe @nogc
     {
         size_t toFront, toBack;
-        auto current = this;
+        auto current = self;
         while(current)
         {
-            current = current.prevSibling;
+            current = current._prevSibling;
             toFront++;
         }
-        current = this;
+        current = self;
         while(current)
         {
-            current = current.nextSibling;
+            current = current._nextSibling;
             toBack++;
         }
         return toFront + toBack -1;
@@ -1825,13 +1978,13 @@ interface TreeItem
     /**
      * Returns the item position in the list.
      */
-    final ptrdiff_t siblingIndex() @safe
+    ptrdiff_t siblingIndex() @safe @nogc
     {
         size_t result = size_t.max; // -1
-        auto current = this;
+        auto current = self;
         while(current)
         {
-            current = current.prevSibling;
+            current = current._prevSibling;
             result++;
         }
         return result;
@@ -1841,34 +1994,35 @@ interface TreeItem
      * Sets the item position in the list.
      * The new position of the previous item is undetermined.
      */
-    final void siblingIndex(size_t aPosition) @safe
+    void siblingIndex(size_t position) @safe @nogc
     {
-        auto old = siblings[aPosition];
-        version(none) exchangeSibling(old,this);
+        auto old = siblings[position];
+        version(none) exchangeSibling(old,self);
         version(all)
         {
-            removeSibling(this);
-            old.insertSibling(aPosition,this);
+            removeSibling(self);
+            old.insertSibling(position,self);
         }
     }
 
     /**
-     * Indicates if the item has any neighboor.
+     * Indicates if the item has neighboors.
      */
-    final bool hasSibling() @safe
+    bool hasSibling() @safe @nogc
     {
-        return ((prevSibling !is null) | (nextSibling !is null));
+        return prevSibling !is null || nextSibling !is null;
     }
 
 // -----------------------------------------------------------------------------
 // children -------------------------------------------------------------------+
 
     /**
-     * Allocates, adds to the back and returns a new children of type IT.
-     * This method should be preferred over addChildren/insertChildren if deleteChildren() is used.
+     * Constructs, adds to the back then returns a new child of type IT.
+     * This method should be prefered over addChildren/insertChildren
+     * if $(D deleteChildren()) is used.
      */
-    final IT addNewChildren(IT,A...)(A a)
-    if (is(IT : TreeItem))
+    IT addNewChildren(IT,A...)(A a) @trusted
+    if (is(IT : TreeItemType))
     {
         auto result = construct!IT(a);
         addChild(result);
@@ -1876,517 +2030,406 @@ interface TreeItem
     }
 
     /**
-     * Returns the distance to the root.
+     * Returns the distance to the root2.
      */
-    final size_t level() @safe
+    size_t level() @safe @nogc
     {
         size_t result;
-        auto current = this;
-        while(current.parent)
+        auto current = self;
+        while(current._parent)
         {
-            current = current.parent;
+            current = current._parent;
             result++;
         }
         return result;
     }
 
     /**
-     * Returns the root.
+     * Returns the root2.
      */
-    final typeof(this) root() @safe
+    TreeItemType root2() @safe @nogc
     {
-        auto current = this;
-        while(current.parent)
-            current = current.parent;
+        auto current = self;
+        while(current._parent)
+            current = current._parent;
         return current;
     }
 
     /**
      * Returns the children count.
      */
-    final size_t childrenCount() @safe
+    size_t childrenCount() @safe @nogc
     {
-        auto _first = firstChild;
-        if ( _first is null) return 0;
-        else return _first.siblingCount;
+        if ( _firstChild is null)
+            return 0;
+        else
+            return _firstChild.siblingCount;
     }
 
     /**
-     * Adds aChild to the back and returns its position.
+     * Adds child to the back.
      */
-    final void addChild(TreeItem aChild) @safe
+    void addChild(TreeItemType child) @safe @nogc
     {
-        if (aChild.parent)
+        if (child.parent)
         {
-            if (aChild.parent !is this)
-                aChild.parent.removeChild(aChild);
+            if (child.parent !is self)
+                child.parent.removeChild(child);
             else
                 return;
         }
-        if (!firstChild)
+        if (!_firstChild)
         {
-            firstChild = aChild;
-            aChild.parent = this;
-
-            treeChanged(ContainerChangeKind.add, aChild);
-
+            _firstChild = child;
+            child._parent = self;
             return;
         }
-        else firstChild.addSibling(aChild);
+        else _firstChild.addSibling(child);
     }
 
     /**
-     * Tries to insert aChild to the front and returns its position.
+     * Inserts the first child.
      */
-    final void insertChild(TreeItem aChild) @safe
+    void insertChild(TreeItemType child) @safe @nogc
     {
-        if (!firstChild)
+        if (!_firstChild)
         {
-            firstChild = aChild;
-            aChild.parent = this;
-
-            treeChanged(ContainerChangeKind.change,  aChild);
-
+            _firstChild = child;
+            child._parent = self;
             return;
         }
-        else firstChild.insertSibling(aChild);
+        else _firstChild.insertSibling(child);
     }
 
     /**
-     * Inserts aChild at aPosition and returns its position.
+     * Inserts a child.
+     *
+     * Params:
+     *      index = The position in the children list.
+     *      child = The child to insert.
      */
-    final void insertChild(size_t aPosition, TreeItem aChild) @safe
+    void insertChild(size_t index, TreeItemType child) @safe @nogc
     in
     {
-        assert(aChild);
+        assert(child);
     }
     body
     {
-        if (!firstChild)
+        if (!_firstChild)
         {
-            firstChild = aChild;
-            aChild.parent = this;
-
-            treeChanged(ContainerChangeKind.change,aChild);
-
+            _firstChild = child;
+            child._parent = self;
             return;
         }
-        else firstChild.insertSibling(aPosition, aChild);
+        else _firstChild.insertSibling(index, child);
     }
 
     /**
-     * Removes aChild from the list.
+     * Removes a child from the list.
+     *
+     * Params:
+     *      child = The child to remove.
+     * Returns:
+     *      true if child is removed.
      */
-    final bool removeChild(TreeItem aChild) @safe
+    bool removeChild(TreeItemType child) @safe @nogc
     in
     {
-        assert(aChild);
+        assert(child);
     }
     body
     {
-        auto i = firstChild.findSibling(aChild);
+        auto i = firstChild.findSibling(child);
         if (i != -1) removeChild(i);
         return i != -1;
     }
 
     /**
-     * Extracts the child located at anIndex from this branch.
+     * Removes the nth child.
+     *
+     * Params:
+     *      index = The child index.
+     * Returns:
+     *      The child if index was valid, otherwise null.
      */
-    final TreeItem removeChild(size_t anIndex) @safe
+    TreeItemType removeChild(size_t index) @safe @nogc
     {
-        auto result = children[anIndex];
+        auto result = children[index];
         if (result)
         {
-            if (anIndex > 0)
-                result.prevSibling.removeSibling(anIndex);
+            if (index > 0)
+                result.prevSibling.removeSibling(index);
             else
             {
                 if (result.siblingCount == 1)
-                {
-                    result.parent = null;
-                    treeChanged(ContainerChangeKind.remove, result);
-                }
-                else result.nextSibling.removeSibling(anIndex);
+                    result._parent = null;
+                else
+                    result._nextSibling.removeSibling(index);
             }
         }
         return result;
     }
 
     /**
-     * Removes the children.
-     * Params:
-     * unlinkSiblings = when true, the previous links to the sibling are cleaned.
+     * Removes the children, without destructing them.
+     * After the call, the links to the items siblings are also reset to null.
      */
-    @safe final void clearChildren(bool unlinkSiblings = false)
+    void removeChildren() @safe @nogc
     {
-        auto current = firstChild;
+        auto current = _firstChild;
         while(current)
         {
-            current.clearChildren(unlinkSiblings);
+            current.removeChildren;
 
             auto _next = current.nextSibling;
-            current.parent = null;
-            if (unlinkSiblings)
-            {
-                current.prevSibling = null;
-                current.nextSibling = null;
-
-                treeChanged(ContainerChangeKind.remove, current);
-            }
+            current._parent = null;
+            current._prevSibling = null;
+            current._nextSibling = null;
             current = _next;
-
-            treeChanged(ContainerChangeKind.change, current);
         }
-        firstChild = null;
+        _firstChild = null;
     }
 
     /**
      * Removes and deletes the children.
-     * If add/insert has been used to fill the list then initial references
-     * will be dangling.
+     *
+     * This method should be used in pair with $(D addNewChildren()) and
+     * $(D addNewSiblings()). If $(D add()) or $(D insert()) have been used to
+     * build the tree then initial references will be dangling.
      */
-    final void deleteChildren()
+    void deleteChildren() @trusted
     {
-        while(firstChild)
+        while(_firstChild)
         {
-            auto current = firstChild;
-            firstChild = current.nextSibling;
+            auto current = _firstChild;
+            _firstChild = current.nextSibling;
 
             current.deleteChildren;
-            current.parent = null;
-            auto asObj = cast(Object)current;
-            asObj.destruct;
-
-            treeChanged(ContainerChangeKind.change, null);
+            current._parent = null;
+            current._nextSibling = null;
+            current._prevSibling = null;
+            static if (is(TreeItemType == interface))
+                destruct(cast(Object) current);
+            else
+                current.destruct;
         }
     }
 // -----------------------------------------------------------------------------
 // other ----------------------------------------------------------------------+
 
-    final char[] nodeToTextNative()
+    /**
+     * Converts the node to a string.
+     * This is used to represent the whole tree in $(D saveToStream()).
+     */
+    char[] itemToTextNative() @trusted
     {
+        import std.format: format;
         char[] result;
         foreach(immutable i; 0 .. level) result ~= '\t';
         result ~= format( "Index: %.4d - NodeType: %s", siblingIndex, typeof(this).stringof);
         return result;
     }
 
-    final void saveToStream(Stream stream)
+    /**
+     * Saves the textual repreentation of the tree to a Stream.
+     *
+     * Params:
+     *      stream = the Stream where items are written.
+     *      itemToText = a custom function to render the items. When not specified,
+     *      $(D itemToTextNative()) is used.
+     */
+    void saveToStream(Stream stream, string function(TreeItemType) itemToText = null)
     {
-        import std.stdio ;
-        auto txt = nodeToTextNative ~ "\r\n";
+        char[] txt;
+        if (itemToText)
+            txt = itemToText(self).dup;
+        else
+            txt = itemToTextNative ~ "\r\n";
         writeArray!false(stream, txt);
         foreach(c; children)
-            c.saveToStream(stream);
+            c.saveToStream(stream, itemToText);
     }
 // -----------------------------------------------------------------------------
-
 }
 
 /**
- * Default implementation for the TreeItem accessors.
+ * Helper class template that implements TreeItem in a C descendant.
  */
-mixin template TreeItemAccessors()
-{
-    private:
-        TreeItem fPrevSibling, fNextSibling, fFirstChild, fParent;
-        TreeItemSiblings fSiblings, fChild;
-
-    public:
-        /**
-         * Called by a TreeItem to set the link to the previous TreeItem.
-         */
-        void prevSibling(TreeItem aSibling) @safe @nogc
-        {
-            fPrevSibling = aSibling;
-        }
-        /**
-         * Called by a TreeItem to set the link to the next TreeItem.
-         */
-        void nextSibling(TreeItem aSibling) @safe @nogc
-        {
-            fNextSibling = aSibling;
-        }
-        /**
-         * Called by a TreeItem to set the link to the its parent.
-         */
-        void parent(TreeItem aParent) @safe @nogc
-        {
-            fParent = aParent;
-        }
-        /**
-         * Called by a TreeItem to set the link to the its first child.
-         */
-        void firstChild(TreeItem aChild) @safe @nogc
-        {
-            fFirstChild = aChild;
-            fChild.item = aChild;
-        }
-        /**
-         * Called by a TreeItem to get the link to the previous TreeItem.
-         */
-        TreeItem prevSibling() @safe @nogc
-        {
-            return fPrevSibling;
-        }
-        /**
-         * Called by a TreeItem to get the link to the next TreeItem.
-         */
-        TreeItem nextSibling() @safe @nogc
-        {
-            return fNextSibling;
-        }
-        /**
-         * Called by a TreeItem to get the link to the its parent.
-         */
-        TreeItem parent() @safe @nogc
-        {
-            return fParent;
-        }
-        /**
-         * Called by a TreeItem to set the link to the its first child.
-         */
-        TreeItem firstChild() @safe @nogc
-        {
-            return fFirstChild;
-        }
-        /**
-         * Provides the array syntax for the siblings.
-         */
-        TreeItemSiblings siblings() @safe @nogc
-        {
-            fSiblings.item = this;
-            return fSiblings;
-        }
-        /**
-         * Provides the array syntax for the children.
-         */
-        TreeItemSiblings children() @safe @nogc
-        {
-            return fChild;
-        }
-        /**
-         * Called by an TreeItem to notify about the changes.
-         * When aChangeKind == ContainerChangeKind.add, data is a pointer to the new item.
-         * When aChangeKind == ContainerChangeKind.remove, data is a pointer to the old item.
-         * When aChangeKind == ContainerChangeKind.change, data is null.
-         */
-        void treeChanged(ContainerChangeKind aChangeKind, TreeItem involvedItem) @safe
-        {
-        }
-}
-
-/**
- * Helper template designed to make a C sub class of C heriting of TreeItem.
- * The class C must have a default ctor and only this default ctor is generated.
- */
-class MakeTreeItem(C): C, TreeItem
+class TreeItemClass(C): C
 if (is(C==class))
 {
-    mixin TreeItemAccessors;
+    mixin TreeItem;
 }
 
+/// Alias to the most simple TreeItem class type.
+alias ObjectTreeItem = TreeItemClass!Object;
+
+/**
+ * Helper struct template that implements TreeItem in a struct.
+ *
+ * Params:
+ *      fieldsAndFuncs = The struct declarations, as a string to mix.
+ */
+struct TreeItemStruct(string fieldsAndFuncs)
+{
+    mixin(fieldsAndFuncs);
+    mixin TreeItem;
+}
+
+/// Alias to the most simple TreeItem struct type.
+alias StructTreeItem = TreeItemStruct!q{public void* data;};
 
 unittest
 {
-    /*class Bar{int a,b,c;}
-    alias BarItem = MakeTreeItem!Bar;
+    ObjectTreeItem[20] ObjectTreeItems;
+    ObjectTreeItem root1;
 
-    auto a = construct!BarItem;
-    scope(exit) destruct(a);
-    assert(cast(TreeItem)a);
+    ObjectTreeItems[0] = construct!ObjectTreeItem;
+    root1 = ObjectTreeItems[0];
+    for (auto i =1; i < ObjectTreeItems.length; i++)
+    {
+        ObjectTreeItems[i] = construct!ObjectTreeItem;
+        if (i>0) root1.addSibling( ObjectTreeItems[i] );
+        assert( ObjectTreeItems[i].siblingIndex == i );
+        assert( root1.siblings[i].siblingIndex == i );
+        assert( root1.siblings[i] == ObjectTreeItems[i] );
+        if (i>0) assert( ObjectTreeItems[i].prevSibling.siblingIndex == i-1 );
+        assert(root1.lastSibling.siblingIndex == i);
+    }
+    assert(root1.siblingCount == ObjectTreeItems.length);
 
-    foreach(item; a.children){}
+    assert(ObjectTreeItems[1].nextSibling.siblingIndex == 2);
+    assert(ObjectTreeItems[1].prevSibling.siblingIndex == 0);
 
-    writeln("MakeTreeItem passed the tests");*/
+    root1.exchangeSibling(ObjectTreeItems[10],ObjectTreeItems[16]);
+    assert(root1.siblingCount == ObjectTreeItems.length);
+    assert( ObjectTreeItems[10].siblingIndex == 16);
+    assert( ObjectTreeItems[16].siblingIndex == 10);
+
+    root1.exchangeSibling(ObjectTreeItems[10],ObjectTreeItems[16]);
+    assert(root1.siblingCount == ObjectTreeItems.length);
+    assert( ObjectTreeItems[10].siblingIndex == 10);
+    assert( ObjectTreeItems[16].siblingIndex == 16);
+
+
+    ObjectTreeItems[8].siblingIndex = 4;
+    assert( ObjectTreeItems[8].siblingIndex == 4);
+    //assert( ObjectTreeItems[4].siblingIndex == 5); // when siblingIndex() calls remove/insert
+    //assert( ObjectTreeItems[4].siblingIndex == 8); // when siblingIndex() calls exchangeSibling.
+
+    assert( root1.siblings[16] == ObjectTreeItems[16]);
+    assert( root1.siblings[10] == ObjectTreeItems[10]);
+    root1.siblings[16] = ObjectTreeItems[10]; // exchg
+    assert(root1.siblingCount == ObjectTreeItems.length);
+    root1.siblings[16] = ObjectTreeItems[16]; // exchg
+    assert(root1.siblingCount == ObjectTreeItems.length);
+    assert( ObjectTreeItems[16].siblingIndex == 16);
+    assert( ObjectTreeItems[10].siblingIndex == 10);
+
+    auto c = construct!ObjectTreeItem;
+    root1.siblings[10] = c;
+    root1.siblings[16] = ObjectTreeItems[10];
+    assert( ObjectTreeItems[16].siblingIndex == 0);
+    assert( ObjectTreeItems[10].siblingIndex == 16);
+    assert( c.siblingIndex == 10);
+
+    assert(root1.findSibling(ObjectTreeItems[18]) > -1);
+    assert(root1.findSibling(ObjectTreeItems[0]) > -1);
+
+    foreach(item; root1.siblings)
+    {
+        assert(root1.findSibling(item) == item.siblingIndex);
+    }
+
+    root1.removeSibling(19);
+    assert(root1.siblingCount == ObjectTreeItems.length -1);
+    root1.removeSibling(18);
+    assert(root1.siblingCount == ObjectTreeItems.length -2);
+    root1.removeSibling(ObjectTreeItems[13]);
+    assert(root1.siblingCount == ObjectTreeItems.length -3);
+    //root1[0] = null; // exception because root1[0] = root1
+    assert(root1.siblingCount == ObjectTreeItems.length -3);
+    root1.siblings[1] = null;
+    assert(root1.siblingCount == ObjectTreeItems.length -4);
+
+    //
+    ObjectTreeItem[20] items1;
+    ObjectTreeItem[4][20] items2;
+    assert( items1[12] is null);
+    assert( items2[12][0] is null);
+    assert( items2[18][3] is null);
+
+    ObjectTreeItem root2;
+    root2 = construct!ObjectTreeItem;
+    assert(root2.level == 0);
+    for (auto i=0; i < items1.length; i++)
+    {
+        items1[i] = construct!ObjectTreeItem;
+        root2.addChild(items1[i]);
+        assert(root2.childrenCount == 1 + i);
+        assert(items1[i].parent is root2);
+        assert(items1[i].siblingCount == 1 + i);
+        assert(items1[i].level == 1);
+        assert(items1[i].siblingIndex == i);
+    }
+    root2.removeChildren;
+    assert(root2.childrenCount == 0);
+    for (auto i=0; i < items1.length; i++)
+    {
+        root2.addChild(items1[i]);
+        assert(items1[i].siblingIndex == i);
+    }
+
+    for( auto i = 0; i < items2.length; i++)
+        for( auto j = 0; j < items2[i].length; j++)
+        {
+            items2[i][j] = construct!ObjectTreeItem;
+            items1[i].addChild(items2[i][j]);
+            assert(items2[i][j].level == 2);
+            assert(items1[i].childrenCount == 1 + j);
+            assert(items2[i][j].siblingCount == 1 + j);
+        }
+
+    root2.deleteChildren;
+/*
+    // this is an expected behavior:
+
+    // original refs are dangling
+    assert( items1[12] is null);
+    assert( items2[12][0] is null);
+    assert( items2[18][3] is null);
+    // A.V: 'cause the items are destroyed
+    writeln( items1[12].level );
+*/
+
+    root2.addNewChildren!ObjectTreeItem();
+        root2.children[0].addNewChildren!ObjectTreeItem();
+        root2.children[0].addNewChildren!ObjectTreeItem();
+        root2.children[0].addNewChildren!ObjectTreeItem();
+    root2.addNewChildren!ObjectTreeItem();
+        root2.children[1].addNewChildren!ObjectTreeItem();
+        root2.children[1].addNewChildren!ObjectTreeItem();
+        root2.children[1].addNewChildren!ObjectTreeItem();
+        root2.children[1].addNewChildren!ObjectTreeItem();
+            root2.children[1].children[3].addNewChildren!ObjectTreeItem();
+            root2.children[1].children[3].addNewChildren!ObjectTreeItem();
+            root2.children[1].children[3].addNewChildren!ObjectTreeItem();
+
+    assert(root2.childrenCount == 2);
+    assert(root2.children[0].childrenCount == 3);
+    assert(root2.children[1].childrenCount == 4);
+    assert(root2.children[1].children[3].childrenCount == 3);
+    assert(root2.children[1].children[3].children[0].level == 3);
+
+    assert(root2.children[1].children[3].children[0].root2 is root2);
+    assert(root2.children[1].children[3].root2 is root2);
+
+    auto str = construct!MemoryStream;
+    root2.saveToStream(str);
+    //str.saveToFile("treenodes.txt");
+    str.destruct;
+    root2.deleteChildren;
+
+    writeln("TreeItem passed the tests");
 }
-
-
-private class Foo: TreeItem
-{
-    int member;
-    mixin TreeItemAccessors;
-
-    bool changeMonitor,getMonitor;
-
-    @safe final void treeChanged(ContainerChangeKind aChangeKind, TreeItem involvedItem)
-    {
-        changeMonitor = true;
-    }
-    @safe final override TreeItem nextSibling()
-    {
-        getMonitor = true;
-        return fNextSibling;
-    }
-
-    unittest
-    {
-
-        Foo[20] foos;
-        Foo conductor;
-
-        foos[0] = construct!Foo;
-        conductor = foos[0];
-        for (auto i =1; i < foos.length; i++)
-        {
-            foos[i] = construct!Foo;
-            if (i>0) conductor.addSibling( foos[i] );
-            assert( foos[i].siblingIndex == i );
-            assert( conductor.siblings[i].siblingIndex == i );
-            assert( conductor.siblings[i] == foos[i] );
-            if (i>0) assert( foos[i].prevSibling.siblingIndex == i-1 );
-            assert(conductor.lastSibling.siblingIndex == i);
-        }
-        assert(conductor.siblingCount == foos.length);
-
-        assert(foos[1].nextSibling.siblingIndex == 2);
-        assert(foos[1].prevSibling.siblingIndex == 0);
-
-        conductor.exchangeSibling(foos[10],foos[16]);
-        assert(conductor.siblingCount == foos.length);
-        assert( foos[10].siblingIndex == 16);
-        assert( foos[16].siblingIndex == 10);
-
-        conductor.exchangeSibling(foos[10],foos[16]);
-        assert(conductor.siblingCount == foos.length);
-        assert( foos[10].siblingIndex == 10);
-        assert( foos[16].siblingIndex == 16);
-
-
-        foos[8].siblingIndex = 4;
-        assert( foos[8].siblingIndex == 4);
-        //assert( foos[4].siblingIndex == 5); // when siblingIndex() calls remove/insert
-        //assert( foos[4].siblingIndex == 8); // when siblingIndex() calls exchangeSibling.
-
-        assert( conductor.siblings[16] == foos[16]);
-        assert( conductor.siblings[10] == foos[10]);
-        conductor.siblings[16] = foos[10]; // exchg
-        assert(conductor.siblingCount == foos.length);
-        conductor.siblings[16] = foos[16]; // exchg
-        assert(conductor.siblingCount == foos.length);
-        assert( foos[16].siblingIndex == 16);
-        assert( foos[10].siblingIndex == 10);
-
-
-        auto C = construct!Foo;
-        conductor.siblings[10] = C;
-        conductor.siblings[16] = foos[10];
-        assert( foos[16].siblingIndex == 0);
-        assert( foos[10].siblingIndex == 16);
-        assert( C.siblingIndex == 10);
-
-        assert(conductor.findSibling(foos[18]) > -1);
-        assert(conductor.findSibling(foos[0]) > -1);
-
-        // remember that "item" type is the interface not its implementer.
-        foreach(TreeItem item; conductor.siblings)
-        {
-            assert(conductor.findSibling(item) == item.siblingIndex);
-            assert( cast(Foo) item);
-        }
-        foreach_reverse(item; conductor.siblings)
-        {
-            assert(conductor.findSibling(item) == item.siblingIndex);
-        }
-
-        conductor.removeSibling(19);
-        assert(conductor.siblingCount == foos.length -1);
-        conductor.removeSibling(18);
-        assert(conductor.siblingCount == foos.length -2);
-        conductor.removeSibling(foos[13]);
-        assert(conductor.siblingCount == foos.length -3);
-        //conductor[0] = null; // exception because conductor[0] = conductor
-        assert(conductor.siblingCount == foos.length -3);
-        conductor.siblings[1] = null;
-        assert(conductor.siblingCount == foos.length -4);
-
-        assert(conductor.changeMonitor);
-        assert(conductor.getMonitor);
-
-        //
-
-        Foo[20] items1;
-        Foo[4][20] items2;
-
-        assert( items1[12] is null);
-        assert( items2[12][0] is null);
-        assert( items2[18][3] is null);
-
-        Foo root;
-        root = construct!Foo;
-        assert(root.level == 0);
-        for (auto i=0; i < items1.length; i++)
-        {
-            items1[i] = construct!Foo;
-            root.addChild(items1[i]);
-            assert(root.childrenCount == 1 + i);
-            assert(items1[i].parent is root);
-            assert(items1[i].siblingCount == 1 + i);
-            assert(items1[i].level == 1);
-            assert(items1[i].siblingIndex == i);
-        }
-        root.clearChildren(true);
-        assert(root.childrenCount == 0);
-        for (auto i=0; i < items1.length; i++)
-        {
-            root.addChild(items1[i]);
-            assert(items1[i].siblingIndex == i);
-        }
-
-        for( auto i = 0; i < items2.length; i++)
-            for( auto j = 0; j < items2[i].length; j++)
-            {
-                items2[i][j] = construct!Foo;
-                items1[i].addChild(items2[i][j]);
-                assert(items2[i][j].level == 2);
-                assert(items1[i].childrenCount == 1 + j);
-                assert(items2[i][j].siblingCount == 1 + j);
-            }
-
-        root.deleteChildren;
-    /*
-        // this is an expected behavior:
-
-        // original refs are dangling
-        assert( items1[12] is null);
-        assert( items2[12][0] is null);
-        assert( items2[18][3] is null);
-        // A.V: 'cause the items are destroyed
-        writeln( items1[12].level );
-    */
-
-        // the clean-way:
-        root.addNewChildren!Foo();
-            root.children[0].addNewChildren!Foo();
-            root.children[0].addNewChildren!Foo();
-            root.children[0].addNewChildren!Foo();
-        root.addNewChildren!Foo();
-            root.children[1].addNewChildren!Foo();
-            root.children[1].addNewChildren!Foo();
-            root.children[1].addNewChildren!Foo();
-            root.children[1].addNewChildren!Foo();
-                root.children[1].children[3].addNewChildren!Foo();
-                root.children[1].children[3].addNewChildren!Foo();
-                root.children[1].children[3].addNewChildren!Foo();
-
-        assert(root.childrenCount == 2);
-        assert(root.children[0].childrenCount == 3);
-        assert(root.children[1].childrenCount == 4);
-        assert(root.children[1].children[3].childrenCount == 3);
-        assert(root.children[1].children[3].children[0].level == 3);
-
-        assert(root.children[1].children[3].children[0].root is root);
-        assert(root.children[1].children[3].root is root);
-
-        auto str = construct!MemoryStream;
-        root.saveToStream(str);
-        //str.saveToFile("izTreeNodes.txt");
-        str.destruct;
-
-        root.deleteChildren;
-
-        writeln("TreeItem passed the tests");
-    }
-}
-
 
