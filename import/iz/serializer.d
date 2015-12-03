@@ -274,55 +274,103 @@ struct SerNodeInfo
 }
 
 /// IST node
-class IstNode : TreeItem
+class IstNode
 {
-    mixin TreeItemAccessors;
-    private SerNodeInfo _info;
-    public
+
+    mixin TreeItem;
+private:
+
+    SerNodeInfo _info;
+    IstNode[string] _cache;
+    bool _cached;
+
+    void updateCache()
     {
-        /**
-         * Sets the infomations describing the property associated
-         * to this IST node.
-         */
-        void setDescriptor(T)(PropDescriptor!T* descriptor)
+        _cached = true;
+        _cache = _cache.init;
+        auto thisChain = identifiersChain();
+        foreach(IstNode node; children)
         {
-            if (descriptor)
-                setNodeInfo!T(&_info, descriptor);
-        }
-        /**
-         * Returns a pointer to the information describing the property
-         * associated to this IST node.
-         */
-        SerNodeInfo* info()
-        {
-            return &_info;
-        }
-        /**
-         * Returns the identifier chain of the parents.
-         */
-        string parentIdentifiersChain()
-        {
-            if (!level) return "";
-            //
-            import std.algorithm: joiner;
-            string[] items;
-            IstNode curr = cast(IstNode) parent;
-            while (curr)
-            {
-                items ~= curr.info.name;
-                curr = cast(IstNode) curr.parent;
-            }
-            return items.retro.join(".");
-        }
-        /**
-         * Returns the identifier chain.
-         */
-        string identifiersChain()
-        {
-            if (!level) return info.name;
-            else return parentIdentifiersChain ~ "." ~ info.name;
+            _cache[thisChain ~ "." ~ node.info.name] = node;
         }
     }
+
+public:
+
+    ~this()
+    {
+        deleteChildren;
+    }
+
+    /**
+     * Returns a new unmanaged IstNode.
+     */
+    IstNode addNewChildren()
+    {
+        _cached = false;
+        auto result = construct!IstNode;
+        addChild(result);
+        return result;
+    }
+
+    /**
+     * Sets the infomations describing the property associated
+     * to this IST node.
+     */
+    void setDescriptor(T)(PropDescriptor!T* descriptor)
+    {
+        if (descriptor)
+            setNodeInfo!T(&_info, descriptor);
+    }
+
+    /**
+     * Returns a pointer to the information describing the property
+     * associated to this IST node.
+     */
+    SerNodeInfo* info()
+    {
+        return &_info;
+    }
+
+    /**
+     * Returns the identifier chain of the parents.
+     */
+    string parentIdentifiersChain()
+    {
+        if (!level) return "";
+        //
+        import std.algorithm: joiner;
+        string[] items;
+        IstNode curr = cast(IstNode) parent;
+        while (curr)
+        {
+            items ~= curr.info.name;
+            curr = cast(IstNode) curr.parent;
+        }
+        return items.retro.join(".");
+    }
+
+    /**
+     * Returns the identifier chain.
+     */
+    string identifiersChain()
+    {
+        if (!level) return info.name;
+        else return parentIdentifiersChain ~ "." ~ info.name;
+    }
+
+    /**
+     * Returns the child node whose info.name matches name.
+     */
+    IstNode findChildren(in char[] name)
+    {
+        if (!_cached) updateCache;
+        if (auto r = name in _cache)
+            return *r;
+        else
+            return null;
+    }
+
 }
 //----
 
@@ -871,19 +919,20 @@ private SerializationReader readFormat(SerializationFormat format)
 /**
  * Prototype of the event triggered when a serializer misses a property descriptor.
  * Params:
- * node = The information the callee uses to determine the descriptor to return.
- * descriptor = What the serializer want. If set to null then node is not restored.
- * stop = the callee can set this value to true in order to stop the restoration
- * process. According to the serialization context, this value can be noop.
+ *      node = The information used to determine the descriptor to return.
+ *      descriptor = What the serializer want. If set to null then node is not restored.
+ *      stop = the callee can set this value to true to stop the restoration
+ *      process. According to the serialization context, this value can be noop.
  */
 alias WantDescriptorEvent = void delegate(IstNode node, ref Ptr descriptor, out bool stop);
 
 /**
- * Prototype of the event triggered when a serializer failed to get an object to deserialize.
+ * Prototype of the event called when a serializer failed to get an object to deserialize.
  * Params:
- * node = The information the callee uses to set the parameter serializable.
- * serializable = The Object the callee has to return.
- * fromReference = When set to true, the serializer tries to find the Object using the ReferenceMan.
+ *      node = The information the callee uses to set the parameter serializable.
+ *      serializable = The Object the callee has to return.
+ *      fromReference = When set to true, the serializer tries to find the Object
+ *      using the ReferenceMan.
  */
 alias WantObjectEvent = void delegate(IstNode node, ref Object serializable, out bool fromRefererence);
 
@@ -895,23 +944,32 @@ alias WantObjectEvent = void delegate(IstNode node, ref Object serializable, out
  *
  * A Serializer is specialized to store and restore a structure of Objects.
  *
+ * PropertyPublisher:
  * A Serializer can only serializes trees of classes that implements the
- * PropertyPublisher interface. Their publications defines what is saved or
- * restored.
+ * PropertyPublisher interface. Their publications define what is saved or
+ * restored. Object descriptors define the structure. Basics types and array
+ * of basic types are handled. Special cases exist to manage Stream properties,
+ * delegates or objects that are stored in the ReferenceMan. It's even possible
+ * to handle more complex types by using custom PropertyPublisher, such as
+ * those defined in iz.classes.
  *
+ * Representation:
  * The serializer uses an intermediate serialization tree (IST) that ensures a 
  * certain flexibilty against a traditional single-shot sequential serialization.
- * 
  * As expected for a serializer, object trees can be stored or restored by
  * a simple and single call to $(D publisherToStream()) in pair with
  * $(D streamToPublisher()) but the IST also allows to convert a Stream or
  * to find and restores a specific property.
- * 
- * At last but not least, two events ($(D onWantDescriptor) and  $(DonWantObject))
- * allow to handle the errors that could be encountered when restoring.
- * They allow a PropertyPublisher to be modified without any risk of deserialization
- * failure. Data saved from an older version can be recovered, converted or
- * deserialized in a temporary property.
+ *
+ * Errors:
+ * Two events ($(D onWantDescriptor) and  $(D onWantObject)) allow to handle
+ * the errors that could be encountered when restoring.
+ * They permit a PropertyPublisher to be modified without any risk of deserialization
+ * failure. Data saved from an older version can be recovered by deserializing in
+ * a temporary property and converted to a new type. They can also be skipped,
+ * without stopping the whole processing. Missing objects can be created when
+ * The serializer ask for, since in this case, the original Object type and the
+ * original variable names are passed as hint.
  */
 class Serializer
 {
@@ -949,7 +1007,7 @@ private:
     }
     body
     {
-        IstNode propNode = _parentNode.addNewChildren!IstNode;
+        IstNode propNode = _parentNode.addNewChildren;
         propNode.setDescriptor(descriptor);
 
         if (_mustWrite)
@@ -994,7 +1052,7 @@ private:
 
         // write/Set object node
         if (!_parentNode) _parentNode = _rootNode;
-        else _parentNode = _parentNode.addNewChildren!IstNode;
+        else _parentNode = _parentNode.addNewChildren;
         _parentNode.setDescriptor(objDescr);
         if (_mustWrite)
             writeFormat(_format)(_parentNode, _stream);
@@ -1170,10 +1228,6 @@ public:
             {
                 bool done;
                 IstNode childNode = cast(IstNode) child;
-
-                // collection fails from here: publicationFromName()
-                // object array items are not pusblished only the array.
-
                 if (void* t0 = target.publicationFromName(childNode.info.name))
                 {
                     PropDescriptor!int* t1 = cast(PropDescriptor!int*)t0;
@@ -1240,9 +1294,10 @@ public:
     /**
      * Builds the IST from a stream.
      *
-     * After the call the properties can only be restored manually 
-     * by using findNode() and restoreProperty(). 
-     * This function is also usefull to convert from a format to another.
+     * After the call the IST nodes are not yet linked to their PropDescriptor.
+     * The deserialization process can be achieved manually, using $(D findNode())
+     * in pair with $(D restoreProperty()) or automatically, using $(D istToPublisher()).
+     * This function can also be used to convert from a format to another.
      *
      * Params:
      *      inputStream = The stream containing the serialized data.
@@ -1267,7 +1322,7 @@ public:
         unorderNodes.length -= 1;
         
         if (unorderNodes.length > 1)
-        foreach(i; 1 .. unorderNodes.length)
+        foreach(immutable i; 1 .. unorderNodes.length)
         {
             unorderNodes[i-1].info.isLastChild = 
               unorderNodes[i].info.level < unorderNodes[i-1].info.level ||
@@ -1276,7 +1331,7 @@ public:
         }
         
         parents ~= _rootNode;
-        foreach(i; 1 .. unorderNodes.length)
+        foreach(immutable i; 1 .. unorderNodes.length)
         {
             auto node = unorderNodes[i];
             parents[$-1].addChild(node);
@@ -1294,55 +1349,64 @@ public:
     }
 
     /**
-     * Fully Restores the IST. Can be called after *streamToIst()*.
-     * For each IST Node and if assigned, the onWantDescriptor event is called.
-     */
-    void istToObject(){istToObject(_rootNode, true);}
-
-    /**
      * Finds the tree node matching to a property names chain.
      * Params:
+     *      cache = Set to true to activate the internal IST node cache.
+     *      Should only be set to true when performing many queries.
      *      descriptorName = The property names chain which identifies the node.
      * Returns:
      *      A reference to the node that matches the property or nulll.
      */ 
-    IstNode findNode(in char[] descriptorName)
+    IstNode findNode(bool cache = false)(in char[] descriptorName)
     {
-        //TODO-cfeature : optimize random access by caching in an AA, "à la JSON"
-
         if (_rootNode.info.name == descriptorName)
             return _rootNode;
-
         IstNode scanNode(IstNode parent, in char[] namePipe)
         {
-            IstNode result;
-            foreach(node; parent.children)
+            static if (cache)
             {
-                auto child = cast(IstNode) node; 
-                if (namePipe ~ "." ~ child.info.name == descriptorName)
-                    return child;
-                if (child.childrenCount)
-                    result = scanNode(child, namePipe ~ "." ~ child.info.name);
-                if (result)
-                    return result;
+                if (auto r = parent.findChildren(descriptorName))
+                    return r;
+                else foreach(node; parent.children)
+                {
+                    if (auto r = scanNode(node, descriptorName))
+                        return r;
+                }
+                return null;
             }
-            return result;
+            else
+            {
+                IstNode result;
+                foreach(node; parent.children)
+                {
+                    auto child = cast(IstNode) node;
+                    if (namePipe ~ "." ~ child.info.name == descriptorName)
+                        return child;
+                    if (child.childrenCount)
+                        result = scanNode(child, namePipe ~ "." ~ child.info.name);
+                    if (result)
+                        return result;
+                }
+                return result;
+            }
         }
         return scanNode(_rootNode, _rootNode.info.name);
     }
 
     /**
-     * Restores the IST from an arbitrary tree node. 
+     * Restores the IST from an arbitrary tree node.
+     *
      * The process is lead by the nodeInfo associated to the node.
      * If the descriptor is not defined then wantDescriptorEvent is called.
      * It means that this method can be used to deserialize to an arbitrary descriptor,
      * for example after a call to streamToIst().
+     *
      * Params:
-     * node = The IST node from where the restoration begins.
-     * It can be determined by a call to findNode().
-     * recursive = When set to true the restoration is recursive.
+     *      node = The IST node from where the restoration begins.
+     *      It can be determined by a call to findNode().
+     *      recursive = When set to true the restoration is recursive.
      */  
-    void istToObject(IstNode node, bool recursive = false)
+    void nodeToPublisher(IstNode node, bool recursive = false)
     {
         bool restore(IstNode current)
         {
@@ -1358,7 +1422,6 @@ public:
             }
             return result;    
         }
-        
         bool restoreLoop(IstNode current)
         {
             if (!restore(current)) return false;
@@ -1371,19 +1434,19 @@ public:
             }
             return true;
         }
-
         restoreLoop(node);
     }
 
     /**
-     * Restores a single property from a tree node using the setter of a descriptor.
+     * Restores the property associated to an IST node using the setter of the
+     * PropDescriptor passed as parameter.
      *
      * Params:
      *      node = An IstNode. Can be determined by a call to findNode()
      *      descriptor = The PropDescriptor whose setter is used to restore the node data.
      *      if not specified then the onWantDescriptor event may be called.
      */
-    void restoreProperty(T)(IstNode node, PropDescriptor!T* descriptor = null)
+    void nodeToProperty(T)(IstNode node, PropDescriptor!T* descriptor = null)
     {
         if (descriptorMatchesNode!T(descriptor, node))
         {
@@ -1398,11 +1461,7 @@ public:
     }
 
 //------------------------------------------------------------------------------
-//---- declaration from an Serializable ---------------------------------------+
-
-
-    /// Allows a Serializable to adjust the way to declare the properties.
-    @property SerializationFormat serializationFormat() {return _format;} 
+//---- miscellaneous properties -----------------------------------------------+
 
     /// The IST can be modified, build, cleaned from the root node
     @property IstNode serializationTree(){return _rootNode;}
@@ -1421,6 +1480,50 @@ public:
 
 //------------------------------------------------------------------------------
 
+}
+///
+unittest
+{
+    // defines two serializable classes
+    class B: PropertyPublisher
+    {
+        mixin PropertyPublisherImpl;
+        @SetGet uint data1 = 1, data2 = 2;
+        this(){collectPublications!B;}
+        void reset(){data1 = 0; data2 = 0;}
+    }
+    class A: PropertyPublisher
+    {
+        mixin PropertyPublisherImpl;
+        @SetGet B sub1, sub2;
+        this()
+        {
+            sub1 = construct!B;
+            sub2 = construct!B;
+            // sub1 and sub2 are fully serialized because they already exist
+            // when the analyzers run, otherwise they would be considered as
+            // reference and their members would not be serialized.
+            collectPublications!A;
+        }
+        ~this(){destruct(sub1, sub2);}
+    }
+
+    MemoryStream stream = construct!MemoryStream;
+    Serializer serializer = construct!Serializer;
+    A a = construct!A;
+    // serializes
+    serializer.publisherToStream(a, stream);
+    // reset the fields
+    a.sub1.reset;
+    a.sub2.reset;
+    stream.position = 0;
+    // deserializes
+    serializer.streamToPublisher(stream, a);
+    // check the restored values
+    assert(a.sub1.data1 == 1);
+    assert(a.sub2.data1 == 1);
+    assert(a.sub1.data2 == 2);
+    assert(a.sub2.data2 == 2);
 }
 
 //----
@@ -1534,11 +1637,11 @@ version(unittest)
 
     unittest 
     {
-        //foreach(fmt;EnumMembers!SerializationFormat)
-        //    testByFormat!fmt();
-        testByFormat!(SerializationFormat.iztxt)();
-        testByFormat!(SerializationFormat.izbin)();
-        testByFormat!(SerializationFormat.json)();
+        foreach(fmt;EnumMembers!SerializationFormat)
+            testByFormat!fmt();
+        //testByFormat!(SerializationFormat.iztxt)();
+        //testByFormat!(SerializationFormat.izbin)();
+        //testByFormat!(SerializationFormat.json)();
     }
     
     class Referenced1 {}
@@ -1670,7 +1773,7 @@ version(unittest)
         float outside;
         auto node = ser.findNode("root.aFloat");
         auto aFloatDescr = PropDescriptor!float(&outside, "aFloat");
-        ser.restoreProperty(node, &aFloatDescr);
+        ser.nodeToProperty(node, &aFloatDescr);
         assert(outside == 0.123456f);
         //----
 
@@ -1715,7 +1818,6 @@ version(unittest)
         str.clear;
         usrr.fRef = &ref1;
         ser.publisherToStream(usrr, str, format);
-        str.saveToFile("sdf.txt");
 
         usrr.fRef = &ref2;
         assert(*usrr.fRef is ref2);
@@ -1750,15 +1852,15 @@ version(unittest)
         ser.streamToIst(str,format);
 
         auto node_anIntArray = ser.findNode("root.anIntArray");
-        if(node_anIntArray) ser.restoreProperty(node_anIntArray,
+        if(node_anIntArray) ser.nodeToProperty(node_anIntArray,
              b.publication!(int[])("anIntArray"));
         else assert(0);
         auto node_aFloat = ser.findNode("root.aFloat");
-        if(node_aFloat) ser.restoreProperty(node_aFloat,
+        if(node_aFloat) ser.nodeToProperty(node_aFloat,
             b.publication!float("aFloat"));
         else assert(0);  
         auto node_someChars = ser.findNode("root.someChars");
-        if(node_someChars) ser.restoreProperty(node_someChars,
+        if(node_someChars) ser.nodeToProperty(node_someChars,
             b.publication!(char[])("someChars"));
         else assert(0);
         assert(b.anIntArray == [0, 1, 2, 3]);
@@ -1794,7 +1896,9 @@ version(unittest)
         str.position = 0;
         ser.onWantDescriptor = &wantDescr;
         ser.streamToIst(str,format);
-        ser.istToObject;
+        auto nd = ser.findNode("root");
+        assert(nd);
+        ser.nodeToPublisher(nd, true);
         assert(a.anIntArray == [0, 1, 2, 3]);
         assert(a.aFloat ==  0.123456f);
         assert(a.someChars == "azertyuiop");
