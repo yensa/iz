@@ -253,3 +253,4 @@ unittest
     static assert(dimensionCount!(int[][]) == 2);
     static assert(dimensionCount!(int[][][]) == 3);
 }
+

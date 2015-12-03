@@ -21,7 +21,7 @@ version(unittest) import std.stdio;
  * The life-time of the objects is automatically handled by the internal container.
  *
  * Params:
- *      ItemClass = The common items type. It has to be a PropertyPublisher descendant.
+ *      ItemClass = The common items type. It must be a PropertyPublisher descendant.
  */
 class PublishedObjectArray(ItemClass): PropertyPublisher
 if(is(ItemClass : PropertyPublisher))
@@ -147,6 +147,18 @@ public:
     {
         int result = 0;
         foreach(immutable i; 0 .. _items.length)
+        {
+            result = dg(_items[i]);
+            if (result) break;
+        }
+        return result;
+    }
+
+    /// Support for iterating the items with $(D foreach_reverse()).
+    int opApplyReverse(int delegate(ItemClass) dg)
+    {
+        int result = 0;
+        foreach_reverse(immutable i; 0 .. _items.length)
         {
             result = dg(_items[i]);
             if (result) break;
