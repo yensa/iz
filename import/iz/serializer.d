@@ -162,19 +162,19 @@ static this()
     text2type["GenericFunction"] = SerializableType._function;
 }
 
-private bool isSerObjectType(T)()
+package bool isSerObjectType(T)()
 {
     static if (is(T : Stream)) return false;
     else static if (is(T : Object)) return true;
     else return false;
 }
 
-private bool isSerObjectType(SerializableType type)
+package bool isSerObjectType(SerializableType type)
 {
     with(SerializableType) return type == _object;
 }
 
-private bool isSerSimpleType(T)()
+package bool isSerSimpleType(T)()
 {
     static if (isArray!T) return false;
     else static if (is(T : GenericDelegate)) return false;
@@ -184,7 +184,7 @@ private bool isSerSimpleType(T)()
     else return true;
 }
 
-private bool isSerArrayType(T)()
+package bool isSerArrayType(T)()
 {
     static if (!isArray!T) return false;
     else static if (isMultiDimensionalArray!T) return false;
@@ -1179,7 +1179,7 @@ public:
      *      outputStream = The stream where the data are written.
      *      format = The serialized data format.
      */
-    void publisherToStream(T)(ref T root, Stream outputStream,
+    void publisherToStream(Object root, Stream outputStream,
         SerializationFormat format = defaultFormat)
     {
         _format = format;
@@ -1188,7 +1188,7 @@ public:
         _rootNode.deleteChildren;
         _previousNode = null;
         _parentNode = null;
-        PropDescriptor!Object rootDescr = PropDescriptor!Object(cast(Object*)&root, "root");
+        PropDescriptor!Object rootDescr = PropDescriptor!Object(&root, "root");
         addPropertyPublisher(&rootDescr);
         _mustWrite = false;
         _stream = null;
@@ -1224,6 +1224,7 @@ public:
     {
         void restoreFrom(IstNode node, PropertyPublisher target)
         {
+            if (!target) return;
             foreach(child; node.children)
             {
                 bool done;
@@ -1283,12 +1284,11 @@ public:
      * This method actually call successively streamToIst() then
      * istToPublisher().
      */
-    void streamToPublisher(T)(Stream inputStream, T root,
+    void streamToPublisher(Stream inputStream, Object root,
         SerializationFormat format = defaultFormat)
-    if (is(T==class) || is(T == struct) || is(T : PropertyPublisher))
     {
         streamToIst(inputStream, format);
-        istToPublisher(root);
+        istToPublisher(cast(PropertyPublisher)root);
     }
 
     /**
@@ -1539,14 +1539,14 @@ unittest
  *      filename = The target file, always created or overwritten.
  *      format = Optional, the serialization format, by default iztext.
  */
-void publisherToFile(PropertyPublisher pub, in char[] filename,
+void publisherToFile(Object pub, in char[] filename,
     SerializationFormat format = defaultFormat)
 {
     MemoryStream str = construct!MemoryStream;
     Serializer ser = construct!Serializer;
     scope(exit) destruct(str, ser);
     //
-    ser.publisherToStream(pub, str, format);
+    ser.publisherToStream(pub, str);
     str.saveToFile(filename);
 }
 
@@ -1561,7 +1561,8 @@ void publisherToFile(PropertyPublisher pub, in char[] filename,
  *      pub = The target PropertyPublisher.
  *      format = optional, the serialization format, by default iztext.
  */
-void fileToPublisher(in char[] filename, PropertyPublisher pub,
+pragma(inline, false)
+void fileToPublisher(in char[] filename, Object pub,
     SerializationFormat format = defaultFormat)
 {
     MemoryStream str = construct!MemoryStream;
