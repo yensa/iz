@@ -133,6 +133,14 @@ if (    (kind == MaskKind.Byte && index <= T.sizeof)
     }
     return value & _mask;
 }
+///
+unittest
+{
+    // MaskKind.Byte by default.
+    static assert(mask!1(0x12345678) == 0x12340078);
+    static assert(mask!(1,MaskKind.Nibble)(0x12345678) == 0x12345608);
+}
+
 
 /// Compile-time mask() partially specialized for nibble-masking.
 auto maskNibble(size_t index, T)(const T value) nothrow
@@ -141,11 +149,21 @@ auto maskNibble(size_t index, T)(const T value) nothrow
     // e.g alias maskNibble(size_t index, T) = mask!(index, MaskKind.Nibble, T);
     return mask!(index, MaskKind.Nibble)(value);
 }
+///
+unittest
+{
+    static assert(maskNibble!1(0x12345678) == 0x12345608);
+}
 
 /// Compile-time mask() partially specialized for bit-masking.
 auto maskBit(size_t index, T)(const T value) nothrow
 {
     return mask!(index, MaskKind.Bit)(value);
+}
+///
+unittest
+{
+    static assert(maskBit!1(0b1111) == 0b1101);
 }
 
 /**
@@ -199,6 +217,13 @@ auto mask(MaskKind kind = MaskKind.Byte, T)(const T value, size_t index) nothrow
     else
         return value & (0xFFFFFFFFFFFFFFFF - (1UL << index));
 }
+///
+unittest
+{
+    // MaskKind.Byte by default.
+    assert(mask(0x12345678,1) == 0x12340078);
+    assert(mask!(MaskKind.Nibble)(0x12345678,1) == 0x12345608);
+}
 
 /*
 First version: less byte code but more latency do to memory access
@@ -220,11 +245,21 @@ auto maskNibble(T)(const T value, size_t index) nothrow
 {
     return mask!(MaskKind.Nibble)(value, index);
 }
+///
+unittest
+{
+    assert(maskNibble(0x12345678,1) == 0x12345608);
+}
 
 /// Run-time mask() partially specialized for bit-masking.
 auto maskBit(T)(const T value, size_t index) nothrow
 {
     return mask!(MaskKind.Bit)(value, index);
+}
+///
+unittest
+{
+    assert(maskBit(0b1111,1) == 0b1101);
 }
 
 unittest
