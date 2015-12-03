@@ -717,7 +717,8 @@ mixin template PropertyPublisherImpl()
         import std.meta: AliasSeq, staticIndexOf;
         import std.algorithm.mutation: remove;
         import std.algorithm.searching: countUntil;
-
+        import std.format: format;
+        // collect
         mixin ScopedReachability;
         foreach(member; __traits(allMembers, T))
         static if (isMemberReachable!(T, member))
@@ -780,8 +781,27 @@ mixin template PropertyPublisherImpl()
                 }
             }
         }
-        //TODO-csafety: check if invalid descriptors have been created.
-        //e.g invalid @Set @Get pair, descriptor without setter or getter.
+        // check
+        bool flag;
+        string[] names;
+        foreach_reverse(immutable i; 0 .. _publishedDescriptors.length)
+        {
+            auto descr = cast(GenericDescriptor*) publicationFromIndex(i);
+            if (descr.setter == null || descr.getter == null)
+            {
+                flag = true;
+                names ~= descr.name;
+                _publishedDescriptors = _publishedDescriptors.remove(i);
+            }
+        }
+        if (flag)
+        {
+            static immutable messg =
+                "Several invalid property descriptors have been removed.\n" ~
+                "The setter or the getter is missing for %s.\n" ~
+                "Tip: check for typo in the function names.";
+            throw new Exception(format(messg, names));
+        }
     }
 }
 
@@ -1064,6 +1084,25 @@ unittest
     assert(a1._owned1.declarator is a1);
     assert(a1._owned2.declarator is a1);
     assert(a1._notowned.declarator is a2);
+}
+
+unittest
+{
+    // test that invalid pairs throw
+    class Test: PropertyPublisher
+    {
+        mixin PropertyPublisherImpl;
+        this(){collectPublications!Test;}
+        // missing getter.
+        @Set void error1(Object o){}
+        // typo in funct name.
+        @Get Object errror2(){return null;}
+        @Set void error2(Object o){}
+    }
+    bool ouch;
+    try auto test = construct!Test;
+    catch(Exception e)ouch = true;
+    assert(ouch);
 }
 
 /**
