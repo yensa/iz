@@ -35,7 +35,6 @@ private:
 
 protected:
 
-
     static immutable string _fmtName = "item<%d>";
     ItemClass[] _items;
 
@@ -86,6 +85,7 @@ public:
             return;
 
         auto itm = _items[index];
+        destruct(itm);
         _items = _items.remove(index);
 
         if (auto descr = publication!uint(format(_fmtName,index)))
@@ -255,7 +255,7 @@ unittest
  * A Serializer is not able to directly handle $(I AA)s but this class
  * does the task automatically by splitting keys and values in two arrays.
  *
- * This class template can only instantiated if the $(I AA)s key and value
+ * This class template can only be instantiated if the $(I AA)s key and value
  * types are basic (see iz.types.BasicTypes).
  *
  * Params:
@@ -326,7 +326,7 @@ public:
      * to be called manually.
      *
      * Params:
-     *      aa = The associative array that will be stoted and restored.
+     *      aa = A pointer to the associative array that will be stoted and restored.
      */
     this(AA* aa)
     {
@@ -419,19 +419,19 @@ unittest
 }
 
 /**
- * The Published2DimArray class template allows to serialize an 2dim array.
+ * The Published2dArray class template allows to serialize 2 dimensional arrays.
  *
  * A Serializer is not able to directly handle them but this class
  * does the task automatically by merging the array and storing an additional
- * property for the dimenssions.
+ * property for the dimensions.
  *
- * This class template can only instantiated if the $(I T) is a basic type.
+ * This class template can only be instantiated if $(I T) is a basic type.
  * (see iz.types.BasicTypes).
  *
  * Params:
- *      T = The element type of the array.
+ *      T = The array element type.
  */
-final class Published2DimArray(T): PropertyPublisher
+final class Published2dArray(T): PropertyPublisher
 if (isSerSimpleType!T)
 {
 
@@ -486,7 +486,7 @@ public:
     ///
     this()
     {
-        collectPublications!(Published2DimArray!T);
+        collectPublications!(Published2dArray!T);
     }
 
     /**
@@ -495,12 +495,12 @@ public:
      * to be called manually.
      *
      * Params:
-     *      array = The array that will be stoted and restored.
+     *      array = A pointer to the array that will be stoted and restored.
      */
-    this(ref T[][] array)
+    this(T[][]* array)
     {
-        _source = &array;
-        collectPublications!(Published2DimArray!T);
+        _source = array;
+        collectPublications!(Published2dArray!T);
     }
 
     /**
@@ -513,6 +513,12 @@ public:
      *      array = The array to get.
      */
     void fromArray(ref T[][] array)
+    out
+    {
+        import std.algorithm.iteration: reduce;
+        assert(_dimensions.reduce!((a,b) => a + b) <= uint.max);
+    }
+    body
     {
         _dimensions = _dimensions.init;
         _content = _content.init;
@@ -548,17 +554,51 @@ public:
 ///
 unittest
 {
-    alias Publisher = Published2DimArray!uint;
+    alias Publisher = Published2dArray!uint;
     Publisher pub = construct!Publisher;
 
     auto array = [[0u,1u],[2u,3u,4u],[5u,6u,7u,8u]];
     pub.fromArray(array);
-    assert(pub._content == [0u,1u,2u,3u,4u,5u,6u,7u,8u]);
-    assert(pub._dimensions == [2,3,4]);
     version (none) publisherToFile(pub, "backup.txt");
     version (none) fileToPublisher("backup.txt", pub);
     pub.toArray(array);
     assert(array == [[0u,1u],[2u,3u,4u],[5u,6u,7u,8u]]);
+}
+
+unittest
+{
+    alias Publisher = Published2dArray!uint;
+    uint[][]src = [[0u,1u],[2u,3u,4u],[5u,6u,7u,8u]];
+
+    Serializer ser = construct!Serializer;
+    MemoryStream str = construct!MemoryStream;
+    scope(exit) destruct(ser, str);
+
+    Publisher pub0 = construct!Publisher;
+    uint[][] array = src.dup;
+    pub0.fromArray(array);
+    assert(pub0._content == [0u,1u,2u,3u,4u,5u,6u,7u,8u]);
+    assert(pub0._dimensions == [2,3,4]);
+    ser.publisherToStream(pub0, str);
+    array = array.init;
+    str.position = 0;
+    ser.streamToPublisher(str, pub0);
+    pub0.toArray(array);
+    assert(array == src);
+
+    str.clear;
+    Publisher pub1 = construct!Publisher(&array);
+    ser.publisherToStream(pub1, str);
+    assert(pub1._content == [0u,1u,2u,3u,4u,5u,6u,7u,8u]);
+    assert(pub1._dimensions == [2,3,4]);
+    array = array.init;
+    str.position = 0;
+    ser.streamToPublisher(str, pub1);
+    assert(array == src);
+
+    destruct(pub0, pub1);
+
+    writeln("Published2dArray(T) passed the tests");
 }
 
 /// Enumerates the possible notifications sent to a ComponentObserver
