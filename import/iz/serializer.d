@@ -1528,6 +1528,7 @@ unittest
 
 //----
 
+// Miscellaneous helpers ------------------------------------------------------+
 /**
  * Serializes a PropertyPublisher to a file.
  *
@@ -1571,7 +1572,7 @@ void fileToPublisher(in char[] filename, Object pub,
     str.loadFromFile(filename);
     ser.streamToPublisher(str, pub, format);
 }
-
+//----
 
 version(unittest)
 {

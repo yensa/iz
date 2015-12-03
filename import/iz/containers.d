@@ -2231,11 +2231,11 @@ public:
     }
 
     /**
-     * Saves the textual repreentation of the tree to a Stream.
+     * Saves the textual representation of the tree to a Stream.
      *
      * Params:
-     *      stream = the Stream where items are written.
-     *      itemToText = a custom function to render the items. When not specified,
+     *      stream = The Stream where items are written.
+     *      itemToText = A custom function to render the items. When not specified,
      *      $(D itemToTextNative()) is used.
      */
     void saveToStream(Stream stream, string function(TreeItemType) itemToText = null)

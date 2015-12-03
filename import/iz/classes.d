@@ -54,9 +54,14 @@ public:
     /**
      * Instantiates and returns a new item.
      * Params:
-     *      a = the variadic arguments passed to the item $(D __ctor).
+     *      a = The variadic arguments passed to the item $(D __ctor).
      */
     ItemClass addItem(A...)(A a)
+    in
+    {
+        assert(_items.length <= uint.max);
+    }
+    body
     {
         _items ~= construct!ItemClass(a);
 
@@ -418,6 +423,7 @@ unittest
     writeln("PublishedAA(T) passed the tests");
 }
 
+
 /**
  * The Published2dArray class template allows to serialize 2 dimensional arrays.
  *
@@ -600,6 +606,8 @@ unittest
 
     writeln("Published2dArray(T) passed the tests");
 }
+
+
 
 /// Enumerates the possible notifications sent to a ComponentObserver
 enum ComponentNotification
