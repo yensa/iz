@@ -945,13 +945,13 @@ alias WantObjectEvent = void delegate(IstNode node, ref Object serializable, out
  * A Serializer is specialized to store and restore a structure of Objects.
  *
  * PropertyPublisher:
- * A Serializer can only serializes trees of classes that implements the
+ * A Serializer serializes trees of classes that implements the
  * PropertyPublisher interface. Their publications define what is saved or
  * restored. Object descriptors define the structure. Basics types and array
  * of basic types are handled. Special cases exist to manage Stream properties,
  * delegates or objects that are stored in the ReferenceMan. It's even possible
- * to handle more complex types by using custom PropertyPublisher, such as
- * those defined in iz.classes.
+ * to handle more complex types by using or writing custom PropertyPublishers,
+ * such as those defined in iz.classes.
  *
  * Representation:
  * The serializer uses an intermediate serialization tree (IST) that ensures a 
@@ -1561,7 +1561,6 @@ void publisherToFile(Object pub, in char[] filename,
  *      pub = The target PropertyPublisher.
  *      format = optional, the serialization format, by default iztext.
  */
-pragma(inline, false)
 void fileToPublisher(in char[] filename, Object pub,
     SerializationFormat format = defaultFormat)
 {
