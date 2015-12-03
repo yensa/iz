@@ -261,7 +261,7 @@ unittest
  * Params:
  *      AA = The type of the associative array.
  */
-class PublishedAA(AA): PropertyPublisher
+final class PublishedAA(AA): PropertyPublisher
 if(isAssociativeArray!AA && isSerializable!(KeyType!AA) &&
     isSerializable!(ValueType!AA))
 {
@@ -272,7 +272,7 @@ protected:
 
     AA* _source;
     KeyType!AA[] _keys;
-    ValueType!AA[] _values;
+    ValueType!AA[] _content;
 
     uint _setCount = 0, _getCount = 0;
 
@@ -302,14 +302,14 @@ protected:
 
     @Set void values(ValueType!AA[] value)
     {
-        _values = value;
+        _content = value;
         if (_source) doSet;
     }
 
     @Get ValueType!AA[] values()
     {
         if (_source) doGet;
-        return _values;
+        return _content;
     }
 
 public:
@@ -326,7 +326,7 @@ public:
      * to be called manually.
      *
      * Params:
-     *      aa = The associative that will be stoted and restored.
+     *      aa = The associative array that will be stoted and restored.
      */
     this(AA* aa)
     {
@@ -355,7 +355,7 @@ public:
         foreach(v; aa.byValue) valApp.put(v);
 
         _keys = keyApp.data;
-        _values = valApp.data;
+        _content = valApp.data;
     }
 
     /**
@@ -371,7 +371,7 @@ public:
     {
         aa = aa.init;
         foreach(immutable i; 0 .. _keys.length)
-            aa[_keys[i]] = _values[i];
+            aa[_keys[i]] = _content[i];
     }
 }
 ///
@@ -382,7 +382,7 @@ unittest
     serializableAA.fromAA(aa);
     aa = aa.init;
     version(none) publisherToFile(serializableAA, "backup.txt");
-    version(none) fileToPublisher(serializableAA, "backup.txt");
+    version(none) fileToPublisher("backup.txt", serializableAA);
     serializableAA.toAA(aa);
     assert(aa == ['c' : 0u, 'x' : 12u]);
 }
@@ -416,6 +416,149 @@ unittest
     assert(a == [0.1f: 1u, 0.2f : 2u]);
 
     writeln("PublishedAA(T) passed the tests");
+}
+
+/**
+ * The Published2DimArray class template allows to serialize an 2dim array.
+ *
+ * A Serializer is not able to directly handle them but this class
+ * does the task automatically by merging the array and storing an additional
+ * property for the dimenssions.
+ *
+ * This class template can only instantiated if the $(I T) is a basic type.
+ * (see iz.types.BasicTypes).
+ *
+ * Params:
+ *      T = The element type of the array.
+ */
+final class Published2DimArray(T): PropertyPublisher
+if (isSerSimpleType!T)
+{
+
+    mixin PropertyPublisherImpl;
+
+protected:
+
+    uint[] _dimensions;
+    T[] _content;
+    T[][]* _source;
+
+    uint _setCount = 0, _getCount = 0;
+
+    void doSet()
+    {
+        if (_setCount++ % 2 == 0 && _setCount > 0)
+            toArray(*_source);
+    }
+
+    void doGet()
+    {
+        if (_getCount++ %  2 == 0)
+            fromArray(*_source);
+    }
+
+    @Get uint[] dimensions()
+    {
+        if (_source) doGet;
+        return _dimensions;
+    }
+
+    @Set void dimensions(uint[] value)
+    {
+        _dimensions = value;
+        if (_source) doSet;
+    }
+
+    @Get T[] content()
+    {
+        if (_source) doGet;
+        return _content;
+    }
+
+    @Set void content(T[] value)
+    {
+        _content = value;
+        if (_source) doSet;
+    }
+
+public:
+
+    ///
+    this()
+    {
+        collectPublications!(Published2DimArray!T);
+    }
+
+    /**
+     * Constructs a new instance and sets a reference to the source array.
+     * Using this constructor, $(D toArray()) and $(D fromArray()) don't need
+     * to be called manually.
+     *
+     * Params:
+     *      array = The array that will be stoted and restored.
+     */
+    this(ref T[][] array)
+    {
+        _source = &array;
+        collectPublications!(Published2DimArray!T);
+    }
+
+    /**
+     * Copy the content of the array to the internal container.
+     *
+     * Typically called before serializing and if the instance is created
+     * using the default constructor.
+     *
+     * Params:
+     *      array = The array to get.
+     */
+    void fromArray(ref T[][] array)
+    {
+        _dimensions = _dimensions.init;
+        _content = _content.init;
+        foreach(immutable i; 0 .. array.length)
+        {
+            _dimensions ~= cast(uint)array[i].length;
+            _content ~= array[i];
+        }
+    }
+
+    /**
+     * Clears then fills the array using the internal data.
+     *
+     * Typically called after serializing and if the instance is created
+     * using the default constructor.
+     *
+     * Params:
+     *      array = The array to set.
+     */
+    void toArray(ref T[][] array)
+    {
+        array = array.init;
+        array.length = _dimensions.length;
+        uint start;
+        foreach(i,len; _dimensions)
+        {
+            array[i].length = len;
+            array[i] = _content[start .. start + len];
+            start += len;
+        }
+    }
+}
+///
+unittest
+{
+    alias Publisher = Published2DimArray!uint;
+    Publisher pub = construct!Publisher;
+
+    auto array = [[0u,1u],[2u,3u,4u],[5u,6u,7u,8u]];
+    pub.fromArray(array);
+    assert(pub._content == [0u,1u,2u,3u,4u,5u,6u,7u,8u]);
+    assert(pub._dimensions == [2,3,4]);
+    version (none) publisherToFile(pub, "backup.txt");
+    version (none) fileToPublisher("backup.txt", pub);
+    pub.toArray(array);
+    assert(array == [[0u,1u],[2u,3u,4u],[5u,6u,7u,8u]]);
 }
 
 /// Enumerates the possible notifications sent to a ComponentObserver
