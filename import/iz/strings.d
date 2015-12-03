@@ -14,7 +14,7 @@ version(unittest) import std.stdio;
 
 /**
  * CharRange is an helper struct that allows to test
- * fast if a char is within a full range of characters.
+ * if a char is within a full range of characters.
  */
 struct CharRange
 {
@@ -22,11 +22,10 @@ struct CharRange
     private immutable dchar _min, _max;
     
     /**
-     * Constructs the char range using a string that contains
-     * the range bounds.
+     * Constructs the char range using a string that contains the range bounds.
      *
      * Params:
-     * s = a string. It neither has to be sorted nor to contain the full range.
+     *      s = A string. It neither has to be sorted nor to contain the full range.
      */
     this(S)(S s) pure @safe
     if (isSomeString!S)
@@ -41,8 +40,8 @@ struct CharRange
      * Constructs the char range using the two chars passed as argument.
      *
      * Params:
-     * cmin: The lower character in the range.
-     * cmax: The upper (inclusive) character in the range.
+     *      cmin: The lower character in the range.
+     *      cmax: The upper (inclusive) character in the range.
      */
     this(C)(C cmin, C cmax) pure @safe
     if (isSomeChar!C || isImplicitlyConvertible!(C, dchar))
@@ -61,11 +60,11 @@ struct CharRange
         }     
     }
     
-    /// returns the lower char in the range.
+    /// Returns the lower char in the range.
     dchar min() pure nothrow @safe @nogc
     {return _min;}
     
-    /// returns the upper char in the range.
+    /// Returns the upper char in the range.
     dchar max() pure nothrow @safe @nogc
     {return _max;}
 
@@ -73,7 +72,7 @@ struct CharRange
      * Returns true if a character is within the range.
      *
      * Params:
-     * c = A character or any value convertible to a dchar.
+     *      c = A character or any value convertible to a dchar.
      */
     bool opIn_r(C)(C c) pure nothrow @safe @nogc const 
     {
@@ -86,7 +85,7 @@ struct CharRange
     
     /**
      * Returns the range representation, as a string.
-     * This function will fail if the range is not within the 0x0 .. 0x80 range.
+     * This function fails if the range is not within the 0x0 .. 0x80 range.
      */
     string toString() const pure @safe
     {
@@ -100,7 +99,7 @@ struct CharRange
         return result;
     }
 }
-
+///
 pure @safe unittest
 {
     auto cs1 = CharRange("ajslkdfjlz");
@@ -147,8 +146,13 @@ struct CharMap
     }
 
     /**
-     * Used in the construction process. The upper bound is inclusive.
-     * Example:
+     * Used in the construction process.
+     *
+     * Params:
+     *      lo = The dchar that defines the range lower bound.
+     *      hi = The dchar that defines the range upper bound (inclusive).
+     *
+     * Examples:
      * ---
      * CharMap cm = CharMap['0'..'9'];
      * ---
@@ -160,10 +164,13 @@ struct CharMap
     
     /**
      * Used in the construction process.
+     *
      * Params:
-     *      a = alist made of character slices, of single characters or
-     * any other values whose type are implicitly convertible to dchar.
-     * Example:
+     *      a = A list made of character slices, of single characters or
+     *
+     * any other values whose type is implicitly convertible to dchar.
+     *
+     * Examples:
      * ---
      * CharMap cm = CharMap['0'..'9', '.', 'f', 'd', 38, 39];
      * ---
@@ -219,7 +226,7 @@ struct CharMap
         else static assert(0, "invalid argument type for CharMap.opIn_r(): " ~ C.stringof);
     }
 }
-
+///
 @safe unittest
 {
     CharMap cm = CharMap['a'..'f', '0'..'9' , 'A'..'F', '_', 9];
@@ -292,7 +299,7 @@ if (isPointer!C && isSomeChar!(PointerTarget!(C)))
     }
     return NullTerminated!C(c);
 }
-
+///
 unittest
 {
     auto text = "ab cd\0";
@@ -315,10 +322,14 @@ private template CharType(T)
     alias CharType = Unqual!(ElementEncodingType!T);
 }
 
-// test if T is supported in the several scanning utils
-// T must either supports the 'in' operator, supports 'algorithm.searching.canFind'
-// or be a 'bool(dchar)' callable.
-private bool isCharTester(T)()
+/**
+ * Tests wether $(D T) is supported in the several scanning functions.
+ *
+ * T must either be a CharRange, a CharMap, supports std.algorithm.searching.canFind,
+ * be a callable of type $(D bool(dchar)) or $(D bool function(dchar)) or be a
+ * single dchar.
+ */
+bool isCharTester(T)()
 {
     static if (isInputRange!T && isSomeChar!(ElementType!T))
         return true;
@@ -337,6 +348,7 @@ private bool isCharTester(T)()
         return false;
 }
 
+
 /**
  * Returns the next word in the range passed as argument.
  *
@@ -345,7 +357,7 @@ private bool isCharTester(T)()
  *      charTester = Defines the valid characters to make a word.
  *
  * Returns:
- *      A dstring containing the word. If the result length is null then the
+ *      A string containing the word. If the result length is null then the
  *      range parameter has not been consumed.
  */
 auto nextWord(Range, T, bool until = false)(ref Range range, T charTester)
@@ -500,6 +512,7 @@ unittest
     assert(w33 == "ty");
 }
 
+
 /**
  * Returns the next word in the range passed as argument.
  *
@@ -628,12 +641,13 @@ unittest
     assert(src2 == "ee");
 }
 
+
 /**
  * Skips the next word in the range passed as argument.
  *
  * Params:
- * range = A character input range. The range is consumed for each word.
- * charTester = Defines the opposite of the valid characters to make a word.
+ *      range = A character input range. The range is consumed for each word.
+ *      charTester = Defines the opposite of the valid characters to make a word.
  */
 void skipWordUntil(Range, T)(ref Range range, T charTester)
 {
@@ -648,8 +662,17 @@ unittest
     assert(src == "\r");
 }
 
+
 /**
  * Tries to make a fixed length slice by consuming range.
+ *
+ * Params:
+ *      range = A character input range. The range is consumed for each word.
+ *      len = An integral value.
+ *
+ * Returns:
+ *      At the tail a string whose length is less or equal to $(I len), otherwise
+ *      always a string of length $(I len).
  */
 auto nextSlice(Range, T)(ref Range range, T len)
 if (isInputRange!Range && isSomeChar!(ElementType!Range) && isIntegral!T)
@@ -679,11 +702,15 @@ unittest
     assert(text1.nextSlice(12_34_56) == "");
     auto ut = "é_é";
     assert(ut.nextSlice(3) == "é_é");
-
 }
 
+
 /**
- * Returns true of str starts with stuff.
+ * Returns true if a string starts with a particular sub string.
+ *
+ * Params:
+ *      range: A character input range. The range is not consumed.
+ *      stuff: the sub string, also works with single chars.
  */
 bool canRead(Range, Stuff)(ref Range range, Stuff stuff)
 if (isInputRange!Range && isSomeChar!(ElementType!Range)
@@ -797,6 +824,7 @@ unittest
     assert(readEol(text3) == "\r\n");
 }
 
+
 /**
  * Tries to skip immediatly an EOL in range.
  */
@@ -848,6 +876,7 @@ unittest
     assert(nextLine!false(text) == "");
 }
 
+
 /**
  * Returns an input range consisting of each line in the input argument
  */
@@ -898,6 +927,7 @@ unittest
     assert(nums.byLine.reduce!((a,b) => a ~ b) == "0123456789");
 }
 
+
 /**
  * Returns the lines count within the input range.
  * The input range is not consumed.
@@ -917,6 +947,7 @@ unittest
     assert(text3.lineCount == 12);
 }
 
+
 /**
  * Returns the next word within range. 
  * Words are spliited using the White characters, which are never included.
@@ -934,6 +965,7 @@ unittest
     assert(text.nextWord == "ipsum");
     assert(text.nextWord == "123456");
 }
+
 
 /**
  * Returns an input range consisting of each non-blank word in the input argument.
@@ -984,6 +1016,7 @@ unittest
     assert(nums.byWord.reduce!((a,b) => a ~ b) == "0123456789");
 }
 
+
 /**
  * Returns the word count within the input range.
  * Words are separatedd by ascii whites. input range is not consumed.
@@ -1026,6 +1059,7 @@ unittest
     assert(text.nextSeparated(seps) == "Douglas");
     assert(text.nextSeparated(seps) == "27");
 }
+
 
 /**
  * Returns an input range consisting of each separated word in the input argument
@@ -1076,6 +1110,7 @@ unittest
     range.popFront;
 }
 
+
 /**
  * Tries to read immediatly a decimal number in range.
  */
@@ -1096,6 +1131,7 @@ unittest
         assert (num == "456");
 }
 
+
 /**
  * Tries to read immediatly an hexadecimal number in range.
  */
@@ -1113,6 +1149,7 @@ unittest
     assert(text2.readHexNumber == "A897F2f2Ff2fF3c6C9c9Cc9cC9c123");
     assert(text2 == " o");
 }
+
 
 /**
  * Strips leading white characters.
@@ -1188,6 +1225,7 @@ unittest
     assert(`1\"`.escape([['"','"']]) == `1\\"`);
     assert(`\`.escape([]) == `\\`);
 }
+
 
 /**
  * Un-escapes some characters in the input text.
