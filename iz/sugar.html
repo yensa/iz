@@ -1,0 +1,418 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8"/>
+<link rel="stylesheet" type="text/css" href="../style.css"/>
+<script src="../highlight.pack.js"></script>
+<title>iz.sugar</title>
+<base href="../"/>
+<script src="search.js"></script>
+<script src="show_hide.js"></script>
+</head>
+<body>
+<div class="main">
+<div class="breadcrumbs">
+<table id="results"></table>
+<a href="index.html" class="home">⌂</a><input type="search" id="search" placeholder="Search" onkeyup="searchSubmit(this.value, event)"/>
+<small>iz.sugar</small>
+</div>
+<div class="sidebar">
+<a href="iz/sugar.html#hide-toc" class="hide" id="hide-toc">&#171;</a>
+<a href="iz/sugar.html#show-toc" class="show" id="show-toc">&#187;</a>
+<div id="toc-id" class="toc">
+<ul><li><span class="package" onclick="show_hide('iz');"><a href="iz.html">iz</a></span>
+<ul id="iz" style='display:block'>
+<li>iz.<a href="iz/classes.html">classes</a></li>
+<li>iz.<a href="iz/containers.html">containers</a></li>
+<li>iz.<a href="iz/enumset.html">enumset</a></li>
+<li>iz.<a href="iz/logicver.html">logicver</a></li>
+<li>iz.<a href="iz/memory.html">memory</a></li>
+<li>iz.<a href="iz/observer.html">observer</a></li>
+<li>iz.<a href="iz/properties.html">properties</a></li>
+<li>iz.<a href="iz/referencable.html">referencable</a></li>
+<li>iz.<a href="iz/serializer.html">serializer</a></li>
+<li>iz.<a href="iz/streams.html">streams</a></li>
+<li>iz.<a href="iz/strings.html">strings</a></li>
+<li><span class=" selected">iz.<a href="iz/sugar.html">sugar</a></span>
+</li>
+<li>iz.<a href="iz/types.html">types</a></li>
+</ul>
+</li>
+
+</ul>
+</div></div>
+<div class="content">
+<div class="aggregate-symbol"><a class="anchor" id="reset"></a><div class="symbol"><div class="description"><pre><code>public @trusted <a href="http://dlang.org/type.html#basic-data-types">void</a> <a href="iz/sugar.html#reset">reset</a>(T)(ref T t)
+</code></pre>
+<div class="section"><h2></h2>
+<p>void version of the init() type function.
+</p>
+
+
+</div>
+<div class="section"><h2></h2>
+
+
+</div>
+</div></div><a class="anchor" id="not"></a><div class="symbol"><div class="description"><pre><code>public <a href="http://dlang.org/type.html#basic-data-types">bool</a> <a href="iz/sugar.html#not">not</a>(T)(T t) @safe @nogc nothrow pure 
+if(asB!T)
+</code></pre>
+<div class="section"><h2></h2>
+<p>Bitwise not.
+</p>
+
+
+</div>
+<div class="section"><h2></h2>
+
+
+</div>
+</div></div><a class="anchor" id="band"></a><div class="symbol"><div class="description"><pre><code>public <a href="http://dlang.org/type.html#basic-data-types">bool</a> <a href="iz/sugar.html#band">band</a>(T1, T2)(
+    T1 t1, 
+    T2 t2) @safe @nogc nothrow pure 
+if(asB!T1 && asB!T2)
+</code></pre>
+<div class="section"><h2></h2>
+<p>boolean and.
+</p>
+
+
+</div>
+<div class="section"><h2></h2>
+
+
+</div>
+</div></div><a class="anchor" id="bor"></a><div class="symbol"><div class="description"><pre><code>public <a href="http://dlang.org/type.html#basic-data-types">bool</a> <a href="iz/sugar.html#bor">bor</a>(T1, T2)(
+    T1 t1, 
+    T2 t2) @safe @nogc nothrow pure 
+if(asB!T1 && asB!T2)
+</code></pre>
+<div class="section"><h2></h2>
+<p>boolean or.
+</p>
+
+
+</div>
+<div class="section"><h2></h2>
+
+
+</div>
+</div></div><a class="anchor" id="bruteCast"></a><div class="symbol"><div class="description"><pre><code>public auto <a href="iz/sugar.html#bruteCast">bruteCast</a>(OT, IT)(auto ref IT it) @nogc nothrow pure
+</code></pre>
+<div class="section"><h2></h2>
+<p>Allows forbidden casts
+</p>
+
+
+</div>
+<div class="section"><h2></h2>
+
+
+</div>
+</div></div><a class="anchor" id="mask"></a><div class="symbol"><div class="description"><pre><code>public auto <a href="iz/sugar.html#mask">mask</a>(size_t index, <a href="iz/sugar/MaskKind.html">MaskKind</a> kind = <a href="iz/sugar/MaskKind.html">MaskKind</a>.Byte, T)(const T value) nothrow 
+if((kind == <a href="iz/sugar/MaskKind.html">MaskKind</a>.Byte && index <= T.sizeof) || (kind == <a href="iz/sugar/MaskKind.html">MaskKind</a>.Nibble && index <= T.sizeof * 2) || (kind == <a href="iz/sugar/MaskKind.html">MaskKind</a>.Bit && index <= T.sizeof * 8))
+</code></pre>
+<div class="section"><h2></h2>
+<p>Mask, at compile-time, a byte, a nibble or a bit in the argument.
+</p>
+
+
+</div>
+<div class="section"><h2></h2>
+
+
+</div>
+<div class="section"><h2>Parameters</h2>
+<table class="params">
+<tr class="param"><td class="paramName">index</td><td class="paramDoc"><p>the position, 0-based, of the element to mask.
+</p>
+</td></tr>
+<tr class="param"><td class="paramName">kind</td><td class="paramDoc"><p>the kind of the element to mask.
+</p>
+</td></tr>
+<tr class="param"><td class="paramName">value</td><td class="paramDoc"><p>the value mask.
+</p>
+</td></tr>
+</table>
+</div>
+<div class="section"><h2>Returns</h2>
+<p>The input argument with the element masked.
+</p>
+
+
+</div>
+<div class="section "><h2>Example</h2>
+<div class="section"><h2></h2>
+
+
+</div>
+<div class="section"><h2></h2>
+
+
+</div>
+<pre><code>// <a href="iz/sugar/MaskKind.html#Byte">MaskKind.Byte</a> by default.
+static assert(<a href="iz/sugar.html#mask">mask</a>!1(0x12345678) == 0x12340078);
+static assert(<a href="iz/sugar.html#mask">mask</a>!(1,<a href="iz/sugar/MaskKind.html#Nibble">MaskKind.Nibble</a>)(0x12345678) == 0x12345608);
+
+</code></pre>
+
+</div>
+</div></div><a class="anchor" id="maskNibble"></a><div class="symbol"><div class="description"><pre><code>public auto <a href="iz/sugar.html#maskNibble">maskNibble</a>(size_t index, T)(const T value) nothrow
+</code></pre>
+<div class="section"><h2></h2>
+<p>Compile-time mask() partially specialized for nibble-masking.
+</p>
+
+
+</div>
+<div class="section"><h2></h2>
+
+
+</div>
+<div class="section "><h2>Example</h2>
+<div class="section"><h2></h2>
+
+
+</div>
+<div class="section"><h2></h2>
+
+
+</div>
+<pre><code>static assert(<a href="iz/sugar.html#maskNibble">maskNibble</a>!1(0x12345678) == 0x12345608);
+
+</code></pre>
+
+</div>
+</div></div><a class="anchor" id="maskBit"></a><div class="symbol"><div class="description"><pre><code>public auto <a href="iz/sugar.html#maskBit">maskBit</a>(size_t index, T)(const T value) nothrow
+</code></pre>
+<div class="section"><h2></h2>
+<p>Compile-time mask() partially specialized for bit-masking.
+</p>
+
+
+</div>
+<div class="section"><h2></h2>
+
+
+</div>
+<div class="section "><h2>Example</h2>
+<div class="section"><h2></h2>
+
+
+</div>
+<div class="section"><h2></h2>
+
+
+</div>
+<pre><code>static assert(<a href="iz/sugar.html#maskBit">maskBit</a>!1(0b1111) == 0b1101);
+
+</code></pre>
+
+</div>
+</div></div><a class="anchor" id="mask"></a><div class="symbol"><div class="description"><pre><code>public auto <a href="iz/sugar.html#mask">mask</a>(<a href="iz/sugar/MaskKind.html">MaskKind</a> kind = <a href="iz/sugar/MaskKind.html">MaskKind</a>.Byte, T)(
+    const T value, 
+    size_t index) nothrow
+</code></pre>
+<div class="section"><h2></h2>
+<p>Mask, at run-time, a byte, a nibble or a bit in the argument.
+</p>
+
+
+</div>
+<div class="section"><h2></h2>
+
+
+</div>
+<div class="section"><h2>Parameters</h2>
+<table class="params">
+<tr class="param"><td class="paramName">index</td><td class="paramDoc"><p>the position, 0-based, of the element to mask.
+</p>
+</td></tr>
+<tr class="param"><td class="paramName">kind</td><td class="paramDoc"><p>the kind of the element to mask.
+</p>
+</td></tr>
+<tr class="param"><td class="paramName">value</td><td class="paramDoc"><p>the value mask.
+</p>
+</td></tr>
+</table>
+</div>
+<div class="section"><h2>Returns</h2>
+<p>The input argument with the element masked.
+</p>
+
+
+</div>
+<div class="section "><h2>Example</h2>
+<div class="section"><h2></h2>
+
+
+</div>
+<div class="section"><h2></h2>
+
+
+</div>
+<pre><code>// <a href="iz/sugar/MaskKind.html#Byte">MaskKind.Byte</a> by default.
+assert(<a href="iz/sugar.html#mask">mask</a>(0x12345678,1) == 0x12340078);
+assert(<a href="iz/sugar.html#mask">mask</a>!(<a href="iz/sugar/MaskKind.html#Nibble">MaskKind.Nibble</a>)(0x12345678,1) == 0x12345608);
+
+</code></pre>
+
+</div>
+</div></div><a class="anchor" id="maskNibble"></a><div class="symbol"><div class="description"><pre><code>public auto <a href="iz/sugar.html#maskNibble">maskNibble</a>(T)(
+    const T value, 
+    size_t index) nothrow
+</code></pre>
+<div class="section"><h2></h2>
+<p>Run-time mask() partially specialized for nibble-masking.
+</p>
+
+
+</div>
+<div class="section"><h2></h2>
+
+
+</div>
+<div class="section "><h2>Example</h2>
+<div class="section"><h2></h2>
+
+
+</div>
+<div class="section"><h2></h2>
+
+
+</div>
+<pre><code>assert(<a href="iz/sugar.html#maskNibble">maskNibble</a>(0x12345678,1) == 0x12345608);
+
+</code></pre>
+
+</div>
+</div></div><a class="anchor" id="maskBit"></a><div class="symbol"><div class="description"><pre><code>public auto <a href="iz/sugar.html#maskBit">maskBit</a>(T)(
+    const T value, 
+    size_t index) nothrow
+</code></pre>
+<div class="section"><h2></h2>
+<p>Run-time mask() partially specialized for bit-masking.
+</p>
+
+
+</div>
+<div class="section"><h2></h2>
+
+
+</div>
+<div class="section "><h2>Example</h2>
+<div class="section"><h2></h2>
+
+
+</div>
+<div class="section"><h2></h2>
+
+
+</div>
+<pre><code>assert(<a href="iz/sugar.html#maskBit">maskBit</a>(0b1111,1) == 0b1101);
+
+</code></pre>
+
+</div>
+</div></div><a class="anchor" id="pickAndCall"></a><div class="symbol"><div class="description"><pre><code>public <a href="http://dlang.org/type.html#basic-data-types">bool</a> <a href="iz/sugar.html#pickAndCall">pickAndCall</a>(T, Fun, A...)(
+    T t, 
+    Fun fun, 
+    auto ref A a) 
+if(isNumeric!T && isCallable!Fun && is(ReturnType!Fun == <a href="http://dlang.org/type.html#basic-data-types">void</a>))
+</code></pre>
+<div class="section "><h2>Contracts</h2><pre><code>in
+{
+
+    static immutable string err = "chance to pick must be in the 0..100 range";
+    assert (t <= 100, err);
+    assert (t >= 0, err);
+}
+</code></pre>
+
+</div>
+<div class="section"><h2></h2>
+<p>Calls a function according to a probability
+</p>
+
+
+</div>
+<div class="section"><h2></h2>
+
+
+</div>
+<div class="section"><h2>Parameters</h2>
+<table class="params">
+<tr class="param"><td class="paramName">t</td><td class="paramDoc"><p>The chance to call, in percentage.
+</p>
+</td></tr>
+<tr class="param"><td class="paramName">fun</td><td class="paramDoc"><p>The function to call. It must be a void function.
+</p>
+</td></tr>
+<tr class="param"><td class="paramName">a</td><td class="paramDoc"><p>The variadic argument passed to fun.
+</p>
+</td></tr>
+</table>
+</div>
+<div class="section"><h2>Returns</h2>
+<p>false if no luck.
+</p>
+
+
+</div>
+<div class="section "><h2>Example</h2>
+<div class="section"><h2></h2>
+
+
+</div>
+<div class="section"><h2></h2>
+
+
+</div>
+<pre><code>uint cnt;
+bool test;
+void foo(uint param0, out bool param1) @safe
+{
+    cnt += param0;
+    param1 = true;
+}
+foreach(immutable i; 0 .. 100)
+    <a href="iz/sugar.html#pickAndCall">pickAndCall</a>!(double)(75.0, &foo, 1, test);
+assert(cnt > 25);
+assert(test);
+cnt = 0;
+test = false;
+foreach(immutable i; 0 .. 100)
+    <a href="iz/sugar.html#pickAndCall">pickAndCall</a>!(byte)(0, &foo, 1, test);
+assert(cnt == 0);
+assert(!test);
+
+</code></pre>
+
+</div>
+</div></div><div class="description"><div class="section"><h2></h2>
+<p>Several trivials functions and strucutures
+</p>
+
+
+</div>
+<div class="section"><h2></h2>
+
+
+</div>
+</div><div class="section members"><h2>Enums</h2><table><tr><td><a href="iz/sugar/MaskKind.html">MaskKind</a></td><td></td><td></td></tr></table><h2>Functions</h2><table><tr><td><span class="extrainfo"><span class="attribs"><span class="attr-trusted">@trusted</span></span></span><a href="iz/sugar.html#reset">reset</a><span class="extrainfo"></span></td><td></td><td></td></tr><tr><td><a href="iz/sugar.html#not">not</a><span class="extrainfo"><span class="method-attribs"><span class="attr-safe">@safe</span>, <span class="attr-nogc">@nogc</span>, <span class="attr-nothrow">nothrow</span>, <span class="attr-pure">pure</span></span></span></td><td></td><td></td></tr><tr><td><a href="iz/sugar.html#band">band</a><span class="extrainfo"><span class="method-attribs"><span class="attr-safe">@safe</span>, <span class="attr-nogc">@nogc</span>, <span class="attr-nothrow">nothrow</span>, <span class="attr-pure">pure</span></span></span></td><td></td><td></td></tr><tr><td><a href="iz/sugar.html#bor">bor</a><span class="extrainfo"><span class="method-attribs"><span class="attr-safe">@safe</span>, <span class="attr-nogc">@nogc</span>, <span class="attr-nothrow">nothrow</span>, <span class="attr-pure">pure</span></span></span></td><td></td><td></td></tr><tr><td><span class="extrainfo"><span class="attribs"><span class="attr-auto">auto</span></span></span><a href="iz/sugar.html#bruteCast">bruteCast</a><span class="extrainfo"><span class="method-attribs"><span class="attr-nogc">@nogc</span>, <span class="attr-nothrow">nothrow</span>, <span class="attr-pure">pure</span></span></span></td><td></td><td></td></tr><tr><td><span class="extrainfo"><span class="attribs"><span class="attr-auto">auto</span></span></span><a href="iz/sugar.html#mask">mask</a><span class="extrainfo"><span class="method-attribs"><span class="attr-nothrow">nothrow</span></span></span></td><td></td><td>Returns: <p>The input argument with the element masked.
+</p>
+</td></tr><tr><td><span class="extrainfo"><span class="attribs"><span class="attr-auto">auto</span></span></span><a href="iz/sugar.html#maskNibble">maskNibble</a><span class="extrainfo"><span class="method-attribs"><span class="attr-nothrow">nothrow</span></span></span></td><td></td><td></td></tr><tr><td><span class="extrainfo"><span class="attribs"><span class="attr-auto">auto</span></span></span><a href="iz/sugar.html#maskBit">maskBit</a><span class="extrainfo"><span class="method-attribs"><span class="attr-nothrow">nothrow</span></span></span></td><td></td><td></td></tr><tr><td><span class="extrainfo"><span class="attribs"><span class="attr-auto">auto</span></span></span><a href="iz/sugar.html#mask">mask</a><span class="extrainfo"><span class="method-attribs"><span class="attr-nothrow">nothrow</span></span></span></td><td></td><td>Returns: <p>The input argument with the element masked.
+</p>
+</td></tr><tr><td><span class="extrainfo"><span class="attribs"><span class="attr-auto">auto</span></span></span><a href="iz/sugar.html#maskNibble">maskNibble</a><span class="extrainfo"><span class="method-attribs"><span class="attr-nothrow">nothrow</span></span></span></td><td></td><td></td></tr><tr><td><span class="extrainfo"><span class="attribs"><span class="attr-auto">auto</span></span></span><a href="iz/sugar.html#maskBit">maskBit</a><span class="extrainfo"><span class="method-attribs"><span class="attr-nothrow">nothrow</span></span></span></td><td></td><td></td></tr><tr><td><a href="iz/sugar.html#pickAndCall">pickAndCall</a><span class="extrainfo"></span></td><td></td><td>Returns: <p>false if no luck.
+</p>
+</td></tr></table><h2>Structs</h2><table><tr><td><a href="iz/sugar/ArrayRange.html">ArrayRange</a></td><td></td><td></td></tr></table>
+</div>
+</div><script>hljs.initHighlightingOnLoad();</script>
+
+</div>
+<footer>
+Generated with <a href="https://github.com/kiith-sa/harbored-mod">harbored-mod</a>
+</footer>
+</div>
+</body>
+</html>

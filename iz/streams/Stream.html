@@ -1,0 +1,257 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8"/>
+<link rel="stylesheet" type="text/css" href="../../style.css"/>
+<script src="../../highlight.pack.js"></script>
+<title>Stream</title>
+<base href="../../"/>
+<script src="search.js"></script>
+<script src="show_hide.js"></script>
+</head>
+<body>
+<div class="main">
+<div class="breadcrumbs">
+<table id="results"></table>
+<a href="index.html" class="home">⌂</a><input type="search" id="search" placeholder="Search" onkeyup="searchSubmit(this.value, event)"/>
+<small>iz.<a href=iz/streams.html>streams</a>.</small><span class="highlight">Stream</span>
+</div>
+<div class="sidebar">
+<a href="iz/streams.html#hide-toc" class="hide" id="hide-toc">&#171;</a>
+<a href="iz/streams.html#show-toc" class="show" id="show-toc">&#187;</a>
+<div id="toc-id" class="toc">
+<ul><li><span class="package" onclick="show_hide('iz');"><a href="iz.html">iz</a></span>
+<ul id="iz" style='display:block'>
+<li>iz.<a href="iz/classes.html">classes</a></li>
+<li>iz.<a href="iz/containers.html">containers</a></li>
+<li>iz.<a href="iz/enumset.html">enumset</a></li>
+<li>iz.<a href="iz/logicver.html">logicver</a></li>
+<li>iz.<a href="iz/memory.html">memory</a></li>
+<li>iz.<a href="iz/observer.html">observer</a></li>
+<li>iz.<a href="iz/properties.html">properties</a></li>
+<li>iz.<a href="iz/referencable.html">referencable</a></li>
+<li>iz.<a href="iz/serializer.html">serializer</a></li>
+<li><span class=" selected">iz.<a href="iz/streams.html">streams</a></span>
+</li>
+<li>iz.<a href="iz/strings.html">strings</a></li>
+<li>iz.<a href="iz/sugar.html">sugar</a></li>
+<li>iz.<a href="iz/types.html">types</a></li>
+</ul>
+</li>
+
+</ul>
+</div></div>
+<div class="content">
+<div class="aggregate-symbol"><div class="description"><pre><code>public interface Stream
+</code></pre>
+<div class="section"><h2></h2>
+<p>Defines the members of a stream.
+</p>
+
+
+</div>
+<div class="section"><h2></h2>
+
+
+</div>
+</div><a class="anchor" id="read"></a><div class="symbol"><div class="description"><pre><code>public size_t <a href="iz/streams/Stream.html#read">read</a>(
+    <a href="iz/types.html#Ptr">Ptr</a> buffer, 
+    size_t count)
+</code></pre>
+<div class="section"><h2></h2>
+<p>Reads count bytes in buffer.
+Returns the count of bytes that's been read.
+</p>
+
+
+</div>
+<div class="section"><h2></h2>
+
+
+</div>
+</div></div><a class="anchor" id="readVariable"></a><div class="symbol"><div class="description"><pre><code>public final T <a href="iz/streams/Stream.html#readVariable">readVariable</a>(T)()
+</code></pre>
+<div class="section"><h2></h2>
+<p>Reads and returns a T.
+The return is undefined if the stream position does not allow to read a T.
+T must verify isFixedSize.
+Typed readers are generated for each type in iz.types.BasicTypes
+and they are named readInt, readChar, etc.
+</p>
+
+
+</div>
+<div class="section"><h2></h2>
+
+
+</div>
+</div></div><a class="anchor" id="write"></a><div class="symbol"><div class="description"><pre><code>public size_t <a href="iz/streams/Stream.html#write">write</a>(
+    <a href="iz/types.html#Ptr">Ptr</a> buffer, 
+    size_t count)
+</code></pre>
+<div class="section"><h2></h2>
+<p>Writes count bytes to buffer.
+Returns the count of bytes that's been written.
+</p>
+
+
+</div>
+<div class="section"><h2></h2>
+
+
+</div>
+</div></div><a class="anchor" id="writeVariable"></a><div class="symbol"><div class="description"><pre><code>public final size_t <a href="iz/streams/Stream.html#writeVariable">writeVariable</a>(T)(T value)
+</code></pre>
+<div class="section"><h2></h2>
+<p>Writes value.
+Returns the count of bytes that's been written (either T.sizeof or 0).
+T must verify isFixedSize.
+Typed writers are generated for each type in iz.types.BasicTypes
+and they are named writeInt, writeChar, etc.
+</p>
+
+
+</div>
+<div class="section"><h2></h2>
+
+
+</div>
+</div></div><a class="anchor" id="seek"></a><div class="symbol"><div class="description"><pre><code>public <a href="http://dlang.org/type.html#basic-data-types">ulong</a> <a href="iz/streams/Stream.html#seek">seek</a>(
+    <a href="http://dlang.org/type.html#basic-data-types">ulong</a> offset, 
+    <a href="iz/streams/SeekMode.html">SeekMode</a> mode)
+</code></pre>
+<div class="section"><h2></h2>
+<p>Sets the position to offset if mode = SeekMode.skBeg,
+to .position + anOffset if mode = SeekMode.skCur,
+to .size + anOffset if mode = SeekMode.skEnd.
+</p>
+
+
+</div>
+<div class="section"><h2></h2>
+
+
+</div>
+</div></div><a class="anchor" id="seek"></a><div class="symbol"><div class="description"><pre><code>public <a href="http://dlang.org/type.html#basic-data-types">ulong</a> <a href="iz/streams/Stream.html#seek">seek</a>(
+    <a href="http://dlang.org/type.html#basic-data-types">uint</a> offset, 
+    <a href="iz/streams/SeekMode.html">SeekMode</a> mode)
+</code></pre>
+<div class="section"><h2></h2>
+<p>Sets the position to offset if mode = SeekMode.skBeg,
+to .position + anOffset if mode = SeekMode.skCur,
+to .size + anOffset if mode = SeekMode.skEnd.
+</p>
+
+
+</div>
+<div class="section"><h2></h2>
+
+
+</div>
+</div></div><a class="anchor" id="size"></a><div class="symbol"><div class="description"><pre><code>public @property <a href="http://dlang.org/type.html#basic-data-types">ulong</a> <a href="iz/streams/Stream.html#size">size</a>()
+</code></pre>
+<div class="section"><h2></h2>
+<p>Sets or gets the stream size.
+</p>
+
+
+</div>
+<div class="section"><h2></h2>
+
+
+</div>
+</div></div><a class="anchor" id="size"></a><div class="symbol"><div class="description"><pre><code>public @property <a href="http://dlang.org/type.html#basic-data-types">void</a> <a href="iz/streams/Stream.html#size">size</a>(<a href="http://dlang.org/type.html#basic-data-types">ulong</a> value)
+</code></pre>
+<div class="section"><h2></h2>
+<p>Sets or gets the stream size.
+</p>
+
+
+</div>
+<div class="section"><h2></h2>
+
+
+</div>
+</div></div><a class="anchor" id="size"></a><div class="symbol"><div class="description"><pre><code>public @property <a href="http://dlang.org/type.html#basic-data-types">void</a> <a href="iz/streams/Stream.html#size">size</a>(<a href="http://dlang.org/type.html#basic-data-types">uint</a> value)
+</code></pre>
+<div class="section"><h2></h2>
+<p>Sets or gets the stream size.
+</p>
+
+
+</div>
+<div class="section"><h2></h2>
+
+
+</div>
+</div></div><a class="anchor" id="position"></a><div class="symbol"><div class="description"><pre><code>public @property <a href="http://dlang.org/type.html#basic-data-types">ulong</a> <a href="iz/streams/Stream.html#position">position</a>()
+</code></pre>
+<div class="section"><h2></h2>
+<p>Sets or gets the stream position.
+</p>
+
+
+</div>
+<div class="section"><h2></h2>
+
+
+</div>
+</div></div><a class="anchor" id="position"></a><div class="symbol"><div class="description"><pre><code>public @property <a href="http://dlang.org/type.html#basic-data-types">void</a> <a href="iz/streams/Stream.html#position">position</a>(<a href="http://dlang.org/type.html#basic-data-types">ulong</a> value)
+</code></pre>
+<div class="section"><h2></h2>
+<p>Sets or gets the stream position.
+</p>
+
+
+</div>
+<div class="section"><h2></h2>
+
+
+</div>
+</div></div><a class="anchor" id="position"></a><div class="symbol"><div class="description"><pre><code>public @property <a href="http://dlang.org/type.html#basic-data-types">void</a> <a href="iz/streams/Stream.html#position">position</a>(<a href="http://dlang.org/type.html#basic-data-types">uint</a> value)
+</code></pre>
+<div class="section"><h2></h2>
+<p>Sets or gets the stream position.
+</p>
+
+
+</div>
+<div class="section"><h2></h2>
+
+
+</div>
+</div></div><a class="anchor" id="clear"></a><div class="symbol"><div class="description"><pre><code>public <a href="http://dlang.org/type.html#basic-data-types">void</a> <a href="iz/streams/Stream.html#clear">clear</a>()
+</code></pre>
+<div class="section"><h2></h2>
+<p>Resets the stream size to 0.
+</p>
+
+
+</div>
+<div class="section"><h2></h2>
+
+
+</div>
+</div></div><a class="anchor" id="opOpAssign"></a><div class="symbol"><div class="description"><pre><code>public final <a href="http://dlang.org/type.html#basic-data-types">void</a> <a href="iz/streams/Stream.html#opOpAssign">opOpAssign</a>(string op)(<a href="iz/streams/Stream.html">Stream</a> rhs)
+</code></pre>
+<div class="section"><h2></h2>
+<p>Support for the concatenation operator.
+</p>
+
+
+</div>
+<div class="section"><h2></h2>
+
+
+</div>
+</div></div><div class="section members"><h2>Functions</h2><table><tr><td><a href="iz/streams/Stream.html#read">read</a><span class="extrainfo"></span></td><td></td><td></td></tr><tr><td><span class="extrainfo"><span class="attribs"><span class="attr-final">final</span></span></span><a href="iz/streams/Stream.html#readVariable">readVariable</a><span class="extrainfo"></span></td><td></td><td></td></tr><tr><td><a href="iz/streams/Stream.html#write">write</a><span class="extrainfo"></span></td><td></td><td></td></tr><tr><td><span class="extrainfo"><span class="attribs"><span class="attr-final">final</span></span></span><a href="iz/streams/Stream.html#writeVariable">writeVariable</a><span class="extrainfo"></span></td><td></td><td></td></tr><tr><td><a href="iz/streams/Stream.html#seek">seek</a><span class="extrainfo"></span></td><td></td><td></td></tr><tr><td><a href="iz/streams/Stream.html#seek">seek</a><span class="extrainfo"></span></td><td></td><td></td></tr><tr><td><span class="extrainfo"><span class="attribs"><span class="attr-property">@property</span></span></span><a href="iz/streams/Stream.html#size">size</a><span class="extrainfo"></span></td><td></td><td></td></tr><tr><td><span class="extrainfo"><span class="attribs"><span class="attr-property">@property</span></span></span><a href="iz/streams/Stream.html#size">size</a><span class="extrainfo"></span></td><td></td><td></td></tr><tr><td><span class="extrainfo"><span class="attribs"><span class="attr-property">@property</span></span></span><a href="iz/streams/Stream.html#size">size</a><span class="extrainfo"></span></td><td></td><td></td></tr><tr><td><span class="extrainfo"><span class="attribs"><span class="attr-property">@property</span></span></span><a href="iz/streams/Stream.html#position">position</a><span class="extrainfo"></span></td><td></td><td></td></tr><tr><td><span class="extrainfo"><span class="attribs"><span class="attr-property">@property</span></span></span><a href="iz/streams/Stream.html#position">position</a><span class="extrainfo"></span></td><td></td><td></td></tr><tr><td><span class="extrainfo"><span class="attribs"><span class="attr-property">@property</span></span></span><a href="iz/streams/Stream.html#position">position</a><span class="extrainfo"></span></td><td></td><td></td></tr><tr><td><a href="iz/streams/Stream.html#clear">clear</a><span class="extrainfo"></span></td><td></td><td></td></tr><tr><td><span class="extrainfo"><span class="attribs"><span class="attr-final">final</span></span></span><a href="iz/streams/Stream.html#opOpAssign">opOpAssign</a><span class="extrainfo"></span></td><td></td><td></td></tr></table>
+</div>
+</div><script>hljs.initHighlightingOnLoad();</script>
+
+</div>
+<footer>
+Generated with <a href="https://github.com/kiith-sa/harbored-mod">harbored-mod</a>
+</footer>
+</div>
+</body>
+</html>

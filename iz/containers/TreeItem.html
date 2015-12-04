@@ -1,0 +1,650 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8"/>
+<link rel="stylesheet" type="text/css" href="../../style.css"/>
+<script src="../../highlight.pack.js"></script>
+<title>TreeItem</title>
+<base href="../../"/>
+<script src="search.js"></script>
+<script src="show_hide.js"></script>
+</head>
+<body>
+<div class="main">
+<div class="breadcrumbs">
+<table id="results"></table>
+<a href="index.html" class="home">⌂</a><input type="search" id="search" placeholder="Search" onkeyup="searchSubmit(this.value, event)"/>
+<small>iz.<a href=iz/containers.html>containers</a>.</small><span class="highlight">TreeItem</span>
+</div>
+<div class="sidebar">
+<a href="iz/containers.html#hide-toc" class="hide" id="hide-toc">&#171;</a>
+<a href="iz/containers.html#show-toc" class="show" id="show-toc">&#187;</a>
+<div id="toc-id" class="toc">
+<ul><li><span class="package" onclick="show_hide('iz');"><a href="iz.html">iz</a></span>
+<ul id="iz" style='display:block'>
+<li>iz.<a href="iz/classes.html">classes</a></li>
+<li><span class=" selected">iz.<a href="iz/containers.html">containers</a></span>
+</li>
+<li>iz.<a href="iz/enumset.html">enumset</a></li>
+<li>iz.<a href="iz/logicver.html">logicver</a></li>
+<li>iz.<a href="iz/memory.html">memory</a></li>
+<li>iz.<a href="iz/observer.html">observer</a></li>
+<li>iz.<a href="iz/properties.html">properties</a></li>
+<li>iz.<a href="iz/referencable.html">referencable</a></li>
+<li>iz.<a href="iz/serializer.html">serializer</a></li>
+<li>iz.<a href="iz/streams.html">streams</a></li>
+<li>iz.<a href="iz/strings.html">strings</a></li>
+<li>iz.<a href="iz/sugar.html">sugar</a></li>
+<li>iz.<a href="iz/types.html">types</a></li>
+</ul>
+</li>
+
+</ul>
+</div></div>
+<div class="content">
+<div class="aggregate-symbol"><div class="description"><pre><code>private @trusted @nogc nothrow template TreeItem()
+</code></pre>
+<div class="section"><h2></h2>
+<p>The TreeItem mixin turns its implementer into a tree item.
+</p>
+
+
+</div>
+<div class="section"><h2></h2>
+
+
+</div>
+</div><a class="anchor" id="self"></a><div class="symbol"><div class="description"><pre><code>private @trusted @nogc nothrow TreeItemType <a href="iz/containers/TreeItem.html#self">self</a>() @safe @nogc
+</code></pre>
+<div class="section"><h2></h2>
+<p>Returns <code class="d_inlinecode">this</code> when mixed in a class or <code class="d_inlinecode">&this</code> in a struct.
+</p>
+
+
+</div>
+<div class="section"><h2></h2>
+
+
+</div>
+</div></div><a class="anchor" id="prevSibling"></a><div class="symbol"><div class="description"><pre><code>private @trusted @nogc nothrow TreeItemType <a href="iz/containers/TreeItem.html#prevSibling">prevSibling</a>() @safe @nogc
+</code></pre>
+<div class="section"><h2></h2>
+<p>Returns the previous TreeItem.
+</p>
+
+
+</div>
+<div class="section"><h2></h2>
+
+
+</div>
+</div></div><a class="anchor" id="nextSibling"></a><div class="symbol"><div class="description"><pre><code>private @trusted @nogc nothrow TreeItemType <a href="iz/containers/TreeItem.html#nextSibling">nextSibling</a>() @safe @nogc
+</code></pre>
+<div class="section"><h2></h2>
+<p>Returns the next TreeItem.
+</p>
+
+
+</div>
+<div class="section"><h2></h2>
+
+
+</div>
+</div></div><a class="anchor" id="parent"></a><div class="symbol"><div class="description"><pre><code>private @trusted @nogc nothrow TreeItemType <a href="iz/containers/TreeItem.html#parent">parent</a>() @safe @nogc
+</code></pre>
+<div class="section"><h2></h2>
+<p>Retuens the parent.
+</p>
+
+
+</div>
+<div class="section"><h2></h2>
+
+
+</div>
+</div></div><a class="anchor" id="firstChild"></a><div class="symbol"><div class="description"><pre><code>private @trusted @nogc nothrow TreeItemType <a href="iz/containers/TreeItem.html#firstChild">firstChild</a>() @safe @nogc
+</code></pre>
+<div class="section"><h2></h2>
+<p>Returns the first child.
+</p>
+
+
+</div>
+<div class="section"><h2></h2>
+
+
+</div>
+</div></div><a class="anchor" id="siblings"></a><div class="symbol"><div class="description"><pre><code>private @trusted @nogc nothrow <a href="iz/containers/TreeItemSiblings.html">TreeItemSiblings</a>!TreeItemType <a href="iz/containers/TreeItem.html#siblings">siblings</a>() @safe @nogc
+</code></pre>
+<div class="section"><h2></h2>
+<p>Return an input range that allows to iterate the siblings.
+The array syntax is also supported.
+</p>
+
+
+</div>
+<div class="section"><h2></h2>
+
+
+</div>
+</div></div><a class="anchor" id="children"></a><div class="symbol"><div class="description"><pre><code>private @trusted @nogc nothrow <a href="iz/containers/TreeItemChildren.html">TreeItemChildren</a>!TreeItemType <a href="iz/containers/TreeItem.html#children">children</a>() @safe @nogc
+</code></pre>
+<div class="section"><h2></h2>
+<p>Return an input range that allows to iterate the children.
+The array syntax is also supported.
+</p>
+
+
+</div>
+<div class="section"><h2></h2>
+
+
+</div>
+</div></div><a class="anchor" id="addNewSibling"></a><div class="symbol"><div class="description"><pre><code>private @trusted @nogc nothrow IT <a href="iz/containers/TreeItem.html#addNewSibling">addNewSibling</a>(IT, A...)(A a) @trusted 
+if(is(IT : TreeItemType))
+</code></pre>
+<div class="section"><h2></h2>
+<p>Allocates, adds to the back, and returns a new sibling of type IT.
+This method should be preferred over addSibling/insertSibling if deleteChildren() is used.
+</p>
+
+
+</div>
+<div class="section"><h2></h2>
+
+
+</div>
+</div></div><a class="anchor" id="lastSibling"></a><div class="symbol"><div class="description"><pre><code>private @trusted @nogc nothrow TreeItemType <a href="iz/containers/TreeItem.html#lastSibling">lastSibling</a>() @safe @nogc
+</code></pre>
+<div class="section"><h2></h2>
+<p>Returns the last item.
+The value returned is never null.
+</p>
+
+
+</div>
+<div class="section"><h2></h2>
+
+
+</div>
+</div></div><a class="anchor" id="firstSibling"></a><div class="symbol"><div class="description"><pre><code>private @trusted @nogc nothrow TreeItemType <a href="iz/containers/TreeItem.html#firstSibling">firstSibling</a>() @safe @nogc
+</code></pre>
+<div class="section"><h2></h2>
+<p>Returns the first item.
+The value returned is never null.
+</p>
+
+
+</div>
+<div class="section"><h2></h2>
+
+
+</div>
+</div></div><a class="anchor" id="findSibling"></a><div class="symbol"><div class="description"><pre><code>private @trusted @nogc nothrow ptrdiff_t <a href="iz/containers/TreeItem.html#findSibling">findSibling</a>(TreeItemType sibling) @safe @nogc
+</code></pre>
+<div class="section "><h2>Contracts</h2><pre><code>in
+{
+    assert (sibling);
+}
+</code></pre>
+
+</div>
+<div class="section"><h2></h2>
+<p>Returns the index of sibling if it's found otherwise -1.
+</p>
+
+
+</div>
+<div class="section"><h2></h2>
+
+
+</div>
+</div></div><a class="anchor" id="addSibling"></a><div class="symbol"><div class="description"><pre><code>private @trusted @nogc nothrow <a href="http://dlang.org/type.html#basic-data-types">void</a> <a href="iz/containers/TreeItem.html#addSibling">addSibling</a>(TreeItemType sibling) @safe @nogc
+</code></pre>
+<div class="section "><h2>Contracts</h2><pre><code>in
+{
+    assert (sibling);
+}
+</code></pre>
+
+</div>
+<div class="section"><h2></h2>
+<p>Adds an item at the end of list.
+</p>
+
+
+</div>
+<div class="section"><h2></h2>
+
+
+</div>
+</div></div><a class="anchor" id="insertSibling"></a><div class="symbol"><div class="description"><pre><code>private @trusted @nogc nothrow <a href="http://dlang.org/type.html#basic-data-types">void</a> <a href="iz/containers/TreeItem.html#insertSibling">insertSibling</a>(TreeItemType sibling) @safe @nogc
+</code></pre>
+<div class="section "><h2>Contracts</h2><pre><code>in
+{
+    assert (sibling);
+}
+</code></pre>
+
+</div>
+<div class="section"><h2></h2>
+<p>Inserts an item at the beginning of the list.
+</p>
+
+
+</div>
+<div class="section"><h2></h2>
+
+
+</div>
+</div></div><a class="anchor" id="insertSibling"></a><div class="symbol"><div class="description"><pre><code>private @trusted @nogc nothrow <a href="http://dlang.org/type.html#basic-data-types">void</a> <a href="iz/containers/TreeItem.html#insertSibling">insertSibling</a>(
+    size_t index, 
+    TreeItemType sibling) @safe @nogc
+</code></pre>
+<div class="section "><h2>Contracts</h2><pre><code>in
+{
+    assert (sibling);
+}
+</code></pre>
+
+</div>
+<div class="section"><h2></h2>
+<p>Inserts a sibling.
+</p>
+
+
+</div>
+<div class="section"><h2></h2>
+
+
+</div>
+<div class="section"><h2>Parameters</h2>
+<table class="params">
+<tr class="param"><td class="paramName">index</td><td class="paramDoc"><p>The position where to insert.
+</p>
+</td></tr>
+<tr class="param"><td class="paramName">sibling</td><td class="paramDoc"><p>the item to insert.
+</p>
+</td></tr>
+</table>
+</div>
+</div></div><a class="anchor" id="exchangeSibling"></a><div class="symbol"><div class="description"><pre><code>private @trusted @nogc nothrow <a href="http://dlang.org/type.html#basic-data-types">void</a> <a href="iz/containers/TreeItem.html#exchangeSibling">exchangeSibling</a>(
+    TreeItemType sibling1, 
+    TreeItemType sibling2) @safe
+</code></pre>
+<div class="section "><h2>Contracts</h2><pre><code>in
+{
+    assert (sibling1);
+    assert (sibling2);
+    assert (sibling1._parent is sibling2._parent);
+}
+</code></pre>
+
+</div>
+<div class="section"><h2></h2>
+<p>Exchanges the position of two siblings.
+</p>
+
+
+</div>
+<div class="section"><h2></h2>
+
+
+</div>
+</div></div><a class="anchor" id="removeSibling"></a><div class="symbol"><div class="description"><pre><code>private @trusted @nogc nothrow <a href="http://dlang.org/type.html#basic-data-types">bool</a> <a href="iz/containers/TreeItem.html#removeSibling">removeSibling</a>(TreeItemType sibling) @safe @nogc
+</code></pre>
+<div class="section "><h2>Contracts</h2><pre><code>in
+{
+    assert (sibling);
+}
+</code></pre>
+
+</div>
+<div class="section"><h2></h2>
+<p>Removes an item.
+</p>
+
+
+</div>
+<div class="section"><h2></h2>
+
+
+</div>
+<div class="section"><h2>Parameters</h2>
+<table class="params">
+<tr class="param"><td class="paramName">sibling</td><td class="paramDoc"><p>The item to remove.
+</p>
+</td></tr>
+</table>
+</div>
+<div class="section"><h2>Returns</h2>
+<p>true if the item is a sibling otherwise false.
+</p>
+
+
+</div>
+</div></div><a class="anchor" id="removeSibling"></a><div class="symbol"><div class="description"><pre><code>private @trusted @nogc nothrow TreeItemType <a href="iz/containers/TreeItem.html#removeSibling">removeSibling</a>(size_t index) @safe @nogc
+</code></pre>
+<div class="section"><h2></h2>
+<p>Removes the nth sibling.
+</p>
+
+
+</div>
+<div class="section"><h2></h2>
+
+
+</div>
+<div class="section"><h2>Parameters</h2>
+<table class="params">
+<tr class="param"><td class="paramName">index</td><td class="paramDoc"><p>the index of the sibling to remove.
+ Returns
+</p>
+</td></tr>
+</table>
+</div>
+<div class="section"><h2>Returns</h2>
+<p>The item if the index is valid, otherwise null.
+</p>
+
+
+</div>
+</div></div><a class="anchor" id="siblingCount"></a><div class="symbol"><div class="description"><pre><code>private @trusted @nogc nothrow size_t <a href="iz/containers/TreeItem.html#siblingCount">siblingCount</a>() @safe @nogc
+</code></pre>
+<div class="section"><h2></h2>
+<p>Returns the count of sibling in the branch.
+The value returned is always greater than 0.
+</p>
+
+
+</div>
+<div class="section"><h2></h2>
+
+
+</div>
+</div></div><a class="anchor" id="siblingIndex"></a><div class="symbol"><div class="description"><pre><code>private @trusted @nogc nothrow ptrdiff_t <a href="iz/containers/TreeItem.html#siblingIndex">siblingIndex</a>() @safe @nogc
+</code></pre>
+<div class="section"><h2></h2>
+<p>Returns the item position in the list.
+</p>
+
+
+</div>
+<div class="section"><h2></h2>
+
+
+</div>
+</div></div><a class="anchor" id="siblingIndex"></a><div class="symbol"><div class="description"><pre><code>private @trusted @nogc nothrow <a href="http://dlang.org/type.html#basic-data-types">void</a> <a href="iz/containers/TreeItem.html#siblingIndex">siblingIndex</a>(size_t position) @safe @nogc
+</code></pre>
+<div class="section"><h2></h2>
+<p>Sets the item position in the list.
+The new position of the previous item is undetermined.
+</p>
+
+
+</div>
+<div class="section"><h2></h2>
+
+
+</div>
+</div></div><a class="anchor" id="hasSibling"></a><div class="symbol"><div class="description"><pre><code>private @trusted @nogc nothrow <a href="http://dlang.org/type.html#basic-data-types">bool</a> <a href="iz/containers/TreeItem.html#hasSibling">hasSibling</a>() @safe @nogc
+</code></pre>
+<div class="section"><h2></h2>
+<p>Indicates if the item has neighboors.
+</p>
+
+
+</div>
+<div class="section"><h2></h2>
+
+
+</div>
+</div></div><a class="anchor" id="addNewChildren"></a><div class="symbol"><div class="description"><pre><code>private @trusted @nogc nothrow IT <a href="iz/containers/TreeItem.html#addNewChildren">addNewChildren</a>(IT, A...)(A a) @trusted 
+if(is(IT : TreeItemType))
+</code></pre>
+<div class="section"><h2></h2>
+<p>Constructs, adds to the back then returns a new child of type IT.
+This method should be prefered over addChildren/insertChildren
+if <code class="d_inlinecode">deleteChildren()</code> is used.
+</p>
+
+
+</div>
+<div class="section"><h2></h2>
+
+
+</div>
+</div></div><a class="anchor" id="level"></a><div class="symbol"><div class="description"><pre><code>private @trusted @nogc nothrow size_t <a href="iz/containers/TreeItem.html#level">level</a>() @safe @nogc
+</code></pre>
+<div class="section"><h2></h2>
+<p>Returns the distance to the root2.
+</p>
+
+
+</div>
+<div class="section"><h2></h2>
+
+
+</div>
+</div></div><a class="anchor" id="root2"></a><div class="symbol"><div class="description"><pre><code>private @trusted @nogc nothrow TreeItemType <a href="iz/containers/TreeItem.html#root2">root2</a>() @safe @nogc
+</code></pre>
+<div class="section"><h2></h2>
+<p>Returns the root2.
+</p>
+
+
+</div>
+<div class="section"><h2></h2>
+
+
+</div>
+</div></div><a class="anchor" id="childrenCount"></a><div class="symbol"><div class="description"><pre><code>private @trusted @nogc nothrow size_t <a href="iz/containers/TreeItem.html#childrenCount">childrenCount</a>() @safe @nogc
+</code></pre>
+<div class="section"><h2></h2>
+<p>Returns the children count.
+</p>
+
+
+</div>
+<div class="section"><h2></h2>
+
+
+</div>
+</div></div><a class="anchor" id="addChild"></a><div class="symbol"><div class="description"><pre><code>private @trusted @nogc nothrow <a href="http://dlang.org/type.html#basic-data-types">void</a> <a href="iz/containers/TreeItem.html#addChild">addChild</a>(TreeItemType child) @safe @nogc
+</code></pre>
+<div class="section"><h2></h2>
+<p>Adds child to the back.
+</p>
+
+
+</div>
+<div class="section"><h2></h2>
+
+
+</div>
+</div></div><a class="anchor" id="insertChild"></a><div class="symbol"><div class="description"><pre><code>private @trusted @nogc nothrow <a href="http://dlang.org/type.html#basic-data-types">void</a> <a href="iz/containers/TreeItem.html#insertChild">insertChild</a>(TreeItemType child) @safe @nogc
+</code></pre>
+<div class="section"><h2></h2>
+<p>Inserts the first child.
+</p>
+
+
+</div>
+<div class="section"><h2></h2>
+
+
+</div>
+</div></div><a class="anchor" id="insertChild"></a><div class="symbol"><div class="description"><pre><code>private @trusted @nogc nothrow <a href="http://dlang.org/type.html#basic-data-types">void</a> <a href="iz/containers/TreeItem.html#insertChild">insertChild</a>(
+    size_t index, 
+    TreeItemType child) @safe @nogc
+</code></pre>
+<div class="section "><h2>Contracts</h2><pre><code>in
+{
+    assert (child);
+}
+</code></pre>
+
+</div>
+<div class="section"><h2></h2>
+<p>Inserts a child.
+</p>
+
+
+</div>
+<div class="section"><h2></h2>
+
+
+</div>
+<div class="section"><h2>Parameters</h2>
+<table class="params">
+<tr class="param"><td class="paramName">index</td><td class="paramDoc"><p>The position in the children list.
+</p>
+</td></tr>
+<tr class="param"><td class="paramName">child</td><td class="paramDoc"><p>The child to insert.
+</p>
+</td></tr>
+</table>
+</div>
+</div></div><a class="anchor" id="removeChild"></a><div class="symbol"><div class="description"><pre><code>private @trusted @nogc nothrow <a href="http://dlang.org/type.html#basic-data-types">bool</a> <a href="iz/containers/TreeItem.html#removeChild">removeChild</a>(TreeItemType child) @safe @nogc
+</code></pre>
+<div class="section "><h2>Contracts</h2><pre><code>in
+{
+    assert (child);
+}
+</code></pre>
+
+</div>
+<div class="section"><h2></h2>
+<p>Removes a child from the list.
+</p>
+
+
+</div>
+<div class="section"><h2></h2>
+
+
+</div>
+<div class="section"><h2>Parameters</h2>
+<table class="params">
+<tr class="param"><td class="paramName">child</td><td class="paramDoc"><p>The child to remove.
+</p>
+</td></tr>
+</table>
+</div>
+<div class="section"><h2>Returns</h2>
+<p>true if child is removed.
+</p>
+
+
+</div>
+</div></div><a class="anchor" id="removeChild"></a><div class="symbol"><div class="description"><pre><code>private @trusted @nogc nothrow TreeItemType <a href="iz/containers/TreeItem.html#removeChild">removeChild</a>(size_t index) @safe @nogc
+</code></pre>
+<div class="section"><h2></h2>
+<p>Removes the nth child.
+</p>
+
+
+</div>
+<div class="section"><h2></h2>
+
+
+</div>
+<div class="section"><h2>Parameters</h2>
+<table class="params">
+<tr class="param"><td class="paramName">index</td><td class="paramDoc"><p>The child index.
+</p>
+</td></tr>
+</table>
+</div>
+<div class="section"><h2>Returns</h2>
+<p>The child if index was valid, otherwise null.
+</p>
+
+
+</div>
+</div></div><a class="anchor" id="removeChildren"></a><div class="symbol"><div class="description"><pre><code>private @trusted @nogc nothrow <a href="http://dlang.org/type.html#basic-data-types">void</a> <a href="iz/containers/TreeItem.html#removeChildren">removeChildren</a>() @safe @nogc
+</code></pre>
+<div class="section"><h2></h2>
+<p>Removes the children, without destructing them.
+After the call, the links to the items siblings are also reset to null.
+</p>
+
+
+</div>
+<div class="section"><h2></h2>
+
+
+</div>
+</div></div><a class="anchor" id="deleteChildren"></a><div class="symbol"><div class="description"><pre><code>private @trusted @nogc nothrow <a href="http://dlang.org/type.html#basic-data-types">void</a> <a href="iz/containers/TreeItem.html#deleteChildren">deleteChildren</a>() @trusted
+</code></pre>
+<div class="section"><h2></h2>
+<p>Removes and deletes the children.
+</p>
+
+
+</div>
+<div class="section"><h2></h2>
+<p>This method should be used in pair with <code class="d_inlinecode">addNewChildren()</code> and
+<code class="d_inlinecode">addNewSiblings()</code>. If <code class="d_inlinecode">add()</code> or <code class="d_inlinecode">insert()</code> have been used to
+build the tree then initial references will be dangling.
+</p>
+
+
+</div>
+</div></div><a class="anchor" id="itemToTextNative"></a><div class="symbol"><div class="description"><pre><code>private @trusted @nogc nothrow <a href="http://dlang.org/type.html#basic-data-types">char</a>[] <a href="iz/containers/TreeItem.html#itemToTextNative">itemToTextNative</a>() @trusted
+</code></pre>
+<div class="section"><h2></h2>
+<p>Converts the node to a string.
+This is used to represent the whole tree in <code class="d_inlinecode">saveToStream()</code>.
+</p>
+
+
+</div>
+<div class="section"><h2></h2>
+
+
+</div>
+</div></div><a class="anchor" id="saveToStream"></a><div class="symbol"><div class="description"><pre><code>private @trusted @nogc nothrow <a href="http://dlang.org/type.html#basic-data-types">void</a> <a href="iz/containers/TreeItem.html#saveToStream">saveToStream</a>(
+    <a href="iz/streams/Stream.html">Stream</a> stream, 
+    string function(TreeItemType) itemToText = null)
+</code></pre>
+<div class="section"><h2></h2>
+<p>Saves the textual repreentation of the tree to a Stream.
+</p>
+
+
+</div>
+<div class="section"><h2></h2>
+
+
+</div>
+<div class="section"><h2>Parameters</h2>
+<table class="params">
+<tr class="param"><td class="paramName">stream</td><td class="paramDoc"><p>the Stream where items are written.
+</p>
+</td></tr>
+<tr class="param"><td class="paramName">itemToText</td><td class="paramDoc"><p>a custom function to render the items. When not specified,
+     <code class="d_inlinecode">itemToTextNative()</code> is used.
+</p>
+</td></tr>
+</table>
+</div>
+</div></div><div class="section members"><h2>Functions</h2><table><tr><td><a href="iz/containers/TreeItem.html#self">self</a><span class="extrainfo"><span class="method-attribs"><span class="attr-safe">@safe</span>, <span class="attr-nogc">@nogc</span></span></span></td><td></td><td></td></tr><tr><td><a href="iz/containers/TreeItem.html#prevSibling">prevSibling</a><span class="extrainfo"><span class="method-attribs"><span class="attr-safe">@safe</span>, <span class="attr-nogc">@nogc</span></span></span></td><td></td><td></td></tr><tr><td><a href="iz/containers/TreeItem.html#nextSibling">nextSibling</a><span class="extrainfo"><span class="method-attribs"><span class="attr-safe">@safe</span>, <span class="attr-nogc">@nogc</span></span></span></td><td></td><td></td></tr><tr><td><a href="iz/containers/TreeItem.html#parent">parent</a><span class="extrainfo"><span class="method-attribs"><span class="attr-safe">@safe</span>, <span class="attr-nogc">@nogc</span></span></span></td><td></td><td></td></tr><tr><td><a href="iz/containers/TreeItem.html#firstChild">firstChild</a><span class="extrainfo"><span class="method-attribs"><span class="attr-safe">@safe</span>, <span class="attr-nogc">@nogc</span></span></span></td><td></td><td></td></tr><tr><td><a href="iz/containers/TreeItem.html#siblings">siblings</a><span class="extrainfo"><span class="method-attribs"><span class="attr-safe">@safe</span>, <span class="attr-nogc">@nogc</span></span></span></td><td></td><td></td></tr><tr><td><a href="iz/containers/TreeItem.html#children">children</a><span class="extrainfo"><span class="method-attribs"><span class="attr-safe">@safe</span>, <span class="attr-nogc">@nogc</span></span></span></td><td></td><td></td></tr><tr><td><a href="iz/containers/TreeItem.html#addNewSibling">addNewSibling</a><span class="extrainfo"><span class="method-attribs"><span class="attr-trusted">@trusted</span></span></span></td><td></td><td></td></tr><tr><td><a href="iz/containers/TreeItem.html#lastSibling">lastSibling</a><span class="extrainfo"><span class="method-attribs"><span class="attr-safe">@safe</span>, <span class="attr-nogc">@nogc</span></span></span></td><td></td><td></td></tr><tr><td><a href="iz/containers/TreeItem.html#firstSibling">firstSibling</a><span class="extrainfo"><span class="method-attribs"><span class="attr-safe">@safe</span>, <span class="attr-nogc">@nogc</span></span></span></td><td></td><td></td></tr><tr><td><a href="iz/containers/TreeItem.html#findSibling">findSibling</a><span class="extrainfo"><span class="method-attribs"><span class="attr-safe">@safe</span>, <span class="attr-nogc">@nogc</span></span></span></td><td></td><td></td></tr><tr><td><a href="iz/containers/TreeItem.html#addSibling">addSibling</a><span class="extrainfo"><span class="method-attribs"><span class="attr-safe">@safe</span>, <span class="attr-nogc">@nogc</span></span></span></td><td></td><td></td></tr><tr><td><a href="iz/containers/TreeItem.html#insertSibling">insertSibling</a><span class="extrainfo"><span class="method-attribs"><span class="attr-safe">@safe</span>, <span class="attr-nogc">@nogc</span></span></span></td><td></td><td></td></tr><tr><td><a href="iz/containers/TreeItem.html#insertSibling">insertSibling</a><span class="extrainfo"><span class="method-attribs"><span class="attr-safe">@safe</span>, <span class="attr-nogc">@nogc</span></span></span></td><td></td><td></td></tr><tr><td><a href="iz/containers/TreeItem.html#exchangeSibling">exchangeSibling</a><span class="extrainfo"><span class="method-attribs"><span class="attr-safe">@safe</span></span></span></td><td></td><td></td></tr><tr><td><a href="iz/containers/TreeItem.html#removeSibling">removeSibling</a><span class="extrainfo"><span class="method-attribs"><span class="attr-safe">@safe</span>, <span class="attr-nogc">@nogc</span></span></span></td><td></td><td>Returns: <p>true if the item is a sibling otherwise false.
+</p>
+</td></tr><tr><td><a href="iz/containers/TreeItem.html#removeSibling">removeSibling</a><span class="extrainfo"><span class="method-attribs"><span class="attr-safe">@safe</span>, <span class="attr-nogc">@nogc</span></span></span></td><td></td><td>Returns: <p>The item if the index is valid, otherwise null.
+</p>
+</td></tr><tr><td><a href="iz/containers/TreeItem.html#siblingCount">siblingCount</a><span class="extrainfo"><span class="method-attribs"><span class="attr-safe">@safe</span>, <span class="attr-nogc">@nogc</span></span></span></td><td></td><td></td></tr><tr><td><a href="iz/containers/TreeItem.html#siblingIndex">siblingIndex</a><span class="extrainfo"><span class="method-attribs"><span class="attr-safe">@safe</span>, <span class="attr-nogc">@nogc</span></span></span></td><td></td><td></td></tr><tr><td><a href="iz/containers/TreeItem.html#siblingIndex">siblingIndex</a><span class="extrainfo"><span class="method-attribs"><span class="attr-safe">@safe</span>, <span class="attr-nogc">@nogc</span></span></span></td><td></td><td></td></tr><tr><td><a href="iz/containers/TreeItem.html#hasSibling">hasSibling</a><span class="extrainfo"><span class="method-attribs"><span class="attr-safe">@safe</span>, <span class="attr-nogc">@nogc</span></span></span></td><td></td><td></td></tr><tr><td><a href="iz/containers/TreeItem.html#addNewChildren">addNewChildren</a><span class="extrainfo"><span class="method-attribs"><span class="attr-trusted">@trusted</span></span></span></td><td></td><td></td></tr><tr><td><a href="iz/containers/TreeItem.html#level">level</a><span class="extrainfo"><span class="method-attribs"><span class="attr-safe">@safe</span>, <span class="attr-nogc">@nogc</span></span></span></td><td></td><td></td></tr><tr><td><a href="iz/containers/TreeItem.html#root2">root2</a><span class="extrainfo"><span class="method-attribs"><span class="attr-safe">@safe</span>, <span class="attr-nogc">@nogc</span></span></span></td><td></td><td></td></tr><tr><td><a href="iz/containers/TreeItem.html#childrenCount">childrenCount</a><span class="extrainfo"><span class="method-attribs"><span class="attr-safe">@safe</span>, <span class="attr-nogc">@nogc</span></span></span></td><td></td><td></td></tr><tr><td><a href="iz/containers/TreeItem.html#addChild">addChild</a><span class="extrainfo"><span class="method-attribs"><span class="attr-safe">@safe</span>, <span class="attr-nogc">@nogc</span></span></span></td><td></td><td></td></tr><tr><td><a href="iz/containers/TreeItem.html#insertChild">insertChild</a><span class="extrainfo"><span class="method-attribs"><span class="attr-safe">@safe</span>, <span class="attr-nogc">@nogc</span></span></span></td><td></td><td></td></tr><tr><td><a href="iz/containers/TreeItem.html#insertChild">insertChild</a><span class="extrainfo"><span class="method-attribs"><span class="attr-safe">@safe</span>, <span class="attr-nogc">@nogc</span></span></span></td><td></td><td></td></tr><tr><td><a href="iz/containers/TreeItem.html#removeChild">removeChild</a><span class="extrainfo"><span class="method-attribs"><span class="attr-safe">@safe</span>, <span class="attr-nogc">@nogc</span></span></span></td><td></td><td>Returns: <p>true if child is removed.
+</p>
+</td></tr><tr><td><a href="iz/containers/TreeItem.html#removeChild">removeChild</a><span class="extrainfo"><span class="method-attribs"><span class="attr-safe">@safe</span>, <span class="attr-nogc">@nogc</span></span></span></td><td></td><td>Returns: <p>The child if index was valid, otherwise null.
+</p>
+</td></tr><tr><td><a href="iz/containers/TreeItem.html#removeChildren">removeChildren</a><span class="extrainfo"><span class="method-attribs"><span class="attr-safe">@safe</span>, <span class="attr-nogc">@nogc</span></span></span></td><td></td><td></td></tr><tr><td><a href="iz/containers/TreeItem.html#deleteChildren">deleteChildren</a><span class="extrainfo"><span class="method-attribs"><span class="attr-trusted">@trusted</span></span></span></td><td></td><td></td></tr><tr><td><a href="iz/containers/TreeItem.html#itemToTextNative">itemToTextNative</a><span class="extrainfo"><span class="method-attribs"><span class="attr-trusted">@trusted</span></span></span></td><td></td><td></td></tr><tr><td><a href="iz/containers/TreeItem.html#saveToStream">saveToStream</a><span class="extrainfo"></span></td><td></td><td></td></tr></table>
+</div>
+</div><script>hljs.initHighlightingOnLoad();</script>
+
+</div>
+<footer>
+Generated with <a href="https://github.com/kiith-sa/harbored-mod">harbored-mod</a>
+</footer>
+</div>
+</body>
+</html>

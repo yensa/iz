@@ -1,0 +1,304 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8"/>
+<link rel="stylesheet" type="text/css" href="../style.css"/>
+<script src="../highlight.pack.js"></script>
+<title>iz.properties</title>
+<base href="../"/>
+<script src="search.js"></script>
+<script src="show_hide.js"></script>
+</head>
+<body>
+<div class="main">
+<div class="breadcrumbs">
+<table id="results"></table>
+<a href="index.html" class="home">⌂</a><input type="search" id="search" placeholder="Search" onkeyup="searchSubmit(this.value, event)"/>
+<small>iz.properties</small>
+</div>
+<div class="sidebar">
+<a href="iz/properties.html#hide-toc" class="hide" id="hide-toc">&#171;</a>
+<a href="iz/properties.html#show-toc" class="show" id="show-toc">&#187;</a>
+<div id="toc-id" class="toc">
+<ul><li><span class="package" onclick="show_hide('iz');"><a href="iz.html">iz</a></span>
+<ul id="iz" style='display:block'>
+<li>iz.<a href="iz/classes.html">classes</a></li>
+<li>iz.<a href="iz/containers.html">containers</a></li>
+<li>iz.<a href="iz/enumset.html">enumset</a></li>
+<li>iz.<a href="iz/logicver.html">logicver</a></li>
+<li>iz.<a href="iz/memory.html">memory</a></li>
+<li>iz.<a href="iz/observer.html">observer</a></li>
+<li><span class=" selected">iz.<a href="iz/properties.html">properties</a></span>
+</li>
+<li>iz.<a href="iz/referencable.html">referencable</a></li>
+<li>iz.<a href="iz/serializer.html">serializer</a></li>
+<li>iz.<a href="iz/streams.html">streams</a></li>
+<li>iz.<a href="iz/strings.html">strings</a></li>
+<li>iz.<a href="iz/sugar.html">sugar</a></li>
+<li>iz.<a href="iz/types.html">types</a></li>
+</ul>
+</li>
+
+</ul>
+</div></div>
+<div class="content">
+<div class="aggregate-symbol"><a class="anchor" id="GetSet"></a><div class="symbol"><div class="description"><pre><code>alias GetSet = <a href="iz/properties/SetGet.html">SetGet</a>
+</code></pre>
+<div class="section"><h2></h2>
+<p>designed to annotate a detectable "direct" field.
+</p>
+
+
+</div>
+<div class="section"><h2></h2>
+
+
+</div>
+</div></div><a class="anchor" id="genPropFromField"></a><div class="symbol"><div class="description"><pre><code>public deprecated("fields can be annotated with @GetSet instead")
+ string <a href="iz/properties.html#genPropFromField">genPropFromField</a>(T, string propName, string propField)()
+</code></pre>
+<div class="section"><h2></h2>
+<p>When mixed in an agregate this generates a property. 
+This property is detectable by a PropertyPublisher.
+</p>
+
+
+</div>
+<div class="section"><h2></h2>
+
+
+</div>
+<div class="section"><h2>Parameters</h2>
+<table class="params">
+<tr class="param"><td class="paramName">T</td><td class="paramDoc"><p>The type of the property.
+</p>
+</td></tr>
+<tr class="param"><td class="paramName">propName</td><td class="paramDoc"><p>The name of the property.
+</p>
+</td></tr>
+<tr class="param"><td class="paramName">propField</td><td class="paramDoc"><p>The identifier that matches the target field.
+</p>
+</td></tr>
+</table>
+</div>
+<div class="section"><h2>Returns</h2>
+<p>A sring to mixin.
+</p>
+
+
+</div>
+</div></div><a class="anchor" id="isPropertyPublisher"></a><div class="symbol"><div class="description"><pre><code>public <a href="http://dlang.org/type.html#basic-data-types">bool</a> <a href="iz/properties.html#isPropertyPublisher">isPropertyPublisher</a>(T)()
+</code></pre>
+<div class="section"><h2></h2>
+<p>Returns true if the argument is a property publisher.
+</p>
+
+
+</div>
+<div class="section"><h2></h2>
+
+
+</div>
+</div></div><a class="anchor" id="isPropertyPublisher"></a><div class="symbol"><div class="description"><pre><code>public <a href="http://dlang.org/type.html#basic-data-types">bool</a> <a href="iz/properties.html#isPropertyPublisher">isPropertyPublisher</a>(Object o)
+</code></pre>
+<div class="section"><h2></h2>
+<p>Returns true if the argument is a property publisher.
+</p>
+
+
+</div>
+<div class="section"><h2></h2>
+
+
+</div>
+</div></div><a class="anchor" id="boolProp"></a><div class="symbol"><div class="description"><pre><code>public <a href="iz/properties/PropDescriptor.html">PropDescriptor</a>!bool* boolProp
+</code></pre>
+<div class="section"><h2></h2>
+<p>Helper union that avoid to cast a generic PropDescriptor.
+</p>
+
+
+</div>
+<div class="section"><h2></h2>
+<p>iz.properties often declares a "generic" PropDescriptor as a PropDescriptor!int
+but such a descriptor as to be casted later according to its rtti value.
+</p>
+
+
+</div>
+</div></div><a class="anchor" id="targetObjectOwnedBy"></a><div class="symbol"><div class="description"><pre><code>public <a href="http://dlang.org/type.html#basic-data-types">bool</a> <a href="iz/properties.html#targetObjectOwnedBy">targetObjectOwnedBy</a>(T)(
+    <a href="iz/properties/PropDescriptor.html">PropDescriptor</a>!Object* descriptor, 
+    T t) 
+if(<a href="iz/properties.html#isPropertyPublisher">isPropertyPublisher</a>!T)
+</code></pre>
+<div class="section"><h2></h2>
+<p>Returns true if the target of a PropDescriptor!Object is owned by another
+object.
+</p>
+
+
+</div>
+<div class="section"><h2></h2>
+<p>The serializer and the binders use this to determine if a sub object has
+to be fully copied / serialized or rather the reference (without members).
+</p>
+
+
+</div>
+<div class="section"><h2>Parameters</h2>
+<table class="params">
+<tr class="param"><td class="paramName">descriptor</td><td class="paramDoc"><p>A pointer to the target accessor.
+</p>
+</td></tr>
+<tr class="param"><td class="paramName">t</td><td class="paramDoc"><p>The potential owner.
+</p>
+</td></tr>
+</table>
+</div>
+</div></div><a class="anchor" id="setTargetObjectOwner"></a><div class="symbol"><div class="description"><pre><code>public <a href="http://dlang.org/type.html#basic-data-types">void</a> <a href="iz/properties.html#setTargetObjectOwner">setTargetObjectOwner</a>(T)(
+    <a href="iz/properties/PropDescriptor.html">PropDescriptor</a>!Object* descriptor, 
+    T t) 
+if(<a href="iz/properties.html#isPropertyPublisher">isPropertyPublisher</a>!T)
+</code></pre>
+<div class="section"><h2></h2>
+<p>Constrains the target of a PropDescriptor!Object to be owned
+by a particular object.
+</p>
+
+
+</div>
+<div class="section"><h2></h2>
+
+
+</div>
+<div class="section"><h2>Parameters</h2>
+<table class="params">
+<tr class="param"><td class="paramName">descriptor</td><td class="paramDoc"><p>A pointer to the target accessor.
+</p>
+</td></tr>
+<tr class="param"><td class="paramName">t</td><td class="paramDoc"><p>The future owner.
+</p>
+</td></tr>
+</table>
+</div>
+</div></div><a class="anchor" id="areBindable"></a><div class="symbol"><div class="description"><pre><code>public <a href="http://dlang.org/type.html#basic-data-types">bool</a> <a href="iz/properties.html#areBindable">areBindable</a>(S, T)(
+    <a href="iz/properties/PropDescriptor.html">PropDescriptor</a>!S* source, 
+    <a href="iz/properties/PropDescriptor.html">PropDescriptor</a>!T* target)
+</code></pre>
+<div class="section "><h2>Contracts</h2><pre><code>in
+{
+    assert (source);
+    assert (target);
+    assert (target != source);
+}
+</code></pre>
+
+</div>
+<div class="section"><h2></h2>
+<p>Returns true if two property descriptors are bindable.
+To be bindable, the property name must be identical but also their types.
+Type checking is based on RTTI and neither source nor target
+needs to be passed with the correct type.
+</p>
+
+
+</div>
+<div class="section"><h2></h2>
+
+
+</div>
+</div></div><a class="anchor" id="bindPublications"></a><div class="symbol"><div class="description"><pre><code>public <a href="http://dlang.org/type.html#basic-data-types">void</a> <a href="iz/properties.html#bindPublications">bindPublications</a>(<a href="http://dlang.org/type.html#basic-data-types">bool</a> recursive = false, Source, Target)(
+    Source source, 
+    Target target) 
+if(<a href="iz/properties.html#isPropertyPublisher">isPropertyPublisher</a>!Source && <a href="iz/properties.html#isPropertyPublisher">isPropertyPublisher</a>!Target)
+</code></pre>
+<div class="section"><h2></h2>
+<p>Binds two property publishers.
+</p>
+
+
+</div>
+<div class="section"><h2></h2>
+<p>After the call, each property published in target that has a matching property
+in source has the same value as the source.
+</p>
+
+
+</div>
+<div class="section"><h2>Parameters</h2>
+<table class="params">
+<tr class="param"><td class="paramName">recursive</td><td class="paramDoc"><p>Indicates if the process is recursive.
+</p>
+</td></tr>
+<tr class="param"><td class="paramName">source</td><td class="paramDoc"><p>The aggregate from where the properties values are copied. Either
+         a class or a struct that's mixed with PropertyPublisherImpl
+         or a PropertyPublisher.
+</p>
+</td></tr>
+<tr class="param"><td class="paramName">target</td><td class="paramDoc"><p>The aggregate where the propertues values are copied.
+         As for the Target type, same requirment as the source.
+</p>
+</td></tr>
+</table>
+</div>
+</div></div><a class="anchor" id="bindPublications"></a><div class="symbol"><div class="description"><pre><code>public <a href="http://dlang.org/type.html#basic-data-types">void</a> <a href="iz/properties.html#bindPublications">bindPublications</a>(<a href="http://dlang.org/type.html#basic-data-types">bool</a> recursive = false)(
+    Object from, 
+    Object to)
+</code></pre>
+<div class="section"><h2></h2>
+<p>Binds two property publishers.
+</p>
+
+
+</div>
+<div class="section"><h2></h2>
+<p>After the call, each property published in target that has a matching property
+in source has the same value as the source.
+</p>
+
+
+</div>
+<div class="section"><h2>Parameters</h2>
+<table class="params">
+<tr class="param"><td class="paramName">recursive</td><td class="paramDoc"><p>Indicates if the process is recursive.
+</p>
+</td></tr>
+<tr class="param"><td class="paramName">source</td><td class="paramDoc"><p>The aggregate from where the properties values are copied. Either
+         a class or a struct that's mixed with PropertyPublisherImpl
+         or a PropertyPublisher.
+</p>
+</td></tr>
+<tr class="param"><td class="paramName">target</td><td class="paramDoc"><p>The aggregate where the propertues values are copied.
+         As for the Target type, same requirment as the source.
+</p>
+</td></tr>
+</table>
+</div>
+</div></div><div class="description"><div class="section"><h2></h2>
+<p>The iz property descriptor system.
+</p>
+
+
+</div>
+<div class="section"><h2></h2>
+
+
+</div>
+</div><div class="section members"><h2>Enums</h2><table><tr><td><a href="iz/properties/PropAccess.html">PropAccess</a></td><td></td><td></td></tr><tr><td><a href="iz/properties/Set.html">Set</a></td><td></td><td></td></tr><tr><td><a href="iz/properties/Get.html">Get</a></td><td></td><td></td></tr><tr><td><a href="iz/properties/SetGet.html">SetGet</a></td><td></td><td></td></tr><tr><td><a href="iz/properties/HideSet.html">HideSet</a></td><td></td><td></td></tr><tr><td><a href="iz/properties/HideGet.html">HideGet</a></td><td></td><td></td></tr></table><h2>Aliases</h2><table><tr><td><a href="iz/properties.html#GetSet">GetSet</a></td><td><pre><code><a href="iz/properties/SetGet.html">SetGet</a>
+</code></pre>
+</td><td></td></tr></table><h2>Variables</h2><table><tr><td><a href="iz/properties.html#boolProp">boolProp</a></td><td><pre><code><a href="iz/properties/PropDescriptor.html">PropDescriptor</a>!bool*
+</code></pre>
+</td><td></td></tr></table><h2>Functions</h2><table><tr><td><span class="extrainfo"><span class="attribs"><span class="attr-deprecatedfieldscanbeannotatedwithGetSetinstead">deprecated("fields can be annotated with @GetSet instead")
+</span></span></span><a href="iz/properties.html#genPropFromField">genPropFromField</a><span class="extrainfo"></span></td><td></td><td>Returns: <p>A sring to mixin.
+</p>
+</td></tr><tr><td><a href="iz/properties.html#isPropertyPublisher">isPropertyPublisher</a><span class="extrainfo"></span></td><td></td><td></td></tr><tr><td><a href="iz/properties.html#isPropertyPublisher">isPropertyPublisher</a><span class="extrainfo"></span></td><td></td><td></td></tr><tr><td><a href="iz/properties.html#targetObjectOwnedBy">targetObjectOwnedBy</a><span class="extrainfo"></span></td><td></td><td></td></tr><tr><td><a href="iz/properties.html#setTargetObjectOwner">setTargetObjectOwner</a><span class="extrainfo"></span></td><td></td><td></td></tr><tr><td><a href="iz/properties.html#areBindable">areBindable</a><span class="extrainfo"></span></td><td></td><td></td></tr><tr><td><a href="iz/properties.html#bindPublications">bindPublications</a><span class="extrainfo"></span></td><td></td><td></td></tr><tr><td><a href="iz/properties.html#bindPublications">bindPublications</a><span class="extrainfo"></span></td><td></td><td></td></tr></table><h2>Structs</h2><table><tr><td><a href="iz/properties/PropDescriptor.html">PropDescriptor</a></td><td></td><td></td></tr><tr><td><a href="iz/properties/AnyPropDescriptor.html">AnyPropDescriptor</a></td><td></td><td></td></tr></table><h2>Interfaces</h2><table><tr><td><a href="iz/properties/PropertyPublisher.html">PropertyPublisher</a></td><td></td><td></td></tr></table><h2>Classes</h2><table><tr><td><a href="iz/properties/PropertyBinder.html">PropertyBinder</a></td><td></td><td></td></tr></table><h2>Templates</h2><table><tr><td><a href="iz/properties/PropertyPublisherImpl.html">PropertyPublisherImpl</a></td><td></td><td></td></tr></table>
+</div>
+</div><script>hljs.initHighlightingOnLoad();</script>
+
+</div>
+<footer>
+Generated with <a href="https://github.com/kiith-sa/harbored-mod">harbored-mod</a>
+</footer>
+</div>
+</body>
+</html>
