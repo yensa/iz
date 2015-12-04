@@ -220,7 +220,6 @@ unittest
     static assert( isSerializable!double );
     static assert( isSerializable!(ushort[]) );
     static assert( isSerializable!Object );
-    //static assert( !(isSerializable!(Object[])) );
     static assert( !isSerializable!S );
     static assert( !isSerializable!VS );
     static assert( isSerializable!MemoryStream);
@@ -250,7 +249,7 @@ private string getSerializableTypeString(T)()
 }
 // -----------------------------------------------------------------------------
 
-// Tree representation --------------------------------------------------------+
+// Intermediate Serialization Tree --------------------------------------------+
 
 /// Represents a serializable property without genericity.
 struct SerNodeInfo
@@ -374,7 +373,7 @@ public:
 }
 //----
 
-// Text to ubyte[] converters -------------------------------------------------+
+// Value as text to ubyte[] converters ----------------------------------------+
 
 private __gshared static char[] invalidText = "invalid".dup;
 
@@ -601,10 +600,10 @@ enum SerializationFormat : ubyte
     json
 }
 
-/// Propotype of a function which writes the representation of an IstNode in an izStream.
+/// Propotype of a function that writes an IstNode representation in a Stream.
 alias SerializationWriter = void function(IstNode istNode, Stream stream);
 
-/// Propotype of a function which reads the representation of an IstNode from an izStream.
+/// Propotype of a function that reads an IstNode representation from a Stream.
 alias SerializationReader = void function(Stream stream, IstNode istNode);
 
 // JSON format ----------------------------------------------------------------+
@@ -930,11 +929,11 @@ alias WantDescriptorEvent = void delegate(IstNode node, ref Ptr descriptor, out 
  * Prototype of the event called when a serializer failed to get an object to deserialize.
  * Params:
  *      node = The information the callee uses to set the parameter serializable.
- *      serializable = The Object the callee has to return.
+ *      obj = The Object the callee has to return.
  *      fromReference = When set to true, the serializer tries to find the Object
  *      using the ReferenceMan.
  */
-alias WantObjectEvent = void delegate(IstNode node, ref Object serializable, out bool fromRefererence);
+alias WantObjectEvent = void delegate(IstNode node, ref Object obj, out bool fromRefererence);
 
 
 //TODO-cfeature: Serializer error handling (using isDamaged + format readers errors).
@@ -1078,7 +1077,7 @@ private:
         // so write its members
         foreach(immutable i; 0 .. publisher.publicationCount)
         {
-            GenericDescriptor* descr = cast(GenericDescriptor*) publisher.publicationFromIndex(i);
+            auto descr = cast(GenericDescriptor*) publisher.publicationFromIndex(i);
             const RuntimeTypeInfo rtti = publisher.publicationType(i);
             //
             void addValueProp(T)()
@@ -1545,7 +1544,7 @@ void publisherToFile(Object pub, in char[] filename,
 {
     MemoryStream str = construct!MemoryStream;
     Serializer ser = construct!Serializer;
-    scope(exit) destruct(str, ser);
+    scope(exit) destruct(str, ser, format);
     //
     ser.publisherToStream(pub, str);
     str.saveToFile(filename);
@@ -1555,7 +1554,7 @@ void publisherToFile(Object pub, in char[] filename,
  * Deserializes a file to a PropertyPublisher.
  *
  * This helper function works in pair with publisherToFile().
- * It is typically used to load configuration files, session backups, etc.
+ * It is typically used to save configuration files, session backups, etc.
  *
  * Params:
  *      filename = The source file.
@@ -1613,7 +1612,7 @@ version(unittest)
             static if (!isArray!T) 
                 assert(*cast(T*)(text2value(asText, &info)).ptr == v, T.stringof);
             static if (isArray!T) 
-                assert(cast(ubyte[])text2value(asText, &info)==cast(ubyte[])v, T.stringof);
+                assert(cast(ubyte[])text2value(asText, &info)==cast(ubyte[])v,T.stringof);
         }
 
         struct ImpConv{uint _field; alias _field this;}
@@ -2030,8 +2029,8 @@ version(unittest)
         @SetGet void delegate(uint) _delegate;
         MemoryStream _stream;
 
-        @SetGet RefPublisher _refPublisher; // RAII: initially null, so it's a ref.
-        @SetGet SubPublisher _subPublisher; // RAII: initially assigned so 'this' is the owner.
+        @SetGet RefPublisher _refPublisher; //initially null, so it's a ref.
+        @SetGet SubPublisher _subPublisher; //initially assigned so 'this' is the owner.
 
         this()
         {
@@ -2062,8 +2061,10 @@ version(unittest)
             auto strDesc = publicationFromName("stream");
             assert(strDesc);
 
-            ReferenceMan.storeReference(cast(Object*)&_refPublisherSource, "root.refPublisher");
-            ReferenceMan.storeReference(cast(void*)&_delegateSource, "mainpub.at.delegatetarget");
+            ReferenceMan.storeReference(cast(Object*)&_refPublisherSource,
+                "root.refPublisher");
+            ReferenceMan.storeReference(cast(void*)&_delegateSource,
+                "mainpub.at.delegatetarget");
             dDescr.referenceID = "mainpub.at.delegatetarget";
         }
         ~this()
@@ -2186,6 +2187,5 @@ version(unittest)
         assert(obj.target == obj.source);
     }
     //----
-
 }
 
