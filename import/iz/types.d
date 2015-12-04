@@ -23,7 +23,7 @@ alias BasicTypes = AliasSeq!(
     float, double, real, 
     char, wchar, dchar
 );
-
+///
 static unittest
 {
     foreach(T; BasicTypes)
@@ -135,7 +135,7 @@ auto runtimeTypeInfo(T)(T t)
 {
     return runtimeTypeInfo!T;
 }
-
+///
 unittest
 {
     byte b;
@@ -152,8 +152,8 @@ unittest
 /**
  * Returns the dynamic class name of an Object or an interface.
  * Params:
- * assumeDemangled = must only be set to false if the class is declared in a unittest.
- * t = either an interface or a class instance.
+ *      assumeDemangled = Must only be set to false if the class is declared in a unittest.
+ *      t = Either an interface or a class instance.
  */
 string className(bool assumeDemangled = true, T)(T t)
 if (is(T == class) || is(T == interface))
@@ -189,11 +189,12 @@ version(unittest)
 
 /**
  * Indicates if the member of a struct or class is accessible for compile time
- * introspection. The template has to be mixed in the scope where the other
- * __traits() operations are performed.
- * The problem solved by this mixin is that a simple function template that uses
- * __traits(getProtection) does not faithfully represent the member accessibility
- * if the function is declared in another module.
+ * introspection.
+ *
+ * The template has to be mixed in the scope where the other __traits()
+ * operations are performed.
+ * A simple function template that uses __traits(getProtection) does not faithfully
+ * represent the member accessibility if the function is declared in another module.
  * Another problem is that __traits(getProtection) does not well represent the
  * accessibility of the private members (own members or friend classes /structs).
  */
