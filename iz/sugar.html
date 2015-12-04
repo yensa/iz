@@ -42,10 +42,10 @@
 </ul>
 </div></div>
 <div class="content">
-<div class="aggregate-symbol"><a class="anchor" id="reset"></a><div class="symbol"><div class="description"><pre><code>public @trusted <a href="http://dlang.org/type.html#basic-data-types">void</a> <a href="iz/sugar.html#reset">reset</a>(T)(ref T t)
+<div class="aggregate-symbol"><a class="anchor" id="reset"></a><div class="symbol"><div class="description"><pre><code>public <a href="http://dlang.org/type.html#basic-data-types">void</a> <a href="iz/sugar.html#reset">reset</a>(T)(ref T t) @safe @nogc nothrow
 </code></pre>
 <div class="section"><h2></h2>
-<p>void version of the init() type function.
+<p>Void version of the init() type function.
 </p>
 
 
@@ -54,11 +54,40 @@
 
 
 </div>
-</div></div><a class="anchor" id="not"></a><div class="symbol"><div class="description"><pre><code>public <a href="http://dlang.org/type.html#basic-data-types">bool</a> <a href="iz/sugar.html#not">not</a>(T)(T t) @safe @nogc nothrow pure 
-if(asB!T)
+<div class="section"><h2>Parameters</h2>
+<table class="params">
+<tr class="param"><td class="paramName">T</td><td class="paramDoc"><p>the argument type, likely to be infered.
+</p>
+</td></tr>
+<tr class="param"><td class="paramName">t</td><td class="paramDoc"><p>a reference to a T.
+</p>
+</td></tr>
+</table>
+</div>
+<div class="section "><h2>Example</h2>
+<div class="section"><h2></h2>
+
+
+</div>
+<div class="section"><h2></h2>
+
+
+</div>
+<pre><code>uint a = 159;
+string b = "bla";
+a.<a href="iz/sugar.html#reset">reset</a>;
+assert(a == 0);
+b.<a href="iz/sugar.html#reset">reset</a>;
+assert(b == "");
+
+</code></pre>
+
+</div>
+</div></div><a class="anchor" id="not"></a><div class="symbol"><div class="description"><pre><code>public <a href="http://dlang.org/type.html#basic-data-types">bool</a> <a href="iz/sugar.html#not">not</a>(T)(auto ref T t) @safe @nogc nothrow pure 
+if(implicitConvToBool!T)
 </code></pre>
 <div class="section"><h2></h2>
-<p>Bitwise not.
+<p>Boolean not.
 </p>
 
 
@@ -67,13 +96,39 @@ if(asB!T)
 
 
 </div>
-</div></div><a class="anchor" id="band"></a><div class="symbol"><div class="description"><pre><code>public <a href="http://dlang.org/type.html#basic-data-types">bool</a> <a href="iz/sugar.html#band">band</a>(T1, T2)(
-    T1 t1, 
-    T2 t2) @safe @nogc nothrow pure 
-if(asB!T1 && asB!T2)
+<div class="section "><h2>Example</h2>
+<div class="section"><h2></h2>
+
+
+</div>
+<div class="section"><h2></h2>
+
+
+</div>
+<pre><code>void* ptr = null;
+assert(<a href="iz/sugar.html#not">not</a>(true) == false);
+assert(<a href="iz/sugar.html#not">not</a>(false) == true);
+assert(<a href="iz/sugar.html#not">not</a>(1) == 0);
+assert(<a href="iz/sugar.html#not">not</a>(0) == 1);
+assert(<a href="iz/sugar.html#not">not</a>(123456) == 0);
+assert(<a href="iz/sugar.html#not">not</a>(ptr));
+assert(1.<a href="iz/sugar.html#not">not</a> == false);
+assert(((1+2)/3)<a href="iz/sugar.html#not">.not</a> == false);
+assert(0.<a href="iz/sugar.html#not">not</a> );
+assert(!1.<a href="iz/sugar.html#not">not</a> );
+assert(0.<a href="iz/sugar.html#not">not</a>.<a href="iz/sugar.html#not">not</a>.<a href="iz/sugar.html#not">not</a> );
+assert(!0.<a href="iz/sugar.html#not">not</a>.<a href="iz/sugar.html#not">not</a>.<a href="iz/sugar.html#not">not</a>.<a href="iz/sugar.html#not">not</a> );
+
+</code></pre>
+
+</div>
+</div></div><a class="anchor" id="and"></a><div class="symbol"><div class="description"><pre><code>public <a href="http://dlang.org/type.html#basic-data-types">bool</a> <a href="iz/sugar.html#and">and</a>(T1, T2)(
+    auto ref T1 t1, 
+    auto ref T2 t2) @safe @nogc nothrow pure 
+if(implicitConvToBool!T1 && implicitConvToBool!T2)
 </code></pre>
 <div class="section"><h2></h2>
-<p>boolean and.
+<p>Boolean and.
 </p>
 
 
@@ -82,38 +137,193 @@ if(asB!T1 && asB!T2)
 
 
 </div>
-</div></div><a class="anchor" id="bor"></a><div class="symbol"><div class="description"><pre><code>public <a href="http://dlang.org/type.html#basic-data-types">bool</a> <a href="iz/sugar.html#bor">bor</a>(T1, T2)(
-    T1 t1, 
-    T2 t2) @safe @nogc nothrow pure 
-if(asB!T1 && asB!T2)
+<div class="section "><h2>Example</h2>
+<div class="section"><h2></h2>
+
+
+</div>
+<div class="section"><h2></h2>
+
+
+</div>
+<pre><code>assert(true.<a href="iz/sugar.html#and">and</a>(true));
+assert(!false.<a href="iz/sugar.html#and">and</a>(false));
+assert((1)<a href="iz/sugar.html#and">.and</a>(2)<a href="iz/sugar.html#and">.and</a>(3)<a href="iz/sugar.html#and">.and</a>(4));
+assert(!(0)<a href="iz/sugar.html#and">.and</a>(1)<a href="iz/sugar.html#and">.and</a>(2)<a href="iz/sugar.html#and">.and</a>(3));
+
+</code></pre>
+
+</div>
+</div></div><a class="anchor" id="and"></a><div class="symbol"><div class="description"><pre><code>public <a href="http://dlang.org/type.html#basic-data-types">bool</a> <a href="iz/sugar.html#and">and</a>(T...)(auto ref T t) @safe @nogc nothrow pure
 </code></pre>
 <div class="section"><h2></h2>
-<p>boolean or.
+<p>Batch <code class="d_inlinecode">and()</code> a list of variable.
+<code class="d_inlinecode">bool</code>.
 </p>
 
 
 </div>
 <div class="section"><h2></h2>
 
+
+</div>
+<div class="section"><h2>Parameters</h2>
+<table class="params">
+<tr class="param"><td class="paramName">t</td><td class="paramDoc"><p>the list of argument, each must be implicitly convertible <code class="d_inlinecode">bool</code>.
+</p>
+</td></tr>
+</table>
+</div>
+<div class="section"><h2>Returns</h2>
+<p>true if all variables are true.
+</p>
+
+
+</div>
+<div class="section "><h2>Example</h2>
+<div class="section"><h2></h2>
+
+
+</div>
+<div class="section"><h2></h2>
+
+
+</div>
+<pre><code>assert(!<a href="iz/sugar.html#and">and</a>(true,3,false));
+assert(<a href="iz/sugar.html#and">and</a>(58,true,true));
+
+</code></pre>
+
+</div>
+</div></div><a class="anchor" id="or"></a><div class="symbol"><div class="description"><pre><code>public <a href="http://dlang.org/type.html#basic-data-types">bool</a> <a href="iz/sugar.html#or">or</a>(T1, T2)(
+    auto ref T1 t1, 
+    auto ref T2 t2) @safe @nogc nothrow pure 
+if(implicitConvToBool!T1 && implicitConvToBool!T2)
+</code></pre>
+<div class="section"><h2></h2>
+<p>Boolean or.
+</p>
+
+
+</div>
+<div class="section"><h2></h2>
+
+
+</div>
+<div class="section "><h2>Example</h2>
+<div class="section"><h2></h2>
+
+
+</div>
+<div class="section"><h2></h2>
+
+
+</div>
+<pre><code>void* ptr = null;
+assert(true.<a href="iz/sugar.html#or">or</a>(false));
+assert(!false.<a href="iz/sugar.html#or">or</a>(false));
+assert((1)<a href="iz/sugar.html#or">.or</a>(2)<a href="iz/sugar.html#or">.or</a>(3)<a href="iz/sugar.html#or">.or</a>(4));
+assert((0)<a href="iz/sugar.html#or">.or</a>(1)<a href="iz/sugar.html#or">.or</a>(2)<a href="iz/sugar.html#or">.or</a>(3));
+assert(!(0)<a href="iz/sugar.html#or">.or</a>(false)<a href="iz/sugar.html#or">.or</a>(ptr));
+
+</code></pre>
+
+</div>
+</div></div><a class="anchor" id="or"></a><div class="symbol"><div class="description"><pre><code>public <a href="http://dlang.org/type.html#basic-data-types">bool</a> <a href="iz/sugar.html#or">or</a>(T...)(auto ref T t) @safe @nogc nothrow pure
+</code></pre>
+<div class="section"><h2></h2>
+<p>Batch <code class="d_inlinecode">or()</code> a list of variable.
+<code class="d_inlinecode">bool</code>.
+</p>
+
+
+</div>
+<div class="section"><h2></h2>
+
+
+</div>
+<div class="section"><h2>Parameters</h2>
+<table class="params">
+<tr class="param"><td class="paramName">t</td><td class="paramDoc"><p>the list of argument, each must be implicitly convertible <code class="d_inlinecode">bool</code>.
+</p>
+</td></tr>
+</table>
+</div>
+<div class="section"><h2>Returns</h2>
+<p>true if one argument is true.
+</p>
+
+
+</div>
+<div class="section "><h2>Example</h2>
+<div class="section"><h2></h2>
+
+
+</div>
+<div class="section"><h2></h2>
+
+
+</div>
+<pre><code>assert(!<a href="iz/sugar.html#or">or</a>(false,false,false));
+assert(<a href="iz/sugar.html#or">or</a>(123,false,true));
+
+</code></pre>
 
 </div>
 </div></div><a class="anchor" id="bruteCast"></a><div class="symbol"><div class="description"><pre><code>public auto <a href="iz/sugar.html#bruteCast">bruteCast</a>(OT, IT)(auto ref IT it) @nogc nothrow pure
 </code></pre>
 <div class="section"><h2></h2>
-<p>Allows forbidden casts
+<p>Allows forbidden casts.
 </p>
 
 
 </div>
 <div class="section"><h2></h2>
 
+
+</div>
+<div class="section"><h2>Parameters</h2>
+<table class="params">
+<tr class="param"><td class="paramName">OT</td><td class="paramDoc"><p>The output type.
+</p>
+</td></tr>
+<tr class="param"><td class="paramName">IT</td><td class="paramDoc"><p>The input type, optional, likely to be infered.
+</p>
+</td></tr>
+<tr class="param"><td class="paramName">it</td><td class="paramDoc"><p>A reference to an IT.
+</p>
+</td></tr>
+</table>
+</div>
+<div class="section"><h2>Returns</h2>
+<p>the same as <code class="d_inlinecode">cast(OT) it</code>, except that it never fails to compile.
+</p>
+
+
+</div>
+<div class="section "><h2>Example</h2>
+<div class="section"><h2></h2>
+
+
+</div>
+<div class="section"><h2></h2>
+
+
+</div>
+<pre><code>uint[] array = [0u,1u,2u];
+size_t len;
+//len = cast(uint) array; // <a href="iz/sugar.html#not">not</a> allowed.
+len = <a href="iz/sugar.html#bruteCast">bruteCast</a>!uint(array);
+assert(len == array.length);
+
+</code></pre>
 
 </div>
 </div></div><a class="anchor" id="mask"></a><div class="symbol"><div class="description"><pre><code>public auto <a href="iz/sugar.html#mask">mask</a>(size_t index, <a href="iz/sugar/MaskKind.html">MaskKind</a> kind = <a href="iz/sugar/MaskKind.html">MaskKind</a>.Byte, T)(const T value) nothrow 
 if((kind == <a href="iz/sugar/MaskKind.html">MaskKind</a>.Byte && index <= T.sizeof) || (kind == <a href="iz/sugar/MaskKind.html">MaskKind</a>.Nibble && index <= T.sizeof * 2) || (kind == <a href="iz/sugar/MaskKind.html">MaskKind</a>.Bit && index <= T.sizeof * 8))
 </code></pre>
 <div class="section"><h2></h2>
-<p>Mask, at compile-time, a byte, a nibble or a bit in the argument.
+<p>Masks, at compile-time, a byte, a nibble or a bit in the argument.
 </p>
 
 
@@ -160,7 +370,7 @@ static assert(<a href="iz/sugar.html#mask">mask</a>!(1,<a href="iz/sugar/MaskKin
 </div></div><a class="anchor" id="maskNibble"></a><div class="symbol"><div class="description"><pre><code>public auto <a href="iz/sugar.html#maskNibble">maskNibble</a>(size_t index, T)(const T value) nothrow
 </code></pre>
 <div class="section"><h2></h2>
-<p>Compile-time mask() partially specialized for nibble-masking.
+<p>Compile-time <code class="d_inlinecode">mask()</code> partially specialized for nibble-masking.
 </p>
 
 
@@ -186,7 +396,7 @@ static assert(<a href="iz/sugar.html#mask">mask</a>!(1,<a href="iz/sugar/MaskKin
 </div></div><a class="anchor" id="maskBit"></a><div class="symbol"><div class="description"><pre><code>public auto <a href="iz/sugar.html#maskBit">maskBit</a>(size_t index, T)(const T value) nothrow
 </code></pre>
 <div class="section"><h2></h2>
-<p>Compile-time mask() partially specialized for bit-masking.
+<p>Compile-time <code class="d_inlinecode">mask()</code> partially specialized for bit-masking.
 </p>
 
 
@@ -214,7 +424,7 @@ static assert(<a href="iz/sugar.html#mask">mask</a>!(1,<a href="iz/sugar/MaskKin
     size_t index) nothrow
 </code></pre>
 <div class="section"><h2></h2>
-<p>Mask, at run-time, a byte, a nibble or a bit in the argument.
+<p>Masks, at run-time, a byte, a nibble or a bit in the argument.
 </p>
 
 
@@ -263,7 +473,7 @@ assert(<a href="iz/sugar.html#mask">mask</a>!(<a href="iz/sugar/MaskKind.html#Ni
     size_t index) nothrow
 </code></pre>
 <div class="section"><h2></h2>
-<p>Run-time mask() partially specialized for nibble-masking.
+<p>Run-time <code class="d_inlinecode">mask()</code> partially specialized for nibble-masking.
 </p>
 
 
@@ -291,7 +501,7 @@ assert(<a href="iz/sugar.html#mask">mask</a>!(<a href="iz/sugar/MaskKind.html#Ni
     size_t index) nothrow
 </code></pre>
 <div class="section"><h2></h2>
-<p>Run-time mask() partially specialized for bit-masking.
+<p>Run-time <code class="d_inlinecode">mask()</code> partially specialized for bit-masking.
 </p>
 
 
@@ -390,7 +600,7 @@ assert(!test);
 
 </div>
 </div></div><div class="description"><div class="section"><h2></h2>
-<p>Several trivials functions and strucutures
+<p>Several trivial functions and structures
 </p>
 
 
@@ -399,7 +609,13 @@ assert(!test);
 
 
 </div>
-</div><div class="section members"><h2>Enums</h2><table><tr><td><a href="iz/sugar/MaskKind.html">MaskKind</a></td><td></td><td></td></tr></table><h2>Functions</h2><table><tr><td><span class="extrainfo"><span class="attribs"><span class="attr-trusted">@trusted</span></span></span><a href="iz/sugar.html#reset">reset</a><span class="extrainfo"></span></td><td></td><td></td></tr><tr><td><a href="iz/sugar.html#not">not</a><span class="extrainfo"><span class="method-attribs"><span class="attr-safe">@safe</span>, <span class="attr-nogc">@nogc</span>, <span class="attr-nothrow">nothrow</span>, <span class="attr-pure">pure</span></span></span></td><td></td><td></td></tr><tr><td><a href="iz/sugar.html#band">band</a><span class="extrainfo"><span class="method-attribs"><span class="attr-safe">@safe</span>, <span class="attr-nogc">@nogc</span>, <span class="attr-nothrow">nothrow</span>, <span class="attr-pure">pure</span></span></span></td><td></td><td></td></tr><tr><td><a href="iz/sugar.html#bor">bor</a><span class="extrainfo"><span class="method-attribs"><span class="attr-safe">@safe</span>, <span class="attr-nogc">@nogc</span>, <span class="attr-nothrow">nothrow</span>, <span class="attr-pure">pure</span></span></span></td><td></td><td></td></tr><tr><td><span class="extrainfo"><span class="attribs"><span class="attr-auto">auto</span></span></span><a href="iz/sugar.html#bruteCast">bruteCast</a><span class="extrainfo"><span class="method-attribs"><span class="attr-nogc">@nogc</span>, <span class="attr-nothrow">nothrow</span>, <span class="attr-pure">pure</span></span></span></td><td></td><td></td></tr><tr><td><span class="extrainfo"><span class="attribs"><span class="attr-auto">auto</span></span></span><a href="iz/sugar.html#mask">mask</a><span class="extrainfo"><span class="method-attribs"><span class="attr-nothrow">nothrow</span></span></span></td><td></td><td>Returns: <p>The input argument with the element masked.
+</div><div class="section members"><h2>Enums</h2><table><tr><td><a href="iz/sugar/MaskKind.html">MaskKind</a></td><td></td><td></td></tr></table><h2>Functions</h2><table><tr><td><a href="iz/sugar.html#reset">reset</a><span class="extrainfo"><span class="method-attribs"><span class="attr-safe">@safe</span>, <span class="attr-nogc">@nogc</span>, <span class="attr-nothrow">nothrow</span></span></span></td><td></td><td></td></tr><tr><td><a href="iz/sugar.html#not">not</a><span class="extrainfo"><span class="method-attribs"><span class="attr-safe">@safe</span>, <span class="attr-nogc">@nogc</span>, <span class="attr-nothrow">nothrow</span>, <span class="attr-pure">pure</span></span></span></td><td></td><td></td></tr><tr><td><a href="iz/sugar.html#and">and</a><span class="extrainfo"><span class="method-attribs"><span class="attr-safe">@safe</span>, <span class="attr-nogc">@nogc</span>, <span class="attr-nothrow">nothrow</span>, <span class="attr-pure">pure</span></span></span></td><td></td><td></td></tr><tr><td><a href="iz/sugar.html#and">and</a><span class="extrainfo"><span class="method-attribs"><span class="attr-safe">@safe</span>, <span class="attr-nogc">@nogc</span>, <span class="attr-nothrow">nothrow</span>, <span class="attr-pure">pure</span></span></span></td><td></td><td>Returns: <p>true if all variables are true.
+</p>
+</td></tr><tr><td><a href="iz/sugar.html#or">or</a><span class="extrainfo"><span class="method-attribs"><span class="attr-safe">@safe</span>, <span class="attr-nogc">@nogc</span>, <span class="attr-nothrow">nothrow</span>, <span class="attr-pure">pure</span></span></span></td><td></td><td></td></tr><tr><td><a href="iz/sugar.html#or">or</a><span class="extrainfo"><span class="method-attribs"><span class="attr-safe">@safe</span>, <span class="attr-nogc">@nogc</span>, <span class="attr-nothrow">nothrow</span>, <span class="attr-pure">pure</span></span></span></td><td></td><td>Returns: <p>true if one argument is true.
+</p>
+</td></tr><tr><td><span class="extrainfo"><span class="attribs"><span class="attr-auto">auto</span></span></span><a href="iz/sugar.html#bruteCast">bruteCast</a><span class="extrainfo"><span class="method-attribs"><span class="attr-nogc">@nogc</span>, <span class="attr-nothrow">nothrow</span>, <span class="attr-pure">pure</span></span></span></td><td></td><td>Returns: <p>the same as <code class="d_inlinecode">cast(OT) it</code>, except that it never fails to compile.
+</p>
+</td></tr><tr><td><span class="extrainfo"><span class="attribs"><span class="attr-auto">auto</span></span></span><a href="iz/sugar.html#mask">mask</a><span class="extrainfo"><span class="method-attribs"><span class="attr-nothrow">nothrow</span></span></span></td><td></td><td>Returns: <p>The input argument with the element masked.
 </p>
 </td></tr><tr><td><span class="extrainfo"><span class="attribs"><span class="attr-auto">auto</span></span></span><a href="iz/sugar.html#maskNibble">maskNibble</a><span class="extrainfo"><span class="method-attribs"><span class="attr-nothrow">nothrow</span></span></span></td><td></td><td></td></tr><tr><td><span class="extrainfo"><span class="attribs"><span class="attr-auto">auto</span></span></span><a href="iz/sugar.html#maskBit">maskBit</a><span class="extrainfo"><span class="method-attribs"><span class="attr-nothrow">nothrow</span></span></span></td><td></td><td></td></tr><tr><td><span class="extrainfo"><span class="attribs"><span class="attr-auto">auto</span></span></span><a href="iz/sugar.html#mask">mask</a><span class="extrainfo"><span class="method-attribs"><span class="attr-nothrow">nothrow</span></span></span></td><td></td><td>Returns: <p>The input argument with the element masked.
 </p>

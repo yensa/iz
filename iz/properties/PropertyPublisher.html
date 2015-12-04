@@ -111,8 +111,8 @@ class StuffPublisher: <a href="iz/properties/PropertyPublisher.html">PropertyPub
 }
 
 StuffPublisher stuffPublisher = <a href="iz/memory.html#construct">construct</a>!StuffPublisher;
-// 3 publications are available: name, age and opaque.
-// they will be handled automatically when binding or serializing.
+// 3 publications are available: name, age <a href="iz/sugar.html#and">and</a> opaque.
+// they will be handled automatically when binding <a href="iz/sugar.html#or">or</a> serializing.
 assert(stuffPublisher.<a href="iz/properties/PropertyPublisher.html#publicationCount">publicationCount</a> == 3);
 // One way to access the publications
 assert(stuffPublisher.publication!(char[])("name").get == "Fantomas");

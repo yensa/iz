@@ -57,13 +57,13 @@
 
 </div>
 <div class="section"><h2>PropertyPublisher</h2>
-<p>A Serializer can only serializes trees of classes that implements the
+<p>A Serializer serializes trees of classes that implements the
 PropertyPublisher interface. Their publications define what is saved or
 restored. Object descriptors define the structure. Basics types and array
 of basic types are handled. Special cases exist to manage Stream properties,
 delegates or objects that are stored in the ReferenceMan. It's even possible
-to handle more complex types by using custom PropertyPublisher, such as
-those defined in iz.classes.
+to handle more complex types by using or writing custom PropertyPublishers,
+such as those defined in iz.classes.
 </p>
 
 
@@ -117,9 +117,9 @@ class A: <a href="iz/properties/PropertyPublisher.html">PropertyPublisher</a>
     {
         sub1 = <a href="iz/memory.html#construct">construct</a>!B;
         sub2 = <a href="iz/memory.html#construct">construct</a>!B;
-        // sub1 and sub2 are fully serialized because they already exist
+        // sub1 <a href="iz/sugar.html#and">and</a> sub2 are fully serialized because they already exist
         // when the analyzers run, otherwise they would be considered as
-        // reference and their members would <a href="iz/sugar.html#not">not</a> be serialized.
+        // reference <a href="iz/sugar.html#and">and</a> their members would <a href="iz/sugar.html#not">not</a> be serialized.
         collectPublications!A;
     }
     ~<a href="iz/serializer/Serializer.html#this">this</a>(){<a href="iz/memory.html#destruct">destruct</a>(sub1, sub2);}

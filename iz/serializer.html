@@ -111,7 +111,7 @@
     <a href="iz/streams/Stream.html">Stream</a> stream)
 </code></pre>
 <div class="section"><h2></h2>
-<p>Propotype of a function which writes the representation of an IstNode in an izStream.
+<p>Propotype of a function that writes an IstNode representation in a Stream.
 </p>
 
 
@@ -125,7 +125,7 @@
     <a href="iz/serializer/IstNode.html">IstNode</a> istNode)
 </code></pre>
 <div class="section"><h2></h2>
-<p>Propotype of a function which reads the representation of an IstNode from an izStream.
+<p>Propotype of a function that reads an IstNode representation from a Stream.
 </p>
 
 
@@ -177,7 +177,7 @@
 </div>
 </div></div><a class="anchor" id="WantObjectEvent"></a><div class="symbol"><div class="description"><pre><code>alias WantObjectEvent = <a href="http://dlang.org/type.html#basic-data-types">void</a> delegate(
     <a href="iz/serializer/IstNode.html">IstNode</a> node, 
-    ref Object serializable, 
+    ref Object obj, 
     out <a href="http://dlang.org/type.html#basic-data-types">bool</a> fromRefererence)
 </code></pre>
 <div class="section"><h2></h2>
@@ -195,7 +195,7 @@
 <tr class="param"><td class="paramName">node</td><td class="paramDoc"><p>The information the callee uses to set the parameter serializable.
 </p>
 </td></tr>
-<tr class="param"><td class="paramName">serializable</td><td class="paramDoc"><p>The Object the callee has to return.
+<tr class="param"><td class="paramName">obj</td><td class="paramDoc"><p>The Object the callee has to return.
 </p>
 </td></tr>
 <tr class="param"><td class="paramName">fromReference</td><td class="paramDoc"><p>When set to true, the serializer tries to find the Object
@@ -235,7 +235,7 @@ It is typically used to load configuration files, session backups, etc.
 </td></tr>
 </table>
 </div>
-</div></div><a class="anchor" id="fileToPublisher"></a><div class="symbol"><div class="description"><pre><code>public pragma(inline, false) <a href="http://dlang.org/type.html#basic-data-types">void</a> <a href="iz/serializer.html#fileToPublisher">fileToPublisher</a>(
+</div></div><a class="anchor" id="fileToPublisher"></a><div class="symbol"><div class="description"><pre><code>public <a href="http://dlang.org/type.html#basic-data-types">void</a> <a href="iz/serializer.html#fileToPublisher">fileToPublisher</a>(
     in <a href="http://dlang.org/type.html#basic-data-types">char</a>[] filename, 
     Object pub, 
     <a href="iz/serializer/SerializationFormat.html">SerializationFormat</a> format = <a href="iz/serializer.html#defaultFormat">defaultFormat</a>)
@@ -248,7 +248,7 @@ It is typically used to load configuration files, session backups, etc.
 </div>
 <div class="section"><h2></h2>
 <p>This helper function works in pair with publisherToFile().
-It is typically used to load configuration files, session backups, etc.
+It is typically used to save configuration files, session backups, etc.
 </p>
 
 
@@ -297,10 +297,10 @@ It is typically used to load configuration files, session backups, etc.
 </code></pre>
 </td><td></td></tr><tr><td><a href="iz/serializer.html#WantObjectEvent">WantObjectEvent</a></td><td><pre><code><a href="http://dlang.org/type.html#basic-data-types">void</a> delegate(
     <a href="iz/serializer/IstNode.html">IstNode</a> node, 
-    ref Object serializable, 
+    ref Object obj, 
     out <a href="http://dlang.org/type.html#basic-data-types">bool</a> fromRefererence)
 </code></pre>
-</td><td></td></tr></table><h2>Functions</h2><table><tr><td><a href="iz/serializer.html#isSerializable">isSerializable</a><span class="extrainfo"></span></td><td></td><td></td></tr><tr><td><a href="iz/serializer.html#value2text">value2text</a><span class="extrainfo"></span></td><td></td><td></td></tr><tr><td><a href="iz/serializer.html#text2value">text2value</a><span class="extrainfo"></span></td><td></td><td></td></tr><tr><td><a href="iz/serializer.html#nodeInfo2Declarator">nodeInfo2Declarator</a><span class="extrainfo"></span></td><td></td><td></td></tr><tr><td><a href="iz/serializer.html#setNodeInfo">setNodeInfo</a><span class="extrainfo"></span></td><td></td><td></td></tr><tr><td><a href="iz/serializer.html#publisherToFile">publisherToFile</a><span class="extrainfo"></span></td><td></td><td></td></tr><tr><td><span class="extrainfo"><span class="attribs"><span class="attr-pragmainlinefalse">pragma(inline, false)</span></span></span><a href="iz/serializer.html#fileToPublisher">fileToPublisher</a><span class="extrainfo"></span></td><td></td><td></td></tr></table><h2>Structs</h2><table><tr><td><a href="iz/serializer/SerNodeInfo.html">SerNodeInfo</a></td><td></td><td></td></tr></table><h2>Classes</h2><table><tr><td><a href="iz/serializer/SerializableReference.html">SerializableReference</a></td><td></td><td></td></tr><tr><td><a href="iz/serializer/IstNode.html">IstNode</a></td><td></td><td></td></tr><tr><td><a href="iz/serializer/Serializer.html">Serializer</a></td><td></td><td></td></tr></table>
+</td><td></td></tr></table><h2>Functions</h2><table><tr><td><a href="iz/serializer.html#isSerializable">isSerializable</a><span class="extrainfo"></span></td><td></td><td></td></tr><tr><td><a href="iz/serializer.html#value2text">value2text</a><span class="extrainfo"></span></td><td></td><td></td></tr><tr><td><a href="iz/serializer.html#text2value">text2value</a><span class="extrainfo"></span></td><td></td><td></td></tr><tr><td><a href="iz/serializer.html#nodeInfo2Declarator">nodeInfo2Declarator</a><span class="extrainfo"></span></td><td></td><td></td></tr><tr><td><a href="iz/serializer.html#setNodeInfo">setNodeInfo</a><span class="extrainfo"></span></td><td></td><td></td></tr><tr><td><a href="iz/serializer.html#publisherToFile">publisherToFile</a><span class="extrainfo"></span></td><td></td><td></td></tr><tr><td><a href="iz/serializer.html#fileToPublisher">fileToPublisher</a><span class="extrainfo"></span></td><td></td><td></td></tr></table><h2>Structs</h2><table><tr><td><a href="iz/serializer/SerNodeInfo.html">SerNodeInfo</a></td><td></td><td></td></tr></table><h2>Classes</h2><table><tr><td><a href="iz/serializer/SerializableReference.html">SerializableReference</a></td><td></td><td></td></tr><tr><td><a href="iz/serializer/IstNode.html">IstNode</a></td><td></td><td></td></tr><tr><td><a href="iz/serializer/Serializer.html">Serializer</a></td><td></td><td></td></tr></table>
 </div>
 </div><script>hljs.initHighlightingOnLoad();</script>
 
