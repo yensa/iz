@@ -1,5 +1,5 @@
 /**
- * Several trivials functions and strucutures
+ * Several trivial functions and structures
  */
 module iz.sugar;
 
@@ -8,102 +8,181 @@ import
 
 version(unittest) import std.stdio;
 
-/// void version of the init() type function.
-@trusted void reset(T)(ref T t)
+/**
+ * Void version of the init() type function.
+ *
+ * Params:
+ *      T = the argument type, likely to be infered.
+ *      t = a reference to a T.
+ */
+void reset(T)(ref T t) @safe @nogc nothrow
 {
     t = T.init;
 }
-
+///
 unittest
 {
     uint a = 159;
     string b = "bla";
     a.reset;
-    assert(a == typeof(a).init);
+    assert(a == 0);
     b.reset;
-    assert(b == typeof(b).init);
+    assert(b == "");
 }
 
-private bool asB(T)()
+
+private bool implicitConvToBool(T)()
 {
     return (isIntegral!T || is(T==bool) || is(T==void*));
 }
 
+
 /**
- * Bitwise not.
+ * Boolean not.
  */
-bool not(T)(T t) @safe @nogc nothrow pure
-if (asB!T)
+bool not(T)(auto ref T t) @safe @nogc nothrow pure
+if (implicitConvToBool!T)
 {
     return !t;
 }
-
+///
 unittest
 {
-    void * ptr = null;
-    assert( not(true) == false);
-    assert( not(false) == true);
-    assert( not(1) == 0);
-    assert( not(0) == 1);
-    assert( not(123456) == 0);
-    assert( not(ptr) == true);
-    assert( 1.not == false);
-    assert( ((1+2)/3).not == false);
-    assert( 0.not );
-    assert( !1.not );
-    assert( 0.not.not.not );
-    assert( !0.not.not.not.not );
+    void* ptr = null;
+    assert(not(true) == false);
+    assert(not(false) == true);
+    assert(not(1) == 0);
+    assert(not(0) == 1);
+    assert(not(123456) == 0);
+    assert(not(ptr));
+    assert(1.not == false);
+    assert(((1+2)/3).not == false);
+    assert(0.not );
+    assert(!1.not );
+    assert(0.not.not.not );
+    assert(!0.not.not.not.not );
 }
 
+
 /**
- * boolean and.
+ * Boolean and.
  */
-bool band(T1, T2)(T1 t1 ,T2 t2) @safe @nogc nothrow pure
-if (asB!T1 && asB!T2)
+bool and(T1, T2)(auto ref T1 t1 ,auto ref T2 t2) @safe @nogc nothrow pure
+if (implicitConvToBool!T1 && implicitConvToBool!T2)
 {
-    return cast(bool)t1 & cast(bool)t2;
+    return t1 && t2;
 }
-
+///
 unittest
 {
-    assert( true.band(true));
-    assert( !false.band(false));
-    assert((1).band(2).band(3).band(4));
-    assert(!(0).band(1).band(2).band(3));
+    assert(true.and(true));
+    assert(!false.and(false));
+    assert((1).and(2).and(3).and(4));
+    assert(!(0).and(1).and(2).and(3));
 }
 
+
 /**
- * boolean or.
+ * Batch $(D and()) a list of variable.
+ * $(D bool).
+ *
+ * Params:
+ *      t = the list of argument, each must be implicitly convertible $(D bool).
+ *
+ * Returns:
+ *      true if all variables are true.
  */
-bool bor(T1, T2)(T1 t1 ,T2 t2) @safe @nogc nothrow pure
-if (asB!T1 && asB!T2)
+bool and(T...)(auto ref T t) @safe @nogc nothrow pure
 {
-    return cast(bool)t1 | cast(bool)t2;
+    bool result = cast(bool)t[0];
+    foreach(v; t[1 .. $])
+        result = result && v;
+    return result;
 }
-
+///
 unittest
 {
-    void * ptr = null;
-    assert( true.bor(false));
-    assert( !false.bor(false));
-    assert((1).bor(2).bor(3).bor(4));
-    assert((0).bor(1).bor(2).bor(3));
-    assert(!(0).bor(false).bor(ptr));
+    assert(!and(true,3,false));
+    assert(and(58,true,true));
 }
 
 /**
- * Allows forbidden casts
+ * Boolean or.
+ */
+bool or(T1, T2)(auto ref T1 t1 ,auto ref T2 t2) @safe @nogc nothrow pure
+if (implicitConvToBool!T1 && implicitConvToBool!T2)
+{
+    return t1 || t2;
+}
+///
+unittest
+{
+    void* ptr = null;
+    assert(true.or(false));
+    assert(!false.or(false));
+    assert((1).or(2).or(3).or(4));
+    assert((0).or(1).or(2).or(3));
+    assert(!(0).or(false).or(ptr));
+}
+
+
+/**
+ * Batch $(D or()) a list of variable.
+ * $(D bool).
+ *
+ * Params:
+ *      t = the list of argument, each must be implicitly convertible $(D bool).
+ *
+ * Returns:
+ *      true if one argument is true.
+ */
+bool or(T...)(auto ref T t) @safe @nogc nothrow pure
+{
+    bool result = cast(bool)t[0];
+    foreach(v; t[1 .. $])
+        result = result || v;
+    return result;
+}
+///
+unittest
+{
+    assert(!or(false,false,false));
+    assert(or(123,false,true));
+}
+
+
+/**
+ * Allows forbidden casts.
+ *
+ * Params:
+ *      OT = The output type.
+ *      IT = The input type, optional, likely to be infered.
+ *      it = A reference to an IT.
+ *
+ * Returns:
+ *      the same as $(D cast(OT) it), except that it never fails to compile.
  */
 auto bruteCast(OT, IT)(auto ref IT it) @nogc nothrow pure
 {
-    return * cast(OT*) &it;
+    return *cast(OT*) &it;
+}
+///
+unittest
+{
+    uint[] array = [0u,1u,2u];
+    size_t len;
+    //len = cast(uint) array; // not allowed.
+    len = bruteCast!uint(array);
+    assert(len == array.length);
 }
 
-/// Describes the unit of a mask.
+
+/// Enumerates the possible units of a mask.
 enum MaskKind {Byte, Nibble, Bit}
 
+
 /**
- * Mask, at compile-time, a byte, a nibble or a bit in the argument.
+ * Masks, at compile-time, a byte, a nibble or a bit in the argument.
  *
  * Params:
  *      index = the position, 0-based, of the element to mask.
@@ -142,7 +221,7 @@ unittest
 }
 
 
-/// Compile-time mask() partially specialized for nibble-masking.
+/// Compile-time $(D mask()) partially specialized for nibble-masking.
 auto maskNibble(size_t index, T)(const T value) nothrow
 {
     // note: aliasing prevents template parameter type deduction,
@@ -155,7 +234,8 @@ unittest
     static assert(maskNibble!1(0x12345678) == 0x12345608);
 }
 
-/// Compile-time mask() partially specialized for bit-masking.
+
+/// Compile-time $(D mask()) partially specialized for bit-masking.
 auto maskBit(size_t index, T)(const T value) nothrow
 {
     return mask!(index, MaskKind.Bit)(value);
@@ -166,8 +246,9 @@ unittest
     static assert(maskBit!1(0b1111) == 0b1101);
 }
 
+
 /**
- * Mask, at run-time, a byte, a nibble or a bit in the argument.
+ * Masks, at run-time, a byte, a nibble or a bit in the argument.
  *
  * Params:
  *      index = the position, 0-based, of the element to mask.
@@ -240,7 +321,8 @@ auto mask(MaskKind kind = MaskKind.Byte, T)(const T value, size_t index) nothrow
 }
 */
 
-/// Run-time mask() partially specialized for nibble-masking.
+
+/// Run-time $(D mask()) partially specialized for nibble-masking.
 auto maskNibble(T)(const T value, size_t index) nothrow
 {
     return mask!(MaskKind.Nibble)(value, index);
@@ -251,7 +333,8 @@ unittest
     assert(maskNibble(0x12345678,1) == 0x12345608);
 }
 
-/// Run-time mask() partially specialized for bit-masking.
+
+/// Run-time $(D mask()) partially specialized for bit-masking.
 auto maskBit(T)(const T value, size_t index) nothrow
 {
     return mask!(MaskKind.Bit)(value, index);
@@ -298,6 +381,7 @@ unittest
     assert( mask!(MaskKind.Bit)(v2,7) == 0b01111111);
 }
 
+
 /**
  * Alternative to std.range primitives for arrays.
  *
@@ -309,7 +393,8 @@ unittest
  *
  * When the source is an array of character and if assumeDecoded is set to false 
  * (the default) then the ArrayRange front type is always dchar because of the
- * UTF decoding. The parameter can be set to true if the source contains only SBCs.
+ * UTF decoding. The parameter can be set to true if the source is known to
+ * contains only SBCs.
  *
  * The template parameter infinite allows to turn the range in an infinite range
  * that loops over the elements.
@@ -482,6 +567,7 @@ unittest
     }
     assert(arr == src);
 }
+
 
 /**
  * Calls a function according to a probability
