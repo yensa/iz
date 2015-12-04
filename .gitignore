@@ -1,41 +1,21 @@
-Thumbs.db
-backup
-lib
-doc
-temp
-ser.txt
+# OS stuff
+thumbs.db
 .directory
-*.obj
-*.exe
-*.bak
-*.cache
-*.log
-*.dll
-*.o
-*.or
-*.compiled
-*.dbg
-*.ppu
-*.res
-*.lps
-*.bin
-*.npp
-*.json
-*.html
-*.js
-*.css
-# generated when unittesting a module under nix
-import/iz/classes
-import/iz/containers
-import/iz/enumset
-import/iz/logicver
-import/iz/memory
-import/iz/observer
-import/iz/properties
-import/iz/referencable
-import/iz/serializer
-import/iz/streams
-import/iz/strings
-import/iz/sugar
-import/iz/types
 
+# compiler garbages
+*.obj
+*.o
+
+# final binaries
+*.lib
+*.a
+*.exe
+
+# nix module unittests, ignore all in import/ except sources
+import/*
+!import/*.d
+
+# misc
+*.map
+*.bak
+temp
