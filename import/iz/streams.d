@@ -252,7 +252,7 @@ interface Stream
      *      offset = The offset from the start position.
      *      mode = The start position. Either the Stream.position if
      *      $(D mode == SeekMode.skCur), 0 if $(D mode == SeekMode.skBeg) or
-     *      Stream.size if $(D mode == SeekMode.skCur).
+     *      Stream.size if $(D mode == SeekMode.skEnd).
      * Returns:
      *      the new position.
      */
@@ -701,10 +701,9 @@ class SystemStream: Stream, StreamPersist
         {
             if (!_handle.isHandleValid) return 0;
 
-            long saved = seek(0, SeekMode.cur);
-            long result = seek(0, SeekMode.end);
+            long saved = seek(0L, SeekMode.cur);
+            long result = seek(0L, SeekMode.end);
             seek(saved, SeekMode.beg);
-
             return result;
         }
 
@@ -723,7 +722,7 @@ class SystemStream: Stream, StreamPersist
             }
             version(Posix)
             {
-                ftruncate(_handle, value);
+                ftruncate64(_handle, value);
             }
         }
 
@@ -919,9 +918,9 @@ class FileStream: SystemStream
 
 /**
  * Implements a stream of contiguous, GC-free, heap-memory.
- * Its maximal theoretical size is 2^31 bytes (x86) or 2^63 bytes (x86_64).
- * Its practical size limit is damped by the amount of remaining DRAM.
- * This limit is itself reduced by the memory fragmentation.
+ *
+ * In theory its size can go up to 2^31 bytes (X86) or 2^63 bytes (X86_64).
+ * This value is obviously limited by the amount of DRAM and the fragmentation.
  *
  * MemoryStream is also enhanced by implementing the interfaces StreamPersist
  * and FilePersist8. They allow to save the content either to another stream or
@@ -960,9 +959,8 @@ class MemoryStream: Stream, StreamPersist, FilePersist8
         /**
          * Constructs a MemoryStream and write the input argument.
          * Params:
-         * a = either an array, an input range, a variable with a basic type
-         * or a stream. Even if the argument is written, the position remains
-         * at 0. 
+         *      a = Either an array, an input range, a basic variable or a Stream.
+         *      Even if the argument is written, the position remains at 0.
          */
         this(A)(A a)
         {
@@ -1104,20 +1102,23 @@ class MemoryStream: Stream, StreamPersist, FilePersist8
         }
 
         /**
-         * Sets the stream memory to aPtr and assumes it represents a chunk
-         * of size aSize. After the call, the stream position is reset to 0.
-         * If freeCurrent is true then the current memory is freed.
-         * Returns the previous memory, only usefull when freeCurrent is set
-         * to false.
+         * Replaces the current memory.
+         *
+         * Params:
+         *      ptr = The new memory.
+         *      newSize = The new size.
+         *      freeCurrent = If true, the default, the current memory is freed.
+         * Returns:
+         *      The old memory, useful only if freeCurrent is set to false.
          */
-        final Ptr setMemory(Ptr aPtr, size_t aSize, bool freeCurrent = true)
+        final Ptr setMemory(Ptr ptr, size_t newSize, bool freeCurrent = true)
         {
             Ptr result = _memory;
-            if (!aPtr) return result;
+            if (!ptr) return result;
             if (freeCurrent) freeNonGc(_memory);
             _position = 0;
-            _size = aSize;
-            _memory = aPtr; 
+            _size = newSize;
+            _memory = ptr;
             return result;
         }
         
@@ -1136,7 +1137,7 @@ class MemoryStream: Stream, StreamPersist, FilePersist8
         {
             fBytes.length = _size;
             fBytes.ptr = _memory;
-            return * cast(ubyte[] *) &fBytes;
+            return *cast(ubyte[]*) &fBytes;
         }
         
 // -----------------------------------------------------------------------------     
@@ -1184,9 +1185,9 @@ class MemoryStream: Stream, StreamPersist, FilePersist8
         }
         
 // -----------------------------------------------------------------------------
-// izFilePersist8 -------------------------------------------------------------+
+// FilePersist8 ---------------------------------------------------------------+
         
-        /// see the izFilePersist8 interface.
+        /// see the FilePersist8 interface.
         void saveToFile(in char[] aFilename)
         {
             version(Windows)
@@ -1221,7 +1222,7 @@ class MemoryStream: Stream, StreamPersist, FilePersist8
             _filename = aFilename.idup;
         }
         
-        /// see the izFilePersist8 interface.
+        /// see the FilePersist8 interface.
         void loadFromFile(in char[] aFilename)      
         {
             version(Windows)
@@ -1261,7 +1262,7 @@ class MemoryStream: Stream, StreamPersist, FilePersist8
             _filename = aFilename.idup;
         }   
         
-        /// see the izFilePersist8 interface.
+        /// see the FilePersist8 interface.
         @property string filename()
         {
             return _filename;
@@ -1318,16 +1319,16 @@ unittest
 
 unittest
 {
-    /*auto sz = 0x1_FFFF_FFFFUL;
-    auto huge = construct!FileStream("huge.bin");
+    auto sz = 0x1_FFFF_FFFFL;
+    FileStream huge = construct!FileStream("huge.bin");
     scope(exit)
     {
         huge.destruct;
         std.stdio.remove("huge.bin");
     }
-    huge.size = sz;
+    huge.size(sz);
     huge.position = 0;
-    assert(huge.size == sz);*/
+    assert(huge.size == sz);
 }
 
 unittest
