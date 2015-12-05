@@ -562,8 +562,8 @@ mixin template PropertyPublisherImpl()
 {
     /**
      * Contains the list of PropDesrcriptors created by the analyzers.
-     * The access to this should be accessed directly but using the functions
-     * publication(), publicationFromName() and publicationFromIndex().
+     * Even if it's possible to access directly the array, it's safer to use
+     * ($D publication()), ($D publicationFromName()) and ($D publicationFromIndex()).
      */
     static if (!__traits(hasMember, typeof(this), "_publishedDescriptors"))
     protected void*[] _publishedDescriptors;

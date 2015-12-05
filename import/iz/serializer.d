@@ -1532,7 +1532,7 @@ unittest
  * Serializes a PropertyPublisher to a file.
  *
  * This helper function works in pair with fileToPublisher().
- * It is typically used to load configuration files, session backups, etc.
+ * It is typically used to save configuration files, session backups, etc.
  *
  * Params:
  *      pub = The PropertyPublisher to save.
@@ -1554,7 +1554,7 @@ void publisherToFile(Object pub, in char[] filename,
  * Deserializes a file to a PropertyPublisher.
  *
  * This helper function works in pair with publisherToFile().
- * It is typically used to save configuration files, session backups, etc.
+ * It is typically used to load configuration files, session backups, etc.
  *
  * Params:
  *      filename = The source file.

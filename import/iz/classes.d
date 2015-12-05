@@ -107,7 +107,7 @@ public:
      * Sets or gets the item count.
      *
      * Items are automatically created or destroyed when changing this property.
-     * Note that changing the length or $(D items()) is a noop, the only way to
+     * Note that to change the length of $(D items()) is a noop, the only way to
      * add and remove items is to use $(D count()), $(D addItem()) or $(D deleteItem()).
      */
     @Get final uint count()
@@ -260,8 +260,8 @@ unittest
  * A Serializer is not able to directly handle $(I AA)s but this class
  * does the task automatically by splitting keys and values in two arrays.
  *
- * This class template can only be instantiated if the $(I AA)s key and value
- * types are basic (see iz.types.BasicTypes).
+ * This class template can only be instantiated if the $(I AA) key and value
+ * type is basic (see iz.types.BasicTypes).
  *
  * Params:
  *      AA = The type of the associative array.
@@ -331,7 +331,7 @@ public:
      * to be called manually.
      *
      * Params:
-     *      aa = A pointer to the associative array that will be stoted and restored.
+     *      aa = A pointer to the associative array that will be stored and restored.
      */
     this(AA* aa)
     {
@@ -340,7 +340,7 @@ public:
     }
 
     /**
-     * Copy the content of the associative array $(I aa) to the internal containers.
+     * Copies the content of an associative array to the internal containers.
      *
      * Typically called before serializing and if the instance is created
      * using the default constructor.
@@ -364,7 +364,7 @@ public:
     }
 
     /**
-     * Clears then fills the associative array $(I aa) using the internal containers.
+     * Resets then fills an  associative array using the internal containers.
      *
      * Typically called after serializing and if the instance is created
      * using the default constructor.
@@ -425,7 +425,7 @@ unittest
 
 
 /**
- * The Published2dArray class template allows to serialize 2 dimensional arrays.
+ * The Published2dArray class template allows to serialize 2-dimensional arrays.
  *
  * A Serializer is not able to directly handle them but this class
  * does the task automatically by merging the array and storing an additional
@@ -501,7 +501,7 @@ public:
      * to be called manually.
      *
      * Params:
-     *      array = A pointer to the array that will be stoted and restored.
+     *      array = A pointer to the array that will be stored and restored.
      */
     this(T[][]* array)
     {
@@ -510,7 +510,7 @@ public:
     }
 
     /**
-     * Copy the content of the array to the internal container.
+     * Copies the content of the array to the internal container.
      *
      * Typically called before serializing and if the instance is created
      * using the default constructor.
@@ -536,7 +536,7 @@ public:
     }
 
     /**
-     * Clears then fills the array using the internal data.
+     * Resets then fills the array using the internal data.
      *
      * Typically called after serializing and if the instance is created
      * using the default constructor.
@@ -614,13 +614,13 @@ enum ComponentNotification
 {
     /**
      * The Component parameter of the notifySubject() is now owned.
-     * The owner that also matches to the caller can be retieved using
-     * the .owner() property on the parameter.
+     * The owner that also matches the caller can be retrieved using
+     * the .owner() property of the parameter.
      */
     added,
     /**
      * The Component parameter of the notifySubject() is about to be destroyed,
-     * after what anyof its reference that's been escaped will be danling.
+     * after what any of its reference that's been escaped will be danling.
      * The parameter may match the emitter itself or one of its owned Component.
      */
     free,
@@ -644,12 +644,12 @@ private alias ComponentSubject = CustomSubject!(ComponentNotification, Component
 
 /**
  * Component is a high-level class that proposes an automatic memory
- * managment model based on ownership. It also verify the requirements that
- * make an instance referencable and serializable.
+ * managment model based on ownership. It also verifies the requirements to
+ * make its instances referencable and serializable.
  *
  * Ownership:
  * A Component can be created with iz.memory.construct. As constructor parameter
- * another Component can be specified. It's responsible for freeing this "owned"
+ * another Component can be specified. It's in charge for freeing this "owned"
  * instance. Components that's not owned have to be freed manually. A reference
  * to an owned object can be escaped. To be notified of its destruction, it's
  * possible to observe the component or its owner by adding an observer to the
@@ -657,15 +657,15 @@ private alias ComponentSubject = CustomSubject!(ComponentNotification, Component
  *
  * Referencable:
  * Each Component instance that's properly named is automatically registered
- * in the ReferenceMan, as a void reference. This allow some powerfull features
+ * in the ReferenceMan, as a void reference. This allows some powerfull features
  * such as the Object property editor or the Serializer to inspect, store, retrieve
  * a Component between two sessions.
  *
  * Serializable:
- * A Component implements the PropDescriptorCollection interface. Each field annotated
- * by @SetGet and each setter/getter pair annotated with @Set and @Get is automatically
- * collected and is usable directly by a PropertyBinder, by a Serializer or
- * by any other system based on the PropDescriptor system.
+ * A Component implements the PropertyPublisher interface. Each field annotated
+ * with @SetGet and each setter/getter pair annotated with @Set and @Get
+ * is automatically published and is usable by a PropertyBinder, by a Serializer
+ * or by any other system based on the PropDescriptor system.
  */
 class Component: PropertyPublisher
 {
@@ -702,7 +702,8 @@ public:
 
     /**
      * Constructs a new instance whose life-time will be managed.
-     * by its owner.
+     * Params:
+     *      owner = The Component that owns the new instance.
      */
     static C create(C = typeof(this))(Component owner)
     if (is(C : Component))
@@ -737,12 +738,12 @@ public:
     /// Returns this instance onwer.
     final const(Component) owner() {return _owner;}
 
-    /// Returns the subject allowing some ComponentObserver to observe this instance.
+    /// Returns the subject allowing ComponentObservers to observe this instance.
     final ComponentSubject componentSubject() {return _compSubj;}
 
     // name things ------------------------------------------------------------+
 
-    /// Returns true if value is available as an unique Component name.
+    /// Returns true if a string is available as an unique Component name.
     final bool nameAvailable(in char[] value)
     {
         if (_owner !is null && _owner._owned.first)
@@ -771,8 +772,8 @@ public:
     /**
      * Defines the name of this Component.
      *
-     * The name must be an unique value in the Component tree owned by the owner.
-     * This value is a collected property.
+     * The name must be an unique value in the owner Component tree.
+     * This value is a published property.
      * This value is stored as an ID in the ReferenceMan with the void type.
      */
     final @Set name(const(char)[] value)
@@ -787,7 +788,7 @@ public:
     final @Get char[] name() {return _name;}
 
     /**
-     * Returns the fully qualified name of this component within the owner
+     * Returns the fully qualified name of this component in the owner
      * Component tree.
      */
     final char[] qualifiedName()
