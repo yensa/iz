@@ -129,8 +129,10 @@ version (Posix)
 }
 
 /**
- * Enumerates the possible streams seek modes.
- * triggers this ICE: https://issues.dlang.org/show_bug.cgi?id=13975
+ * Enumerates the Stream seek modes.
+ *
+ * Bugs:
+ *      https://issues.dlang.org/show_bug.cgi?id=13975
  */
 enum SeekMode 
 {
@@ -140,7 +142,7 @@ enum SeekMode
 }
 
 /**
- * An implementer can save or load from a Stream. 
+ * An implementer can save to and load from a Stream.
  */
 interface StreamPersist
 {
@@ -151,7 +153,7 @@ interface StreamPersist
 }
 
 /**
- * An implementer can save to or load from a file with a UTF8 file name.
+ * An implementer can save to and load from a file with a UTF8 file name.
  */
 interface FilePersist8
 {
@@ -163,7 +165,7 @@ interface FilePersist8
     string filename();
 }
 
-/// Generates all the typed write() and read() of an Stream implementation.
+/// Generates all the typed write() and read() of a Stream implementation.
 string genReadWriteVar()
 {
     import std.ascii: toUpper;
@@ -180,72 +182,107 @@ string genReadWriteVar()
 }
 
 /**
- * Defines the members of a stream.
+ * Defines the members of a Stream.
  */
 interface Stream
 {
     /**
-     * Reads count bytes in buffer.
-     * Returns the count of bytes that's been read.
+     * Reads from the Stream.
+     * Params:
+     *      buffer = A pointer to the target.
+     *      count = The number of bytes to read.
+     * Returns:
+     *      The count of bytes that's been read.
      */
     size_t read(Ptr buffer, size_t count);
+
     /**
-     * Reads and returns a T.
-     * The return is undefined if the stream position does not allow to read a T.
-     * T must verify isFixedSize.
+     * Reads a typed variable.
+     *
      * Typed readers are generated for each type in iz.types.BasicTypes
      * and they are named readInt, readChar, etc.
+     *
+     * Params:
+     *      T = The type of the variable to read.
+     *
+     * Returns:
+     *      A variable of type T. This value can be undefined if the stream
+     *      position does not allow to read a T.
      */
     final T readVariable(T)()
     {
         T result;
         read(&result, T.sizeof);
         return result;
-    }     
+    }
+
     /**
-     * Writes count bytes to buffer.
-     * Returns the count of bytes that's been written.
+     * Writes the content of a buffer.
+     *
+     * Params:
+     *      buffer = A pointer to the buffer to write.
+     *      count = The size of the buffer.
+     * Returns:
+     *      the count of bytes that's been written.
      */
     size_t write(Ptr buffer, size_t count);
+
     /**
-     * Writes value.
-     * Returns the count of bytes that's been written (either T.sizeof or 0).
-     * T must verify isFixedSize.
+     * Writes a typed value.
+     *
      * Typed writers are generated for each type in iz.types.BasicTypes
      * and they are named writeInt, writeChar, etc.
+     *
+     * Params:
+     *      T = The type of the variable to read.
+     *      value = the T to write.
+     *
+     * Returns:
+     *      the count of bytes that's been written (either T.sizeof or 0).
      */
     final size_t writeVariable(T)(T value)
     {
         return write(&value, T.sizeof);
     }
+
     /**
-     * Sets the position to offset if mode = SeekMode.skBeg,
-     * to .position + anOffset if mode = SeekMode.skCur,
-     * to .size + anOffset if mode = SeekMode.skEnd.
+     * Sets the stream position.
+     *
+     * Params:
+     *      offset = The offset from the start position.
+     *      mode = The start position. Either the Stream.position if
+     *      $(D mode == SeekMode.skCur), 0 if $(D mode == SeekMode.skBeg) or
+     *      Stream.size if $(D mode == SeekMode.skCur).
+     * Returns:
+     *      the new position.
      */
-    ulong seek(ulong offset, SeekMode mode);
+    long seek(long offset, SeekMode mode);
     /// ditto
-    ulong seek(uint offset, SeekMode mode);
+    int seek(int offset, SeekMode mode);
+
     /**
      * Sets or gets the stream size.
      */
-    @property ulong size();
+    @property long size();
     /// ditto
-    @property void size(ulong value);
+    @property void size(long value);
     /// ditto
-    @property void size(uint value);
+    @property void size(int value);
+
     /**
      * Sets or gets the stream position.
      */
-    @property ulong position();
+    @property long position();
     /// ditto
-    @property void position(ulong value);
+    @property void position(long value);
     /// ditto
-    @property void position(uint value);
+    @property void position(int value);
+
     /**
      * Resets the stream size to 0.
      */
     void clear();
+
     /// Support for the concatenation operator.
     final void opOpAssign(string op)(Stream rhs)
     {
@@ -280,12 +317,13 @@ interface Stream
 }
 
 /**
- * Helper designed to construct a new heap-allocated StreamRange.
- * The result is a pointer and to be used it must be derferenced.
- * The result must be manually freed with destruct().
+ * Helper designed to construct a new StreamRange allocated on the C heap.
+ *
  * Params:
- * ST = the Stream descendant for which the range will be created, likely to be inferred.
- * T = the range element type.
+ *      ST = The Stream descendant for which the range will be created.
+ *      T = The range element type.
+ * Returns:
+ *      A pointer to a StreamRange that has to be free manually with $(D destruct()).
  */
 auto streamRange(T, ST)(ST st)
 if (is(ST : Stream))
@@ -295,9 +333,10 @@ if (is(ST : Stream))
  
 /** 
  * Input, forward and bidirectional range for an Stream.
+ *
  * Params:
- * ST = the Stream descendant for which the range will be created.
- * T = the range element type.
+ *      ST = The Stream descendant for which the range will be created.
+ *      T = The range element type.
  */
 struct StreamRange(ST, T)
 if (is(ST : Stream))
@@ -309,7 +348,7 @@ if (is(ST : Stream))
     
     public:
         
-        /// initialized a StreamRange with a Stream instance.
+        /// initializes a StreamRange with a Stream instance.
         this(ST stream)
         {
             _str = stream;
@@ -432,12 +471,13 @@ unittest
  
 
 /**
- * Copies the content of a _Stream_ to another one.
+ * Copies the content of a Stream to another one.
+ *
  * The position in the source is preserved.
  *
  * Params:
- * source = the _Stream_ instance whose content will be copied.
- * target = the _Stream_ instance whose content will be replaced.
+ *      source = The Stream instance whose content will be copied.
+ *      target = The Stream instance whose content will be replaced.
  */
 void copyStream(Stream source, Stream target)
 {
@@ -486,10 +526,11 @@ unittest
 /**
  * Writes an input range to a stream.
  *
- * A failure can be verified by testing the range for empty after the call.
+ * A failure can be verified by testing if the range is empty after the call.
+ *
  * Params:
- * target = A Stream instance.
- * r = An input range.
+ *      target = A Stream instance.
+ *      r = An input range.
  */
 void writeRange(R)(Stream target, R r)
 if (isInputRange!R)
@@ -525,15 +566,16 @@ unittest
 
 
 /**
- * Writes a single dimension array to a stream.
+ * Writes an unidimensional array in a stream.
  *
  * By default writes the array length as a ulong and then always the array content.
- * While writeRange() already allow to write an array, there is no clue about
+ * While writeRange() already allows to write an array, there is no clue about
  * its length. Additionally this function is more efficient.
+ *
  * Params:
- * WriteLength = When set to true (the default), the array length is written.
- * str = The Stream where data are written.
- * t = The array to write.
+ *      WriteLength = When set to true (the default), the array length is written.
+ *      str = The Stream where data are written.
+ *      t = The array to write.
  */
 void writeArray(bool WriteLength = true, T)(Stream str, auto ref T t)
 if (isArray!T && !isMultiDimensionalArray!T)
@@ -543,14 +585,14 @@ if (isArray!T && !isMultiDimensionalArray!T)
 }
 
 /**
- * Reads a single dimension array
+ * Reads an unidimensional array from a stream.
  *
  * By default reads the array length as a ulong and then always the array content.
  * Params:
- * ReadLength = When set to true (the default), the array length is read.
- * Otherwise the data are read according to the current array length.
- * str = The Stream where data are read.
- * t = The array to write.
+ *      ReadLength = When set to true (the default), the array length is read.
+ *      Otherwise the data are read according to the current array length.
+ *      str = The Stream where data are read.
+ *      t = The array to write.
  */
 void readArray(bool ReadLength = true, T)(Stream str, auto ref T t)
 if (isArray!T && !isMultiDimensionalArray!T)
@@ -583,8 +625,8 @@ unittest
 }
 
 /**
- * Unspecialized stream class. Descendants are all some
- * system stream (based on a OS-specific handle).
+ * Base Stream for a descendant that uses the operating system API.
+ *
  * This class is not directly usable.
  */
 class SystemStream: Stream, StreamPersist
@@ -632,7 +674,7 @@ class SystemStream: Stream, StreamPersist
         }
 
         /// see the Stream interface.
-        ulong seek(ulong offset, SeekMode mode)
+        long seek(long offset, SeekMode mode)
         {
             if (!_handle.isHandleValid) return 0;
             version(Windows)
@@ -649,25 +691,25 @@ class SystemStream: Stream, StreamPersist
         }
 
         /// ditto
-        ulong seek(uint offset, SeekMode mode)
+        int seek(int offset, SeekMode mode)
         {
-            return seek(cast(ulong)offset, mode);
+            return cast(int) seek(cast(long)offset, mode);
         }
 
         /// see the Stream interface.
-        @property ulong size()
+        @property long size()
         {
             if (!_handle.isHandleValid) return 0;
 
-            ulong saved = seek(0, SeekMode.cur);
-            ulong result = seek(0, SeekMode.end);
+            long saved = seek(0, SeekMode.cur);
+            long result = seek(0, SeekMode.end);
             seek(saved, SeekMode.beg);
 
             return result;
         }
 
         /// ditto
-        @property void size(ulong value)
+        @property void size(long value)
         {
             if (!_handle.isHandleValid) return;
             if (size == value) return;
@@ -686,7 +728,7 @@ class SystemStream: Stream, StreamPersist
         }
 
         /// ditto
-        @property void size(uint value)
+        @property void size(int value)
         {
             if (!_handle.isHandleValid) return;
             version(Windows)
@@ -701,21 +743,21 @@ class SystemStream: Stream, StreamPersist
         }
 
         /// see the Stream interface.
-        @property ulong position()
+        @property long position()
         {
             return seek(0, SeekMode.cur);
         }
 
         /// ditto
-        @property void position(ulong value)
+        @property void position(long value)
         {
-            immutable ulong sz = size;
+            immutable long sz = size;
             if (value >  sz) value = sz;
             seek(value, SeekMode.beg);
         }
 
         /// ditto
-        @property void position(uint value)
+        @property void position(int value)
         {
             seek(value, SeekMode.beg);
         }
@@ -877,12 +919,12 @@ class FileStream: SystemStream
 
 /**
  * Implements a stream of contiguous, GC-free, heap-memory.
- * Its maximal theoretical size is 2^32 bytes (x86) or 2^64 bytes (x86_64).
+ * Its maximal theoretical size is 2^31 bytes (x86) or 2^63 bytes (x86_64).
  * Its practical size limit is damped by the amount of remaining DRAM.
  * This limit is itself reduced by the memory fragmentation.
  *
  * MemoryStream is also enhanced by implementing the interfaces StreamPersist
- * and FilePersist8. This allows to save the content either to another stream or
+ * and FilePersist8. They allow to save the content either to another stream or
  * to a file and to load the content either from another Stream or from a file.
  */
 class MemoryStream: Stream, StreamPersist, FilePersist8
@@ -970,7 +1012,7 @@ class MemoryStream: Stream, StreamPersist, FilePersist8
 // seek -----------------------------------------------------------------------+
 
         /// see the Stream interface.
-        ulong seek(ulong offset, SeekMode mode)
+        long seek(long offset, SeekMode mode)
         {
             with(SeekMode) final switch(mode) 
             {
@@ -988,23 +1030,23 @@ class MemoryStream: Stream, StreamPersist, FilePersist8
         }
         
         /// ditto
-        ulong seek(uint offset, SeekMode mode)
+        int seek(int offset, SeekMode mode)
         {
-            ulong longOffs = offset;
-            return seek(longOffs, mode);
+            long longOffs = offset;
+            return cast(int) seek(longOffs, mode);
         }
         
 // -----------------------------------------------------------------------------        
 // size -----------------------------------------------------------------------+
 
         /// see the Stream interface.
-        @property ulong size()
+        @property long size()
         {
             return _size;
         }
         
         /// ditto
-        @property void size(uint value)
+        @property void size(int value)
         {
             if (_size == value) return;
             if (value == 0)
@@ -1018,33 +1060,33 @@ class MemoryStream: Stream, StreamPersist, FilePersist8
         }
         
         /// ditto
-        @property void size(ulong value)
+        @property void size(long value)
         {
             static if (size_t.sizeof == 4)
             {
-                if (value > 0xFFFFFFFF)
-                    throw new Exception("cannot allocate more than 0xFFFFFFFF bytes");
+                if (value > 2^^31)
+                    throw new Exception("cannot allocate more than 2^31 bytes");
             }
-            size(cast(uint) value);        
+            size(cast(int) value);
         }
         
 // -----------------------------------------------------------------------------  
 // position -------------------------------------------------------------------+
         
         /// see the Stream interface.
-        @property ulong position()
+        @property long position()
         {
             return _position;
         }
         
         /// ditto
-        @property void position(ulong value)
+        @property void position(long value)
         {
             seek(value, SeekMode.beg);
         }
         
         /// ditto
-        @property void position(uint value)
+        @property void position(int value)
         {
             seek(value, SeekMode.beg);
         }
@@ -1132,7 +1174,7 @@ class MemoryStream: Stream, StreamPersist, FilePersist8
             }
         }
         
-        /// ditto
+        /// see the StreamPersist interface.
         void loadFromStream(Stream stream)
         {
             if (auto source = cast(MemoryStream) stream) 
@@ -1179,7 +1221,7 @@ class MemoryStream: Stream, StreamPersist, FilePersist8
             _filename = aFilename.idup;
         }
         
-        /// ditto
+        /// see the izFilePersist8 interface.
         void loadFromFile(in char[] aFilename)      
         {
             version(Windows)
@@ -1219,7 +1261,7 @@ class MemoryStream: Stream, StreamPersist, FilePersist8
             _filename = aFilename.idup;
         }   
         
-        /// ditto
+        /// see the izFilePersist8 interface.
         @property string filename()
         {
             return _filename;
