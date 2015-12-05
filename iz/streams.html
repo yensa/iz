@@ -249,7 +249,7 @@
 </div></div><a class="anchor" id="genReadWriteVar"></a><div class="symbol"><div class="description"><pre><code>public string <a href="iz/streams.html#genReadWriteVar">genReadWriteVar</a>()
 </code></pre>
 <div class="section"><h2></h2>
-<p>Generates all the typed write() and read() of an Stream implementation.
+<p>Generates all the typed write() and read() of a Stream implementation.
 </p>
 
 
@@ -262,9 +262,7 @@
 if(is(ST : <a href="iz/streams/Stream.html">Stream</a>))
 </code></pre>
 <div class="section"><h2></h2>
-<p>Helper designed to construct a new heap-allocated StreamRange.
-The result is a pointer and to be used it must be derferenced.
-The result must be manually freed with destruct().
+<p>Helper designed to construct a new StreamRange allocated on the C heap.
 </p>
 
 
@@ -275,35 +273,42 @@ The result must be manually freed with destruct().
 </div>
 <div class="section"><h2>Parameters</h2>
 <table class="params">
-<tr class="param"><td class="paramName">ST</td><td class="paramDoc"><p>the Stream descendant for which the range will be created, likely to be inferred.
+<tr class="param"><td class="paramName">ST</td><td class="paramDoc"><p>The Stream descendant for which the range will be created.
 </p>
 </td></tr>
-<tr class="param"><td class="paramName">T</td><td class="paramDoc"><p>the range element type.
+<tr class="param"><td class="paramName">T</td><td class="paramDoc"><p>The range element type.
 </p>
 </td></tr>
 </table>
+</div>
+<div class="section"><h2>Returns</h2>
+<p>A pointer to a StreamRange that has to be free manually with <code class="d_inlinecode">destruct()</code>.
+</p>
+
+
 </div>
 </div></div><a class="anchor" id="copyStream"></a><div class="symbol"><div class="description"><pre><code>public <a href="http://dlang.org/type.html#basic-data-types">void</a> <a href="iz/streams.html#copyStream">copyStream</a>(
     <a href="iz/streams/Stream.html">Stream</a> source, 
     <a href="iz/streams/Stream.html">Stream</a> target)
 </code></pre>
 <div class="section"><h2></h2>
-<p>Copies the content of a _Stream_ to another one.
-The position in the source is preserved.
+<p>Copies the content of a Stream to another one.
 </p>
 
 
 </div>
 <div class="section"><h2></h2>
+<p>The position in the source is preserved.
+</p>
 
 
 </div>
 <div class="section"><h2>Parameters</h2>
 <table class="params">
-<tr class="param"><td class="paramName">source</td><td class="paramDoc"><p>the _Stream_ instance whose content will be copied.
+<tr class="param"><td class="paramName">source</td><td class="paramDoc"><p>The Stream instance whose content will be copied.
 </p>
 </td></tr>
-<tr class="param"><td class="paramName">target</td><td class="paramDoc"><p>the _Stream_ instance whose content will be replaced.
+<tr class="param"><td class="paramName">target</td><td class="paramDoc"><p>The Stream instance whose content will be replaced.
 </p>
 </td></tr>
 </table>
@@ -320,7 +325,7 @@ if(isInputRange!R)
 
 </div>
 <div class="section"><h2></h2>
-<p>A failure can be verified by testing the range for empty after the call.
+<p>A failure can be verified by testing if the range is empty after the call.
 </p>
 
 
@@ -341,14 +346,14 @@ if(isInputRange!R)
 if(isArray!T && !<a href="iz/types/isMultiDimensionalArray.html">isMultiDimensionalArray</a>!T)
 </code></pre>
 <div class="section"><h2></h2>
-<p>Writes a single dimension array to a stream.
+<p>Writes an unidimensional array in a stream.
 </p>
 
 
 </div>
 <div class="section"><h2></h2>
 <p>By default writes the array length as a ulong and then always the array content.
-While writeRange() already allow to write an array, there is no clue about
+While writeRange() already allows to write an array, there is no clue about
 its length. Additionally this function is more efficient.
 </p>
 
@@ -373,7 +378,7 @@ its length. Additionally this function is more efficient.
 if(isArray!T && !<a href="iz/types/isMultiDimensionalArray.html">isMultiDimensionalArray</a>!T)
 </code></pre>
 <div class="section"><h2></h2>
-<p>Reads a single dimension array
+<p>Reads an unidimensional array from a stream.
 </p>
 
 
@@ -387,7 +392,7 @@ if(isArray!T && !<a href="iz/types/isMultiDimensionalArray.html">isMultiDimensio
 <div class="section"><h2>Parameters</h2>
 <table class="params">
 <tr class="param"><td class="paramName">ReadLength</td><td class="paramDoc"><p>When set to true (the default), the array length is read.
-Otherwise the data are read according to the current array length.
+     Otherwise the data are read according to the current array length.
 </p>
 </td></tr>
 <tr class="param"><td class="paramName">str</td><td class="paramDoc"><p>The Stream where data are read.
@@ -435,7 +440,9 @@ to D ranges.
 </code></pre>
 </td><td></td></tr><tr><td><a href="iz/streams.html#pdIn">pdIn</a></td><td><pre><code><a href="http://dlang.org/type.html#basic-data-types">uint</a>
 </code></pre>
-</td><td></td></tr></table><h2>Functions</h2><table><tr><td><a href="iz/streams.html#isHandleValid">isHandleValid</a><span class="extrainfo"></span></td><td></td><td></td></tr><tr><td><a href="iz/streams.html#cmToSystem">cmToSystem</a><span class="extrainfo"></span></td><td></td><td></td></tr><tr><td><a href="iz/streams.html#isHandleValid">isHandleValid</a><span class="extrainfo"></span></td><td></td><td></td></tr><tr><td><a href="iz/streams.html#cmToSystem">cmToSystem</a><span class="extrainfo"></span></td><td></td><td></td></tr><tr><td><a href="iz/streams.html#genReadWriteVar">genReadWriteVar</a><span class="extrainfo"></span></td><td></td><td></td></tr><tr><td><span class="extrainfo"><span class="attribs"><span class="attr-auto">auto</span></span></span><a href="iz/streams.html#streamRange">streamRange</a><span class="extrainfo"></span></td><td></td><td></td></tr><tr><td><a href="iz/streams.html#copyStream">copyStream</a><span class="extrainfo"></span></td><td></td><td></td></tr><tr><td><a href="iz/streams.html#writeRange">writeRange</a><span class="extrainfo"></span></td><td></td><td></td></tr><tr><td><a href="iz/streams.html#writeArray">writeArray</a><span class="extrainfo"></span></td><td></td><td></td></tr><tr><td><a href="iz/streams.html#readArray">readArray</a><span class="extrainfo"></span></td><td></td><td></td></tr></table><h2>Structs</h2><table><tr><td><a href="iz/streams/StreamRange.html">StreamRange</a></td><td></td><td></td></tr></table><h2>Interfaces</h2><table><tr><td><a href="iz/streams/StreamPersist.html">StreamPersist</a></td><td></td><td></td></tr><tr><td><a href="iz/streams/FilePersist8.html">FilePersist8</a></td><td></td><td></td></tr><tr><td><a href="iz/streams/Stream.html">Stream</a></td><td></td><td></td></tr></table><h2>Classes</h2><table><tr><td><a href="iz/streams/SystemStream.html">SystemStream</a></td><td></td><td></td></tr><tr><td><a href="iz/streams/FileStream.html">FileStream</a></td><td></td><td></td></tr><tr><td><a href="iz/streams/MemoryStream.html">MemoryStream</a></td><td></td><td></td></tr></table>
+</td><td></td></tr></table><h2>Functions</h2><table><tr><td><a href="iz/streams.html#isHandleValid">isHandleValid</a><span class="extrainfo"></span></td><td></td><td></td></tr><tr><td><a href="iz/streams.html#cmToSystem">cmToSystem</a><span class="extrainfo"></span></td><td></td><td></td></tr><tr><td><a href="iz/streams.html#isHandleValid">isHandleValid</a><span class="extrainfo"></span></td><td></td><td></td></tr><tr><td><a href="iz/streams.html#cmToSystem">cmToSystem</a><span class="extrainfo"></span></td><td></td><td></td></tr><tr><td><a href="iz/streams.html#genReadWriteVar">genReadWriteVar</a><span class="extrainfo"></span></td><td></td><td></td></tr><tr><td><span class="extrainfo"><span class="attribs"><span class="attr-auto">auto</span></span></span><a href="iz/streams.html#streamRange">streamRange</a><span class="extrainfo"></span></td><td></td><td>Returns: <p>A pointer to a StreamRange that has to be free manually with <code class="d_inlinecode">destruct()</code>.
+</p>
+</td></tr><tr><td><a href="iz/streams.html#copyStream">copyStream</a><span class="extrainfo"></span></td><td></td><td></td></tr><tr><td><a href="iz/streams.html#writeRange">writeRange</a><span class="extrainfo"></span></td><td></td><td></td></tr><tr><td><a href="iz/streams.html#writeArray">writeArray</a><span class="extrainfo"></span></td><td></td><td></td></tr><tr><td><a href="iz/streams.html#readArray">readArray</a><span class="extrainfo"></span></td><td></td><td></td></tr></table><h2>Structs</h2><table><tr><td><a href="iz/streams/StreamRange.html">StreamRange</a></td><td></td><td></td></tr></table><h2>Interfaces</h2><table><tr><td><a href="iz/streams/StreamPersist.html">StreamPersist</a></td><td></td><td></td></tr><tr><td><a href="iz/streams/FilePersist8.html">FilePersist8</a></td><td></td><td></td></tr><tr><td><a href="iz/streams/Stream.html">Stream</a></td><td></td><td></td></tr></table><h2>Classes</h2><table><tr><td><a href="iz/streams/SystemStream.html">SystemStream</a></td><td></td><td></td></tr><tr><td><a href="iz/streams/FileStream.html">FileStream</a></td><td></td><td></td></tr><tr><td><a href="iz/streams/MemoryStream.html">MemoryStream</a></td><td></td><td></td></tr></table>
 </div>
 </div><script>hljs.initHighlightingOnLoad();</script>
 

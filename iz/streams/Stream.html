@@ -45,7 +45,7 @@
 <div class="aggregate-symbol"><div class="description"><pre><code>public interface Stream
 </code></pre>
 <div class="section"><h2></h2>
-<p>Defines the members of a stream.
+<p>Defines the members of a Stream.
 </p>
 
 
@@ -59,29 +59,57 @@
     size_t count)
 </code></pre>
 <div class="section"><h2></h2>
-<p>Reads count bytes in buffer.
-Returns the count of bytes that's been read.
+<p>Reads from the Stream.
 </p>
 
 
 </div>
 <div class="section"><h2></h2>
+
+
+</div>
+<div class="section"><h2>Parameters</h2>
+<table class="params">
+<tr class="param"><td class="paramName">buffer</td><td class="paramDoc"><p>A pointer to the target.
+</p>
+</td></tr>
+<tr class="param"><td class="paramName">count</td><td class="paramDoc"><p>The number of bytes to read.
+</p>
+</td></tr>
+</table>
+</div>
+<div class="section"><h2>Returns</h2>
+<p>The count of bytes that's been read.
+</p>
 
 
 </div>
 </div></div><a class="anchor" id="readVariable"></a><div class="symbol"><div class="description"><pre><code>public final T <a href="iz/streams/Stream.html#readVariable">readVariable</a>(T)()
 </code></pre>
 <div class="section"><h2></h2>
-<p>Reads and returns a T.
-The return is undefined if the stream position does not allow to read a T.
-T must verify isFixedSize.
-Typed readers are generated for each type in iz.types.BasicTypes
-and they are named readInt, readChar, etc.
+<p>Reads a typed variable.
 </p>
 
 
 </div>
 <div class="section"><h2></h2>
+<p>Typed readers are generated for each type in iz.types.BasicTypes
+and they are named readInt, readChar, etc.
+</p>
+
+
+</div>
+<div class="section"><h2>Parameters</h2>
+<table class="params">
+<tr class="param"><td class="paramName">T</td><td class="paramDoc"><p>The type of the variable to read.
+</p>
+</td></tr>
+</table>
+</div>
+<div class="section"><h2>Returns</h2>
+<p>A variable of type T. This value can be undefined if the stream
+     position does not allow to read a T.
+</p>
 
 
 </div>
@@ -90,40 +118,68 @@ and they are named readInt, readChar, etc.
     size_t count)
 </code></pre>
 <div class="section"><h2></h2>
-<p>Writes count bytes to buffer.
-Returns the count of bytes that's been written.
+<p>Writes the content of a buffer.
 </p>
 
 
 </div>
 <div class="section"><h2></h2>
+
+
+</div>
+<div class="section"><h2>Parameters</h2>
+<table class="params">
+<tr class="param"><td class="paramName">buffer</td><td class="paramDoc"><p>A pointer to the buffer to write.
+</p>
+</td></tr>
+<tr class="param"><td class="paramName">count</td><td class="paramDoc"><p>The size of the buffer.
+</p>
+</td></tr>
+</table>
+</div>
+<div class="section"><h2>Returns</h2>
+<p>the count of bytes that's been written.
+</p>
 
 
 </div>
 </div></div><a class="anchor" id="writeVariable"></a><div class="symbol"><div class="description"><pre><code>public final size_t <a href="iz/streams/Stream.html#writeVariable">writeVariable</a>(T)(T value)
 </code></pre>
 <div class="section"><h2></h2>
-<p>Writes value.
-Returns the count of bytes that's been written (either T.sizeof or 0).
-T must verify isFixedSize.
-Typed writers are generated for each type in iz.types.BasicTypes
+<p>Writes a typed value.
+</p>
+
+
+</div>
+<div class="section"><h2></h2>
+<p>Typed writers are generated for each type in iz.types.BasicTypes
 and they are named writeInt, writeChar, etc.
 </p>
 
 
 </div>
-<div class="section"><h2></h2>
+<div class="section"><h2>Parameters</h2>
+<table class="params">
+<tr class="param"><td class="paramName">T</td><td class="paramDoc"><p>The type of the variable to read.
+</p>
+</td></tr>
+<tr class="param"><td class="paramName">value</td><td class="paramDoc"><p>the T to write.
+</p>
+</td></tr>
+</table>
+</div>
+<div class="section"><h2>Returns</h2>
+<p>the count of bytes that's been written (either T.sizeof or 0).
+</p>
 
 
 </div>
-</div></div><a class="anchor" id="seek"></a><div class="symbol"><div class="description"><pre><code>public <a href="http://dlang.org/type.html#basic-data-types">ulong</a> <a href="iz/streams/Stream.html#seek">seek</a>(
-    <a href="http://dlang.org/type.html#basic-data-types">ulong</a> offset, 
+</div></div><a class="anchor" id="seek"></a><div class="symbol"><div class="description"><pre><code>public <a href="http://dlang.org/type.html#basic-data-types">long</a> <a href="iz/streams/Stream.html#seek">seek</a>(
+    <a href="http://dlang.org/type.html#basic-data-types">long</a> offset, 
     <a href="iz/streams/SeekMode.html">SeekMode</a> mode)
 </code></pre>
 <div class="section"><h2></h2>
-<p>Sets the position to offset if mode = SeekMode.skBeg,
-to .position + anOffset if mode = SeekMode.skCur,
-to .size + anOffset if mode = SeekMode.skEnd.
+<p>Sets the stream position.
 </p>
 
 
@@ -132,14 +188,30 @@ to .size + anOffset if mode = SeekMode.skEnd.
 
 
 </div>
-</div></div><a class="anchor" id="seek"></a><div class="symbol"><div class="description"><pre><code>public <a href="http://dlang.org/type.html#basic-data-types">ulong</a> <a href="iz/streams/Stream.html#seek">seek</a>(
-    <a href="http://dlang.org/type.html#basic-data-types">uint</a> offset, 
+<div class="section"><h2>Parameters</h2>
+<table class="params">
+<tr class="param"><td class="paramName">offset</td><td class="paramDoc"><p>The offset from the start position.
+</p>
+</td></tr>
+<tr class="param"><td class="paramName">mode</td><td class="paramDoc"><p>The start position. Either the Stream.position if
+     <code class="d_inlinecode">mode == SeekMode.skCur</code>, 0 if <code class="d_inlinecode">mode == SeekMode.skBeg</code> or
+     Stream.size if <code class="d_inlinecode">mode == SeekMode.skCur</code>.
+</p>
+</td></tr>
+</table>
+</div>
+<div class="section"><h2>Returns</h2>
+<p>the new position.
+</p>
+
+
+</div>
+</div></div><a class="anchor" id="seek"></a><div class="symbol"><div class="description"><pre><code>public <a href="http://dlang.org/type.html#basic-data-types">int</a> <a href="iz/streams/Stream.html#seek">seek</a>(
+    <a href="http://dlang.org/type.html#basic-data-types">int</a> offset, 
     <a href="iz/streams/SeekMode.html">SeekMode</a> mode)
 </code></pre>
 <div class="section"><h2></h2>
-<p>Sets the position to offset if mode = SeekMode.skBeg,
-to .position + anOffset if mode = SeekMode.skCur,
-to .size + anOffset if mode = SeekMode.skEnd.
+<p>Sets the stream position.
 </p>
 
 
@@ -148,7 +220,25 @@ to .size + anOffset if mode = SeekMode.skEnd.
 
 
 </div>
-</div></div><a class="anchor" id="size"></a><div class="symbol"><div class="description"><pre><code>public @property <a href="http://dlang.org/type.html#basic-data-types">ulong</a> <a href="iz/streams/Stream.html#size">size</a>()
+<div class="section"><h2>Parameters</h2>
+<table class="params">
+<tr class="param"><td class="paramName">offset</td><td class="paramDoc"><p>The offset from the start position.
+</p>
+</td></tr>
+<tr class="param"><td class="paramName">mode</td><td class="paramDoc"><p>The start position. Either the Stream.position if
+     <code class="d_inlinecode">mode == SeekMode.skCur</code>, 0 if <code class="d_inlinecode">mode == SeekMode.skBeg</code> or
+     Stream.size if <code class="d_inlinecode">mode == SeekMode.skCur</code>.
+</p>
+</td></tr>
+</table>
+</div>
+<div class="section"><h2>Returns</h2>
+<p>the new position.
+</p>
+
+
+</div>
+</div></div><a class="anchor" id="size"></a><div class="symbol"><div class="description"><pre><code>public @property <a href="http://dlang.org/type.html#basic-data-types">long</a> <a href="iz/streams/Stream.html#size">size</a>()
 </code></pre>
 <div class="section"><h2></h2>
 <p>Sets or gets the stream size.
@@ -160,7 +250,7 @@ to .size + anOffset if mode = SeekMode.skEnd.
 
 
 </div>
-</div></div><a class="anchor" id="size"></a><div class="symbol"><div class="description"><pre><code>public @property <a href="http://dlang.org/type.html#basic-data-types">void</a> <a href="iz/streams/Stream.html#size">size</a>(<a href="http://dlang.org/type.html#basic-data-types">ulong</a> value)
+</div></div><a class="anchor" id="size"></a><div class="symbol"><div class="description"><pre><code>public @property <a href="http://dlang.org/type.html#basic-data-types">void</a> <a href="iz/streams/Stream.html#size">size</a>(<a href="http://dlang.org/type.html#basic-data-types">long</a> value)
 </code></pre>
 <div class="section"><h2></h2>
 <p>Sets or gets the stream size.
@@ -172,7 +262,7 @@ to .size + anOffset if mode = SeekMode.skEnd.
 
 
 </div>
-</div></div><a class="anchor" id="size"></a><div class="symbol"><div class="description"><pre><code>public @property <a href="http://dlang.org/type.html#basic-data-types">void</a> <a href="iz/streams/Stream.html#size">size</a>(<a href="http://dlang.org/type.html#basic-data-types">uint</a> value)
+</div></div><a class="anchor" id="size"></a><div class="symbol"><div class="description"><pre><code>public @property <a href="http://dlang.org/type.html#basic-data-types">void</a> <a href="iz/streams/Stream.html#size">size</a>(<a href="http://dlang.org/type.html#basic-data-types">int</a> value)
 </code></pre>
 <div class="section"><h2></h2>
 <p>Sets or gets the stream size.
@@ -184,7 +274,7 @@ to .size + anOffset if mode = SeekMode.skEnd.
 
 
 </div>
-</div></div><a class="anchor" id="position"></a><div class="symbol"><div class="description"><pre><code>public @property <a href="http://dlang.org/type.html#basic-data-types">ulong</a> <a href="iz/streams/Stream.html#position">position</a>()
+</div></div><a class="anchor" id="position"></a><div class="symbol"><div class="description"><pre><code>public @property <a href="http://dlang.org/type.html#basic-data-types">long</a> <a href="iz/streams/Stream.html#position">position</a>()
 </code></pre>
 <div class="section"><h2></h2>
 <p>Sets or gets the stream position.
@@ -196,7 +286,7 @@ to .size + anOffset if mode = SeekMode.skEnd.
 
 
 </div>
-</div></div><a class="anchor" id="position"></a><div class="symbol"><div class="description"><pre><code>public @property <a href="http://dlang.org/type.html#basic-data-types">void</a> <a href="iz/streams/Stream.html#position">position</a>(<a href="http://dlang.org/type.html#basic-data-types">ulong</a> value)
+</div></div><a class="anchor" id="position"></a><div class="symbol"><div class="description"><pre><code>public @property <a href="http://dlang.org/type.html#basic-data-types">void</a> <a href="iz/streams/Stream.html#position">position</a>(<a href="http://dlang.org/type.html#basic-data-types">long</a> value)
 </code></pre>
 <div class="section"><h2></h2>
 <p>Sets or gets the stream position.
@@ -208,7 +298,7 @@ to .size + anOffset if mode = SeekMode.skEnd.
 
 
 </div>
-</div></div><a class="anchor" id="position"></a><div class="symbol"><div class="description"><pre><code>public @property <a href="http://dlang.org/type.html#basic-data-types">void</a> <a href="iz/streams/Stream.html#position">position</a>(<a href="http://dlang.org/type.html#basic-data-types">uint</a> value)
+</div></div><a class="anchor" id="position"></a><div class="symbol"><div class="description"><pre><code>public @property <a href="http://dlang.org/type.html#basic-data-types">void</a> <a href="iz/streams/Stream.html#position">position</a>(<a href="http://dlang.org/type.html#basic-data-types">int</a> value)
 </code></pre>
 <div class="section"><h2></h2>
 <p>Sets or gets the stream position.
@@ -244,7 +334,20 @@ to .size + anOffset if mode = SeekMode.skEnd.
 
 
 </div>
-</div></div><div class="section members"><h2>Functions</h2><table><tr><td><a href="iz/streams/Stream.html#read">read</a><span class="extrainfo"></span></td><td></td><td></td></tr><tr><td><span class="extrainfo"><span class="attribs"><span class="attr-final">final</span></span></span><a href="iz/streams/Stream.html#readVariable">readVariable</a><span class="extrainfo"></span></td><td></td><td></td></tr><tr><td><a href="iz/streams/Stream.html#write">write</a><span class="extrainfo"></span></td><td></td><td></td></tr><tr><td><span class="extrainfo"><span class="attribs"><span class="attr-final">final</span></span></span><a href="iz/streams/Stream.html#writeVariable">writeVariable</a><span class="extrainfo"></span></td><td></td><td></td></tr><tr><td><a href="iz/streams/Stream.html#seek">seek</a><span class="extrainfo"></span></td><td></td><td></td></tr><tr><td><a href="iz/streams/Stream.html#seek">seek</a><span class="extrainfo"></span></td><td></td><td></td></tr><tr><td><span class="extrainfo"><span class="attribs"><span class="attr-property">@property</span></span></span><a href="iz/streams/Stream.html#size">size</a><span class="extrainfo"></span></td><td></td><td></td></tr><tr><td><span class="extrainfo"><span class="attribs"><span class="attr-property">@property</span></span></span><a href="iz/streams/Stream.html#size">size</a><span class="extrainfo"></span></td><td></td><td></td></tr><tr><td><span class="extrainfo"><span class="attribs"><span class="attr-property">@property</span></span></span><a href="iz/streams/Stream.html#size">size</a><span class="extrainfo"></span></td><td></td><td></td></tr><tr><td><span class="extrainfo"><span class="attribs"><span class="attr-property">@property</span></span></span><a href="iz/streams/Stream.html#position">position</a><span class="extrainfo"></span></td><td></td><td></td></tr><tr><td><span class="extrainfo"><span class="attribs"><span class="attr-property">@property</span></span></span><a href="iz/streams/Stream.html#position">position</a><span class="extrainfo"></span></td><td></td><td></td></tr><tr><td><span class="extrainfo"><span class="attribs"><span class="attr-property">@property</span></span></span><a href="iz/streams/Stream.html#position">position</a><span class="extrainfo"></span></td><td></td><td></td></tr><tr><td><a href="iz/streams/Stream.html#clear">clear</a><span class="extrainfo"></span></td><td></td><td></td></tr><tr><td><span class="extrainfo"><span class="attribs"><span class="attr-final">final</span></span></span><a href="iz/streams/Stream.html#opOpAssign">opOpAssign</a><span class="extrainfo"></span></td><td></td><td></td></tr></table>
+</div></div><div class="section members"><h2>Functions</h2><table><tr><td><a href="iz/streams/Stream.html#read">read</a><span class="extrainfo"></span></td><td></td><td>Returns: <p>The count of bytes that's been read.
+</p>
+</td></tr><tr><td><span class="extrainfo"><span class="attribs"><span class="attr-final">final</span></span></span><a href="iz/streams/Stream.html#readVariable">readVariable</a><span class="extrainfo"></span></td><td></td><td>Returns: <p>A variable of type T. This value can be undefined if the stream
+     position does not allow to read a T.
+</p>
+</td></tr><tr><td><a href="iz/streams/Stream.html#write">write</a><span class="extrainfo"></span></td><td></td><td>Returns: <p>the count of bytes that's been written.
+</p>
+</td></tr><tr><td><span class="extrainfo"><span class="attribs"><span class="attr-final">final</span></span></span><a href="iz/streams/Stream.html#writeVariable">writeVariable</a><span class="extrainfo"></span></td><td></td><td>Returns: <p>the count of bytes that's been written (either T.sizeof or 0).
+</p>
+</td></tr><tr><td><a href="iz/streams/Stream.html#seek">seek</a><span class="extrainfo"></span></td><td></td><td>Returns: <p>the new position.
+</p>
+</td></tr><tr><td><a href="iz/streams/Stream.html#seek">seek</a><span class="extrainfo"></span></td><td></td><td>Returns: <p>the new position.
+</p>
+</td></tr><tr><td><span class="extrainfo"><span class="attribs"><span class="attr-property">@property</span></span></span><a href="iz/streams/Stream.html#size">size</a><span class="extrainfo"></span></td><td></td><td></td></tr><tr><td><span class="extrainfo"><span class="attribs"><span class="attr-property">@property</span></span></span><a href="iz/streams/Stream.html#size">size</a><span class="extrainfo"></span></td><td></td><td></td></tr><tr><td><span class="extrainfo"><span class="attribs"><span class="attr-property">@property</span></span></span><a href="iz/streams/Stream.html#size">size</a><span class="extrainfo"></span></td><td></td><td></td></tr><tr><td><span class="extrainfo"><span class="attribs"><span class="attr-property">@property</span></span></span><a href="iz/streams/Stream.html#position">position</a><span class="extrainfo"></span></td><td></td><td></td></tr><tr><td><span class="extrainfo"><span class="attribs"><span class="attr-property">@property</span></span></span><a href="iz/streams/Stream.html#position">position</a><span class="extrainfo"></span></td><td></td><td></td></tr><tr><td><span class="extrainfo"><span class="attribs"><span class="attr-property">@property</span></span></span><a href="iz/streams/Stream.html#position">position</a><span class="extrainfo"></span></td><td></td><td></td></tr><tr><td><a href="iz/streams/Stream.html#clear">clear</a><span class="extrainfo"></span></td><td></td><td></td></tr><tr><td><span class="extrainfo"><span class="attribs"><span class="attr-final">final</span></span></span><a href="iz/streams/Stream.html#opOpAssign">opOpAssign</a><span class="extrainfo"></span></td><td></td><td></td></tr></table>
 </div>
 </div><script>hljs.initHighlightingOnLoad();</script>
 

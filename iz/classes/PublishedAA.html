@@ -54,8 +54,8 @@ if(isAssociativeArray!AA && <a href="iz/serializer.html#isSerializable">isSerial
 <div class="section"><h2></h2>
 <p>A Serializer is not able to directly handle <i>AA</i>s but this class
 does the task automatically by splitting keys and values in two arrays.
-This class template can only be instantiated if the <i>AA</i>s key and value
-types are basic (see iz.types.BasicTypes).
+This class template can only be instantiated if the <i>AA</i> key and value
+type is basic (see iz.types.BasicTypes).
 </p>
 
 
@@ -114,7 +114,7 @@ to be called manually.
 </div>
 <div class="section"><h2>Parameters</h2>
 <table class="params">
-<tr class="param"><td class="paramName">aa</td><td class="paramDoc"><p>A pointer to the associative array that will be stoted and restored.
+<tr class="param"><td class="paramName">aa</td><td class="paramDoc"><p>A pointer to the associative array that will be stored and restored.
 </p>
 </td></tr>
 </table>
@@ -122,7 +122,7 @@ to be called manually.
 </div></div><a class="anchor" id="fromAA"></a><div class="symbol"><div class="description"><pre><code>protected <a href="http://dlang.org/type.html#basic-data-types">void</a> <a href="iz/classes/PublishedAA.html#fromAA">fromAA</a>(ref AA aa)
 </code></pre>
 <div class="section"><h2></h2>
-<p>Copy the content of the associative array <i>aa</i> to the internal containers.
+<p>Copies the content of an associative array to the internal containers.
 </p>
 
 
@@ -144,7 +144,7 @@ using the default constructor.
 </div></div><a class="anchor" id="toAA"></a><div class="symbol"><div class="description"><pre><code>protected <a href="http://dlang.org/type.html#basic-data-types">void</a> <a href="iz/classes/PublishedAA.html#toAA">toAA</a>(ref AA aa)
 </code></pre>
 <div class="section"><h2></h2>
-<p>Clears then fills the associative array <i>aa</i> using the internal containers.
+<p>Resets then fills an  associative array using the internal containers.
 </p>
 
 

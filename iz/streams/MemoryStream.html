@@ -46,7 +46,7 @@
 </code></pre>
 <div class="section"><h2></h2>
 <p>Implements a stream of contiguous, GC-free, heap-memory.
-Its maximal theoretical size is 2^32 bytes (x86) or 2^64 bytes (x86_64).
+Its maximal theoretical size is 2^31 bytes (x86) or 2^63 bytes (x86_64).
 Its practical size limit is damped by the amount of remaining DRAM.
 This limit is itself reduced by the memory fragmentation.
 </p>
@@ -55,7 +55,7 @@ This limit is itself reduced by the memory fragmentation.
 </div>
 <div class="section"><h2></h2>
 <p>MemoryStream is also enhanced by implementing the interfaces StreamPersist
-and FilePersist8. This allows to save the content either to another stream or
+and FilePersist8. They allow to save the content either to another stream or
 to a file and to load the content either from another Stream or from a file.
 </p>
 
@@ -120,8 +120,8 @@ at 0.
 
 
 </div>
-</div></div><a class="anchor" id="seek"></a><div class="symbol"><div class="description"><pre><code>public <a href="http://dlang.org/type.html#basic-data-types">ulong</a> <a href="iz/streams/MemoryStream.html#seek">seek</a>(
-    <a href="http://dlang.org/type.html#basic-data-types">ulong</a> offset, 
+</div></div><a class="anchor" id="seek"></a><div class="symbol"><div class="description"><pre><code>public <a href="http://dlang.org/type.html#basic-data-types">long</a> <a href="iz/streams/MemoryStream.html#seek">seek</a>(
+    <a href="http://dlang.org/type.html#basic-data-types">long</a> offset, 
     <a href="iz/streams/SeekMode.html">SeekMode</a> mode)
 </code></pre>
 <div class="section"><h2></h2>
@@ -134,8 +134,8 @@ at 0.
 
 
 </div>
-</div></div><a class="anchor" id="seek"></a><div class="symbol"><div class="description"><pre><code>public <a href="http://dlang.org/type.html#basic-data-types">ulong</a> <a href="iz/streams/MemoryStream.html#seek">seek</a>(
-    <a href="http://dlang.org/type.html#basic-data-types">uint</a> offset, 
+</div></div><a class="anchor" id="seek"></a><div class="symbol"><div class="description"><pre><code>public <a href="http://dlang.org/type.html#basic-data-types">int</a> <a href="iz/streams/MemoryStream.html#seek">seek</a>(
+    <a href="http://dlang.org/type.html#basic-data-types">int</a> offset, 
     <a href="iz/streams/SeekMode.html">SeekMode</a> mode)
 </code></pre>
 <div class="section"><h2></h2>
@@ -148,7 +148,7 @@ at 0.
 
 
 </div>
-</div></div><a class="anchor" id="size"></a><div class="symbol"><div class="description"><pre><code>public @property <a href="http://dlang.org/type.html#basic-data-types">ulong</a> <a href="iz/streams/MemoryStream.html#size">size</a>()
+</div></div><a class="anchor" id="size"></a><div class="symbol"><div class="description"><pre><code>public @property <a href="http://dlang.org/type.html#basic-data-types">long</a> <a href="iz/streams/MemoryStream.html#size">size</a>()
 </code></pre>
 <div class="section"><h2></h2>
 <p>see the Stream interface.
@@ -160,7 +160,7 @@ at 0.
 
 
 </div>
-</div></div><a class="anchor" id="size"></a><div class="symbol"><div class="description"><pre><code>public @property <a href="http://dlang.org/type.html#basic-data-types">void</a> <a href="iz/streams/MemoryStream.html#size">size</a>(<a href="http://dlang.org/type.html#basic-data-types">uint</a> value)
+</div></div><a class="anchor" id="size"></a><div class="symbol"><div class="description"><pre><code>public @property <a href="http://dlang.org/type.html#basic-data-types">void</a> <a href="iz/streams/MemoryStream.html#size">size</a>(<a href="http://dlang.org/type.html#basic-data-types">int</a> value)
 </code></pre>
 <div class="section"><h2></h2>
 <p>see the Stream interface.
@@ -172,7 +172,7 @@ at 0.
 
 
 </div>
-</div></div><a class="anchor" id="size"></a><div class="symbol"><div class="description"><pre><code>public @property <a href="http://dlang.org/type.html#basic-data-types">void</a> <a href="iz/streams/MemoryStream.html#size">size</a>(<a href="http://dlang.org/type.html#basic-data-types">ulong</a> value)
+</div></div><a class="anchor" id="size"></a><div class="symbol"><div class="description"><pre><code>public @property <a href="http://dlang.org/type.html#basic-data-types">void</a> <a href="iz/streams/MemoryStream.html#size">size</a>(<a href="http://dlang.org/type.html#basic-data-types">long</a> value)
 </code></pre>
 <div class="section"><h2></h2>
 <p>see the Stream interface.
@@ -184,7 +184,7 @@ at 0.
 
 
 </div>
-</div></div><a class="anchor" id="position"></a><div class="symbol"><div class="description"><pre><code>public @property <a href="http://dlang.org/type.html#basic-data-types">ulong</a> <a href="iz/streams/MemoryStream.html#position">position</a>()
+</div></div><a class="anchor" id="position"></a><div class="symbol"><div class="description"><pre><code>public @property <a href="http://dlang.org/type.html#basic-data-types">long</a> <a href="iz/streams/MemoryStream.html#position">position</a>()
 </code></pre>
 <div class="section"><h2></h2>
 <p>see the Stream interface.
@@ -196,7 +196,7 @@ at 0.
 
 
 </div>
-</div></div><a class="anchor" id="position"></a><div class="symbol"><div class="description"><pre><code>public @property <a href="http://dlang.org/type.html#basic-data-types">void</a> <a href="iz/streams/MemoryStream.html#position">position</a>(<a href="http://dlang.org/type.html#basic-data-types">ulong</a> value)
+</div></div><a class="anchor" id="position"></a><div class="symbol"><div class="description"><pre><code>public @property <a href="http://dlang.org/type.html#basic-data-types">void</a> <a href="iz/streams/MemoryStream.html#position">position</a>(<a href="http://dlang.org/type.html#basic-data-types">long</a> value)
 </code></pre>
 <div class="section"><h2></h2>
 <p>see the Stream interface.
@@ -208,7 +208,7 @@ at 0.
 
 
 </div>
-</div></div><a class="anchor" id="position"></a><div class="symbol"><div class="description"><pre><code>public @property <a href="http://dlang.org/type.html#basic-data-types">void</a> <a href="iz/streams/MemoryStream.html#position">position</a>(<a href="http://dlang.org/type.html#basic-data-types">uint</a> value)
+</div></div><a class="anchor" id="position"></a><div class="symbol"><div class="description"><pre><code>public @property <a href="http://dlang.org/type.html#basic-data-types">void</a> <a href="iz/streams/MemoryStream.html#position">position</a>(<a href="http://dlang.org/type.html#basic-data-types">int</a> value)
 </code></pre>
 <div class="section"><h2></h2>
 <p>see the Stream interface.
