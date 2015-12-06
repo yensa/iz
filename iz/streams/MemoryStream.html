@@ -46,15 +46,14 @@
 </code></pre>
 <div class="section"><h2></h2>
 <p>Implements a stream of contiguous, GC-free, heap-memory.
-Its maximal theoretical size is 2^31 bytes (x86) or 2^63 bytes (x86_64).
-Its practical size limit is damped by the amount of remaining DRAM.
-This limit is itself reduced by the memory fragmentation.
 </p>
 
 
 </div>
 <div class="section"><h2></h2>
-<p>MemoryStream is also enhanced by implementing the interfaces StreamPersist
+<p>In theory its size can go up to 2^31 bytes (X86) or 2^63 bytes (X86_64).
+This value is obviously limited by the amount of DRAM and the fragmentation.
+MemoryStream is also enhanced by implementing the interfaces StreamPersist
 and FilePersist8. They allow to save the content either to another stream or
 to a file and to load the content either from another Stream or from a file.
 </p>
@@ -85,9 +84,8 @@ to a file and to load the content either from another Stream or from a file.
 </div>
 <div class="section"><h2>Parameters</h2>
 <table class="params">
-<tr class="param"><td class="paramName">a</td><td class="paramDoc"><p>either an array, an input range, a variable with a basic type
-or a stream. Even if the argument is written, the position remains
-at 0.
+<tr class="param"><td class="paramName">a</td><td class="paramDoc"><p>Either an array, an input range, a basic variable or a Stream.
+     Even if the argument is written, the position remains at 0.
 </p>
 </td></tr>
 </table>
@@ -233,21 +231,36 @@ at 0.
 
 </div>
 </div></div><a class="anchor" id="setMemory"></a><div class="symbol"><div class="description"><pre><code>public final <a href="iz/types.html#Ptr">Ptr</a> <a href="iz/streams/MemoryStream.html#setMemory">setMemory</a>(
-    <a href="iz/types.html#Ptr">Ptr</a> aPtr, 
-    size_t aSize, 
+    <a href="iz/types.html#Ptr">Ptr</a> ptr, 
+    size_t newSize, 
     <a href="http://dlang.org/type.html#basic-data-types">bool</a> freeCurrent = true)
 </code></pre>
 <div class="section"><h2></h2>
-<p>Sets the stream memory to aPtr and assumes it represents a chunk
-of size aSize. After the call, the stream position is reset to 0.
-If freeCurrent is true then the current memory is freed.
-Returns the previous memory, only usefull when freeCurrent is set
-to false.
+<p>Replaces the current memory.
 </p>
 
 
 </div>
 <div class="section"><h2></h2>
+
+
+</div>
+<div class="section"><h2>Parameters</h2>
+<table class="params">
+<tr class="param"><td class="paramName">ptr</td><td class="paramDoc"><p>The new memory.
+</p>
+</td></tr>
+<tr class="param"><td class="paramName">newSize</td><td class="paramDoc"><p>The new size.
+</p>
+</td></tr>
+<tr class="param"><td class="paramName">freeCurrent</td><td class="paramDoc"><p>If true, the default, the current memory is freed.
+</p>
+</td></tr>
+</table>
+</div>
+<div class="section"><h2>Returns</h2>
+<p>The old memory, useful only if freeCurrent is set to false.
+</p>
 
 
 </div>
@@ -302,7 +315,7 @@ to false.
 </div></div><a class="anchor" id="saveToFile"></a><div class="symbol"><div class="description"><pre><code>public <a href="http://dlang.org/type.html#basic-data-types">void</a> <a href="iz/streams/MemoryStream.html#saveToFile">saveToFile</a>(in <a href="http://dlang.org/type.html#basic-data-types">char</a>[] aFilename)
 </code></pre>
 <div class="section"><h2></h2>
-<p>see the izFilePersist8 interface.
+<p>see the FilePersist8 interface.
 </p>
 
 
@@ -314,7 +327,7 @@ to false.
 </div></div><a class="anchor" id="loadFromFile"></a><div class="symbol"><div class="description"><pre><code>public <a href="http://dlang.org/type.html#basic-data-types">void</a> <a href="iz/streams/MemoryStream.html#loadFromFile">loadFromFile</a>(in <a href="http://dlang.org/type.html#basic-data-types">char</a>[] aFilename)
 </code></pre>
 <div class="section"><h2></h2>
-<p>see the izFilePersist8 interface.
+<p>see the FilePersist8 interface.
 </p>
 
 
@@ -326,7 +339,7 @@ to false.
 </div></div><a class="anchor" id="filename"></a><div class="symbol"><div class="description"><pre><code>public @property string <a href="iz/streams/MemoryStream.html#filename">filename</a>()
 </code></pre>
 <div class="section"><h2></h2>
-<p>see the izFilePersist8 interface.
+<p>see the FilePersist8 interface.
 </p>
 
 
@@ -335,7 +348,9 @@ to false.
 
 
 </div>
-</div></div><div class="section members"><h2>Functions</h2><table><tr><td><a href="iz/streams/MemoryStream.html#this">this</a></td><td></td><td></td></tr><tr><td><a href="iz/streams/MemoryStream.html#this">this</a></td><td></td><td></td></tr><tr><td><a href="iz/streams/MemoryStream.html#read">read</a><span class="extrainfo"></span></td><td></td><td></td></tr><tr><td><a href="iz/streams/MemoryStream.html#write">write</a><span class="extrainfo"></span></td><td></td><td></td></tr><tr><td><a href="iz/streams/MemoryStream.html#seek">seek</a><span class="extrainfo"></span></td><td></td><td></td></tr><tr><td><a href="iz/streams/MemoryStream.html#seek">seek</a><span class="extrainfo"></span></td><td></td><td></td></tr><tr><td><span class="extrainfo"><span class="attribs"><span class="attr-property">@property</span></span></span><a href="iz/streams/MemoryStream.html#size">size</a><span class="extrainfo"></span></td><td></td><td></td></tr><tr><td><span class="extrainfo"><span class="attribs"><span class="attr-property">@property</span></span></span><a href="iz/streams/MemoryStream.html#size">size</a><span class="extrainfo"></span></td><td></td><td></td></tr><tr><td><span class="extrainfo"><span class="attribs"><span class="attr-property">@property</span></span></span><a href="iz/streams/MemoryStream.html#size">size</a><span class="extrainfo"></span></td><td></td><td></td></tr><tr><td><span class="extrainfo"><span class="attribs"><span class="attr-property">@property</span></span></span><a href="iz/streams/MemoryStream.html#position">position</a><span class="extrainfo"></span></td><td></td><td></td></tr><tr><td><span class="extrainfo"><span class="attribs"><span class="attr-property">@property</span></span></span><a href="iz/streams/MemoryStream.html#position">position</a><span class="extrainfo"></span></td><td></td><td></td></tr><tr><td><span class="extrainfo"><span class="attribs"><span class="attr-property">@property</span></span></span><a href="iz/streams/MemoryStream.html#position">position</a><span class="extrainfo"></span></td><td></td><td></td></tr><tr><td><a href="iz/streams/MemoryStream.html#clear">clear</a><span class="extrainfo"></span></td><td></td><td></td></tr><tr><td><span class="extrainfo"><span class="attribs"><span class="attr-final">final</span></span></span><a href="iz/streams/MemoryStream.html#setMemory">setMemory</a><span class="extrainfo"></span></td><td></td><td></td></tr><tr><td><span class="extrainfo"><span class="attribs"><span class="attr-property">@property</span>, <span class="attr-final">final</span></span></span><a href="iz/streams/MemoryStream.html#memory">memory</a><span class="extrainfo"></span></td><td></td><td></td></tr><tr><td><a href="iz/streams/MemoryStream.html#ubytes">ubytes</a><span class="extrainfo"></span></td><td></td><td></td></tr><tr><td><a href="iz/streams/MemoryStream.html#saveToStream">saveToStream</a><span class="extrainfo"></span></td><td></td><td></td></tr><tr><td><a href="iz/streams/MemoryStream.html#loadFromStream">loadFromStream</a><span class="extrainfo"></span></td><td></td><td></td></tr><tr><td><a href="iz/streams/MemoryStream.html#saveToFile">saveToFile</a><span class="extrainfo"></span></td><td></td><td></td></tr><tr><td><a href="iz/streams/MemoryStream.html#loadFromFile">loadFromFile</a><span class="extrainfo"></span></td><td></td><td></td></tr><tr><td><span class="extrainfo"><span class="attribs"><span class="attr-property">@property</span></span></span><a href="iz/streams/MemoryStream.html#filename">filename</a><span class="extrainfo"></span></td><td></td><td></td></tr></table>
+</div></div><div class="section members"><h2>Functions</h2><table><tr><td><a href="iz/streams/MemoryStream.html#this">this</a></td><td></td><td></td></tr><tr><td><a href="iz/streams/MemoryStream.html#this">this</a></td><td></td><td></td></tr><tr><td><a href="iz/streams/MemoryStream.html#read">read</a><span class="extrainfo"></span></td><td></td><td></td></tr><tr><td><a href="iz/streams/MemoryStream.html#write">write</a><span class="extrainfo"></span></td><td></td><td></td></tr><tr><td><a href="iz/streams/MemoryStream.html#seek">seek</a><span class="extrainfo"></span></td><td></td><td></td></tr><tr><td><a href="iz/streams/MemoryStream.html#seek">seek</a><span class="extrainfo"></span></td><td></td><td></td></tr><tr><td><span class="extrainfo"><span class="attribs"><span class="attr-property">@property</span></span></span><a href="iz/streams/MemoryStream.html#size">size</a><span class="extrainfo"></span></td><td></td><td></td></tr><tr><td><span class="extrainfo"><span class="attribs"><span class="attr-property">@property</span></span></span><a href="iz/streams/MemoryStream.html#size">size</a><span class="extrainfo"></span></td><td></td><td></td></tr><tr><td><span class="extrainfo"><span class="attribs"><span class="attr-property">@property</span></span></span><a href="iz/streams/MemoryStream.html#size">size</a><span class="extrainfo"></span></td><td></td><td></td></tr><tr><td><span class="extrainfo"><span class="attribs"><span class="attr-property">@property</span></span></span><a href="iz/streams/MemoryStream.html#position">position</a><span class="extrainfo"></span></td><td></td><td></td></tr><tr><td><span class="extrainfo"><span class="attribs"><span class="attr-property">@property</span></span></span><a href="iz/streams/MemoryStream.html#position">position</a><span class="extrainfo"></span></td><td></td><td></td></tr><tr><td><span class="extrainfo"><span class="attribs"><span class="attr-property">@property</span></span></span><a href="iz/streams/MemoryStream.html#position">position</a><span class="extrainfo"></span></td><td></td><td></td></tr><tr><td><a href="iz/streams/MemoryStream.html#clear">clear</a><span class="extrainfo"></span></td><td></td><td></td></tr><tr><td><span class="extrainfo"><span class="attribs"><span class="attr-final">final</span></span></span><a href="iz/streams/MemoryStream.html#setMemory">setMemory</a><span class="extrainfo"></span></td><td></td><td>Returns: <p>The old memory, useful only if freeCurrent is set to false.
+</p>
+</td></tr><tr><td><span class="extrainfo"><span class="attribs"><span class="attr-property">@property</span>, <span class="attr-final">final</span></span></span><a href="iz/streams/MemoryStream.html#memory">memory</a><span class="extrainfo"></span></td><td></td><td></td></tr><tr><td><a href="iz/streams/MemoryStream.html#ubytes">ubytes</a><span class="extrainfo"></span></td><td></td><td></td></tr><tr><td><a href="iz/streams/MemoryStream.html#saveToStream">saveToStream</a><span class="extrainfo"></span></td><td></td><td></td></tr><tr><td><a href="iz/streams/MemoryStream.html#loadFromStream">loadFromStream</a><span class="extrainfo"></span></td><td></td><td></td></tr><tr><td><a href="iz/streams/MemoryStream.html#saveToFile">saveToFile</a><span class="extrainfo"></span></td><td></td><td></td></tr><tr><td><a href="iz/streams/MemoryStream.html#loadFromFile">loadFromFile</a><span class="extrainfo"></span></td><td></td><td></td></tr><tr><td><span class="extrainfo"><span class="attribs"><span class="attr-property">@property</span></span></span><a href="iz/streams/MemoryStream.html#filename">filename</a><span class="extrainfo"></span></td><td></td><td></td></tr></table>
 </div>
 </div><script>hljs.initHighlightingOnLoad();</script>
 

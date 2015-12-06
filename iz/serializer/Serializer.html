@@ -45,25 +45,37 @@
 <div class="aggregate-symbol"><div class="description"><pre><code>public class Serializer
 </code></pre>
 <div class="section"><h2></h2>
-<p>Native serializer.
+<p>The Serializer class is specialized to store and restore the members of
+an Object.
 </p>
 
 
 </div>
 <div class="section"><h2></h2>
-<p>A Serializer is specialized to store and restore a structure of Objects.
-</p>
 
 
 </div>
 <div class="section"><h2>PropertyPublisher</h2>
 <p>A Serializer serializes trees of classes that implements the
 PropertyPublisher interface. Their publications define what is saved or
-restored. Object descriptors define the structure. Basics types and array
-of basic types are handled. Special cases exist to manage Stream properties,
-delegates or objects that are stored in the ReferenceMan. It's even possible
-to handle more complex types by using or writing custom PropertyPublishers,
-such as those defined in iz.classes.
+restored. Object descriptors leading to an owned Object define the structure.
+Basics types and array of basic types are handled. Special cases exist to
+manage Stream properties, delegates or objects that are stored in the ReferenceMan.
+It's even possible to handle more complex types by using or writing custom
+PropertyPublishers, such as those defined in iz.classes.
+</p>
+
+
+</div>
+<div class="section"><h2>Ownership</h2>
+<p>Sub objects can be fully serialized or not. This is determined by the ownership.
+A sub object is considered as owned when its member 'declarator' matches to
+to the member 'declarator' of the descriptor that returns this sub object.
+When not owned, the sub object publications are not stored, instead, the
+serializer writes its unique identifier, as found in the ReferenceMan.
+When deserializing, the opposite process happens: the serializer tries to
+restore the reference using the ReferenceMan. Ownership is automatically set
+by the <code class="d_inlinecode">PropertyPubliserImpl</code> analyzers.
 </p>
 
 
@@ -160,7 +172,7 @@ assert(a.sub2.data2 == 2);
 </div></div><a class="anchor" id="_parentNode"></a><div class="symbol"><div class="description"><pre><code>private <a href="iz/serializer/IstNode.html">IstNode</a> _parentNode
 </code></pre>
 <div class="section"><h2></h2>
-<p>the current parent node, always representing a Serializable
+<p>the current parent node, always represents a PropertyPublisher
 </p>
 
 
@@ -184,7 +196,7 @@ assert(a.sub2.data2 == 2);
 </div></div><a class="anchor" id="_rootPublisher"></a><div class="symbol"><div class="description"><pre><code>private Object _rootPublisher
 </code></pre>
 <div class="section"><h2></h2>
-<p>the Serializable linked to _rootNode
+<p>the PropertyPublisher linked to _rootNode
 </p>
 
 
@@ -234,7 +246,7 @@ assert(a.sub2.data2 == 2);
 </code></pre>
 <div class="section"><h2></h2>
 <p>Builds the IST from a PropertyPublisher and stores each publication
-found in the publisher in a stream.
+of the publisher in a stream.
 </p>
 
 
@@ -259,8 +271,7 @@ found in the publisher in a stream.
 </td></tr>
 </table>
 </div>
-</div></div><a class="anchor" id="publisherToIst"></a><div class="symbol"><div class="description"><pre><code>private <a href="http://dlang.org/type.html#basic-data-types">void</a> <a href="iz/serializer/Serializer.html#publisherToIst">publisherToIst</a>(T)(T root) 
-if(is(T == class) || is(T == struct))
+</div></div><a class="anchor" id="publisherToIst"></a><div class="symbol"><div class="description"><pre><code>private <a href="http://dlang.org/type.html#basic-data-types">void</a> <a href="iz/serializer/Serializer.html#publisherToIst">publisherToIst</a>(Object root)
 </code></pre>
 <div class="section"><h2></h2>
 <p>Builds the IST from a PropertyPublisher.
@@ -272,21 +283,31 @@ if(is(T == class) || is(T == struct))
 
 
 </div>
-</div></div><a class="anchor" id="istToPublisher"></a><div class="symbol"><div class="description"><pre><code>private <a href="http://dlang.org/type.html#basic-data-types">void</a> <a href="iz/serializer/Serializer.html#istToPublisher">istToPublisher</a>(<a href="iz/properties/PropertyPublisher.html">PropertyPublisher</a> publisher)
+</div></div><a class="anchor" id="istToPublisher"></a><div class="symbol"><div class="description"><pre><code>private <a href="http://dlang.org/type.html#basic-data-types">void</a> <a href="iz/serializer/Serializer.html#istToPublisher">istToPublisher</a>(Object root)
 </code></pre>
 <div class="section"><h2></h2>
-<p>Fully Restores the IST. Can be called after streamToIst().
-The root must be structured as a tree of PropertyPublisher.
-For each IST node the function tries to find the matching node in the
-property collection of the current object. If not possible then the
-onWantDescriptor or the onWantObject events are called.
+<p>Restores the IST to a PropertyPublisher.
 </p>
 
 
 </div>
 <div class="section"><h2></h2>
+<p>Can be called after <code class="d_inlinecode">streamToIst</code>, which builds the IST without defining
+the <code class="d_inlinecode">PropDescriptor</code> that match to each node. The descriptors are
+dynamically set using the publications of the root. If the procedure doesn't
+detect the descriptor that matches to an IST node, and if assigned,
+then the events <code class="d_inlinecode">onWantObject</code> and <code class="d_inlinecode">onWantDescriptor</code> are called.
+</p>
 
 
+</div>
+<div class="section"><h2>Parameters</h2>
+<table class="params">
+<tr class="param"><td class="paramName">root</td><td class="paramDoc"><p>The Object from where the restoreation starts. It has to be
+     a PropPublisher.
+</p>
+</td></tr>
+</table>
 </div>
 </div></div><a class="anchor" id="streamToPublisher"></a><div class="symbol"><div class="description"><pre><code>private <a href="http://dlang.org/type.html#basic-data-types">void</a> <a href="iz/serializer/Serializer.html#streamToPublisher">streamToPublisher</a>(
     <a href="iz/streams/Stream.html">Stream</a> inputStream, 
@@ -300,8 +321,20 @@ onWantDescriptor or the onWantObject events are called.
 
 </div>
 <div class="section"><h2></h2>
-<p>This method actually call successively streamToIst() then
-istToPublisher().
+<p>This method actually call successively <code class="d_inlinecode">streamToIst()</code> then
+<code class="d_inlinecode">istToPublisher()</code>.
+</p>
+
+
+</div>
+<div class="section"><h2>Parameters</h2>
+<table class="params">
+</table>
+</div>
+<div class="section"><h2>inputStream</h2>
+<p>The Stream that contains the data previously serialized.
+     root = The Object from where the restoreation starts. It has to be
+     a PropPublisher.
 </p>
 
 
@@ -338,7 +371,7 @@ This function can also be used to convert from a format to another.
 </div></div><a class="anchor" id="findNode"></a><div class="symbol"><div class="description"><pre><code>private <a href="iz/serializer/IstNode.html">IstNode</a> <a href="iz/serializer/Serializer.html#findNode">findNode</a>(<a href="http://dlang.org/type.html#basic-data-types">bool</a> cache = false)(in <a href="http://dlang.org/type.html#basic-data-types">char</a>[] descriptorName)
 </code></pre>
 <div class="section"><h2></h2>
-<p>Finds the tree node matching to a property names chain.
+<p>Finds the tree node matching to a name chain.
 </p>
 
 
@@ -349,17 +382,17 @@ This function can also be used to convert from a format to another.
 </div>
 <div class="section"><h2>Parameters</h2>
 <table class="params">
-<tr class="param"><td class="paramName">cache</td><td class="paramDoc"><p>Set to true to activate the internal IST node cache.
-     Should only be set to true when performing many queries.
+<tr class="param"><td class="paramName">cache</td><td class="paramDoc"><p>Set to true to activate the internal IST node caching.
+     This should only be set to true when performing many queries.
 </p>
 </td></tr>
-<tr class="param"><td class="paramName">descriptorName</td><td class="paramDoc"><p>The property names chain which identifies the node.
+<tr class="param"><td class="paramName">descriptorName</td><td class="paramDoc"><p>The name chain that identifies the node.
 </p>
 </td></tr>
 </table>
 </div>
 <div class="section"><h2>Returns</h2>
-<p>A reference to the node that matches the property or nulll.
+<p>A reference to the node that matches to the property or nulll.
 </p>
 
 
@@ -385,8 +418,8 @@ for example after a call to streamToIst().
 </div>
 <div class="section"><h2>Parameters</h2>
 <table class="params">
-<tr class="param"><td class="paramName">node</td><td class="paramDoc"><p>The IST node from where the restoration begins.
-     It can be determined by a call to findNode().
+<tr class="param"><td class="paramName">node</td><td class="paramDoc"><p>The IST node from where the restoration starts.
+     It can be determined by a call to <code class="d_inlinecode">findNode()</code>.
 </p>
 </td></tr>
 <tr class="param"><td class="paramName">recursive</td><td class="paramDoc"><p>When set to true the restoration is recursive.
@@ -488,7 +521,7 @@ PropDescriptor passed as parameter.
 </code></pre>
 </td><td></td></tr><tr><td><a href="iz/serializer/Serializer.html#_rootPublisher">_rootPublisher</a></td><td><pre><code>Object
 </code></pre>
-</td><td></td></tr></table><h2>Functions</h2><table><tr><td><a href="iz/serializer/Serializer.html#this">this</a></td><td></td><td></td></tr><tr><td><a href="iz/serializer/Serializer.html#istToStream">istToStream</a><span class="extrainfo"></span></td><td></td><td></td></tr><tr><td><a href="iz/serializer/Serializer.html#publisherToStream">publisherToStream</a><span class="extrainfo"></span></td><td></td><td></td></tr><tr><td><a href="iz/serializer/Serializer.html#publisherToIst">publisherToIst</a><span class="extrainfo"></span></td><td></td><td></td></tr><tr><td><a href="iz/serializer/Serializer.html#istToPublisher">istToPublisher</a><span class="extrainfo"></span></td><td></td><td></td></tr><tr><td><a href="iz/serializer/Serializer.html#streamToPublisher">streamToPublisher</a><span class="extrainfo"></span></td><td></td><td></td></tr><tr><td><a href="iz/serializer/Serializer.html#streamToIst">streamToIst</a><span class="extrainfo"></span></td><td></td><td></td></tr><tr><td><a href="iz/serializer/Serializer.html#findNode">findNode</a><span class="extrainfo"></span></td><td></td><td>Returns: <p>A reference to the node that matches the property or nulll.
+</td><td></td></tr></table><h2>Functions</h2><table><tr><td><a href="iz/serializer/Serializer.html#this">this</a></td><td></td><td></td></tr><tr><td><a href="iz/serializer/Serializer.html#istToStream">istToStream</a><span class="extrainfo"></span></td><td></td><td></td></tr><tr><td><a href="iz/serializer/Serializer.html#publisherToStream">publisherToStream</a><span class="extrainfo"></span></td><td></td><td></td></tr><tr><td><a href="iz/serializer/Serializer.html#publisherToIst">publisherToIst</a><span class="extrainfo"></span></td><td></td><td></td></tr><tr><td><a href="iz/serializer/Serializer.html#istToPublisher">istToPublisher</a><span class="extrainfo"></span></td><td></td><td></td></tr><tr><td><a href="iz/serializer/Serializer.html#streamToPublisher">streamToPublisher</a><span class="extrainfo"></span></td><td></td><td></td></tr><tr><td><a href="iz/serializer/Serializer.html#streamToIst">streamToIst</a><span class="extrainfo"></span></td><td></td><td></td></tr><tr><td><a href="iz/serializer/Serializer.html#findNode">findNode</a><span class="extrainfo"></span></td><td></td><td>Returns: <p>A reference to the node that matches to the property or nulll.
 </p>
 </td></tr><tr><td><a href="iz/serializer/Serializer.html#nodeToPublisher">nodeToPublisher</a><span class="extrainfo"></span></td><td></td><td></td></tr><tr><td><a href="iz/serializer/Serializer.html#nodeToProperty">nodeToProperty</a><span class="extrainfo"></span></td><td></td><td></td></tr><tr><td><span class="extrainfo"><span class="attribs"><span class="attr-property">@property</span></span></span><a href="iz/serializer/Serializer.html#serializationTree">serializationTree</a><span class="extrainfo"></span></td><td></td><td></td></tr><tr><td><span class="extrainfo"><span class="attribs"><span class="attr-property">@property</span></span></span><a href="iz/serializer/Serializer.html#onWantDescriptor">onWantDescriptor</a><span class="extrainfo"></span></td><td></td><td></td></tr><tr><td><span class="extrainfo"><span class="attribs"><span class="attr-property">@property</span></span></span><a href="iz/serializer/Serializer.html#onWantDescriptor">onWantDescriptor</a><span class="extrainfo"></span></td><td></td><td></td></tr><tr><td><span class="extrainfo"><span class="attribs"><span class="attr-property">@property</span></span></span><a href="iz/serializer/Serializer.html#onWantObject">onWantObject</a><span class="extrainfo"></span></td><td></td><td></td></tr><tr><td><span class="extrainfo"><span class="attribs"><span class="attr-property">@property</span></span></span><a href="iz/serializer/Serializer.html#onWantObject">onWantObject</a><span class="extrainfo"></span></td><td></td><td></td></tr></table>
 </div>

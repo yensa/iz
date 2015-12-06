@@ -189,7 +189,7 @@ by a particular object.
 {
     assert (source);
     assert (target);
-    assert (target != source);
+    assert (cast(<a href="http://dlang.org/type.html#basic-data-types">void</a>*)target != cast(<a href="http://dlang.org/type.html#basic-data-types">void</a>*)source);
 }
 </code></pre>
 
@@ -205,6 +205,29 @@ needs to be passed with the correct type.
 </div>
 <div class="section"><h2></h2>
 
+
+</div>
+<div class="section "><h2>Example</h2>
+<div class="section"><h2></h2>
+
+
+</div>
+<div class="section"><h2></h2>
+
+
+</div>
+<pre><code>int a,b;
+
+// exact match
+<a href="iz/properties/PropDescriptor.html">PropDescriptor</a>!int aDescriptor = <a href="iz/properties/PropDescriptor.html">PropDescriptor</a>!int(&a, "a");
+<a href="iz/properties/PropDescriptor.html">PropDescriptor</a>!int bDescriptor = <a href="iz/properties/PropDescriptor.html">PropDescriptor</a>!int(&b, "a");
+assert(<a href="iz/properties.html#areBindable">areBindable</a>(&aDescriptor, &bDescriptor));
+
+// it also works with different types because of RTTI
+auto cDescriptor = cast(<a href="iz/properties/PropDescriptor.html">PropDescriptor</a>!float*) &aDescriptor;
+assert(<a href="iz/properties.html#areBindable">areBindable</a>(cDescriptor, &bDescriptor));
+
+</code></pre>
 
 </div>
 </div></div><a class="anchor" id="bindPublications"></a><div class="symbol"><div class="description"><pre><code>public <a href="http://dlang.org/type.html#basic-data-types">void</a> <a href="iz/properties.html#bindPublications">bindPublications</a>(<a href="http://dlang.org/type.html#basic-data-types">bool</a> recursive = false, Source, Target)(

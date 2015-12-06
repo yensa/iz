@@ -71,16 +71,17 @@ a delegate, since those reference types are automatically handled by the seriali
 
 
 </div>
-</div></div><a class="anchor" id="storeReference"></a><div class="symbol"><div class="description"><pre><code>protected <a href="http://dlang.org/type.html#basic-data-types">void</a> <a href="iz/serializer/SerializableReference.html#storeReference">storeReference</a>(RT)(RT* aReferenced)
+</div></div><a class="anchor" id="storeReference"></a><div class="symbol"><div class="description"><pre><code>protected <a href="http://dlang.org/type.html#basic-data-types">void</a> <a href="iz/serializer/SerializableReference.html#storeReference">storeReference</a>(RT)(RT* reference)
 </code></pre>
 <div class="section"><h2></h2>
 <p>Sets the internal fields according to a referenced.
-Usually called before the serialization.
 </p>
 
 
 </div>
 <div class="section"><h2></h2>
+<p>Usually called before the serialization.
+</p>
 
 
 </div>
@@ -88,13 +89,14 @@ Usually called before the serialization.
 </code></pre>
 <div class="section"><h2></h2>
 <p>Returns the reference according to the internal fields.
-Usually called after the deserialization of after the
-the reference owner is notified by onRestored().
 </p>
 
 
 </div>
 <div class="section"><h2></h2>
+<p>Usually called after the deserialization of after the
+the reference owner is notified by onRestored().
+</p>
 
 
 </div>
@@ -103,7 +105,7 @@ the reference owner is notified by onRestored().
 <div class="section"><h2></h2>
 <p>Defines the event called when the the identifier string and the
 type string are restored, so that the reference owner can
-retrieve the matching reference in the RefMan.
+retrieve the matching reference in the ReferenceMan.
 </p>
 
 
@@ -117,7 +119,7 @@ retrieve the matching reference in the RefMan.
 <div class="section"><h2></h2>
 <p>Defines the event called when the the identifier string and the
 type string are restored, so that the reference owner can
-retrieve the matching reference in the RefMan.
+retrieve the matching reference in the ReferenceMan.
 </p>
 
 
