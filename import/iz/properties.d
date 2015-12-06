@@ -1242,11 +1242,25 @@ in
 {
     assert(source);
     assert(target);
-    assert(target != source);
+    assert(cast(void*)target != cast(void*)source);
 }
 body
 {
     return (source.name == target.name) & (source.rtti == target.rtti);
+}
+///
+unittest
+{
+    int a,b;
+
+    // exact match
+    PropDescriptor!int aDescriptor = PropDescriptor!int(&a, "a");
+    PropDescriptor!int bDescriptor = PropDescriptor!int(&b, "a");
+    assert(areBindable(&aDescriptor, &bDescriptor));
+
+    // it also works with different types because of RTTI
+    auto cDescriptor = cast(PropDescriptor!float*) &aDescriptor;
+    assert(areBindable(cDescriptor, &bDescriptor));
 }
 
 /**

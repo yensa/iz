@@ -7,17 +7,17 @@ module iz.streams;
 import
     core.exception;
 import
-    std.string, std.range, std.traits, std.conv;
+    std.string, std.range, std.traits;
 import
     iz.types, iz.memory;
 
 version(unittest) import std.stdio;
 
-/// stream creation mode 'There': open only if exists.
+/// FileStream creation mode 'There': opens only if exists.
 immutable int cmThere    = 0;
-/// stream creation mode 'NotThere': create only if not exists.
+/// FileStream creation mode 'NotThere': creates only if not exists.
 immutable int cmNotThere = 1;
-/// stream creation mode 'Always': create if not exists otherwise open.
+/// FileStream creation mode 'Always': creates if not exists otherwise open.
 immutable int cmAlways   = 2;
 
 version (Windows) 
@@ -86,7 +86,9 @@ version (Posix)
     import core.sys.posix.fcntl, core.sys.posix.unistd;
     import core.sys.posix.stdio;
 
-    public alias StreamHandle = int;
+    static import std.conv;
+
+    alias StreamHandle = int;
 
     // Stream seek modes, used as platform-specific constants in SeekMode.
     private immutable int skBeg = 0;//SEEK_SET;
@@ -94,10 +96,10 @@ version (Posix)
     private immutable int skEnd = 2;//SEEK_END;
 
     /// share modes. (does not allow execution)
-    immutable int shNone = octal!600;
-    immutable int shRead = octal!644;
-    immutable int shWrite= octal!622;
-    immutable int shAll  = octal!666;
+    immutable int shNone = std.conv.octal!600;
+    immutable int shRead = std.conv.octal!644;
+    immutable int shWrite= std.conv.octal!622;
+    immutable int shAll  = std.conv.octal!666;
 
     /// access modes.
     immutable uint acRead = O_RDONLY;
@@ -1208,6 +1210,7 @@ class MemoryStream: Stream, StreamPersist, FilePersist8
             }
             version(Posix)
             {
+                import std.conv: octal;
                 auto hdl = open( aFilename.toStringz, O_CREAT | O_TRUNC | O_WRONLY, octal!666);
                 if (hdl <= -1)
                     throw new Exception(format("stream exception: cannot create or overwrite '%s'", aFilename));
@@ -1245,6 +1248,7 @@ class MemoryStream: Stream, StreamPersist, FilePersist8
             }
             version(Posix)
             {
+                import std.conv: octal;
                 auto hdl = open(aFilename.toStringz, O_CREAT | O_RDONLY, octal!666);
 
                 if (hdl <= -1)
@@ -1319,7 +1323,7 @@ unittest
 
 unittest
 {
-    auto sz = 0x1_FFFF_FFFFL;
+    /*auto sz = 0x1_FFFF_FFFFL;
     FileStream huge = construct!FileStream("huge.bin");
     scope(exit)
     {
@@ -1328,7 +1332,7 @@ unittest
     }
     huge.size(sz);
     huge.position = 0;
-    assert(huge.size == sz);
+    assert(huge.size == sz);*/
 }
 
 unittest

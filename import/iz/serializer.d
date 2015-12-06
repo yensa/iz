@@ -81,16 +81,18 @@ public:
 
     /**
      * Sets the internal fields according to a referenced.
+     *
      * Usually called before the serialization.
      */
-    void storeReference(RT)(RT* aReferenced)
+    void storeReference(RT)(RT* reference)
     {
         _tp = (typeString!RT).dup;
-        _id = ReferenceMan.referenceID!RT(aReferenced).dup;
+        _id = ReferenceMan.referenceID!RT(reference).dup;
     }
 
     /**
      * Returns the reference according to the internal fields.
+     *
      * Usually called after the deserialization of after the
      * the reference owner is notified by onRestored().
      */
@@ -102,7 +104,7 @@ public:
     /**
      * Defines the event called when the the identifier string and the
      * type string are restored, so that the reference owner can
-     * retrieve the matching reference in the RefMan.
+     * retrieve the matching reference in the ReferenceMan.
      */
     void onRestored(void delegate(Object) value)
     {
@@ -155,7 +157,7 @@ static this()
         text2type[SerializableTypes[i].stringof] = t;
         type2size[t] = SerializableTypes[i].sizeof;
     }
-    // the txt format doesnt support a type representations with spaces.
+    // the txt format doesnt support a type representation with spaces.
     type2text[SerializableType._delegate] = "GenericDelegate";
     text2type["GenericDelegate"] = SerializableType._delegate;
     type2text[SerializableType._function] = "GenericFunction";
@@ -258,7 +260,7 @@ struct SerNodeInfo
     SerializableType type;
     /// a pointer to a PropDescriptor
     Ptr     descriptor;
-    /// the value
+    /// the raw value
     ubyte[] value;
     /// the name of the property
     string  name;
@@ -277,6 +279,7 @@ class IstNode
 {
 
     mixin TreeItem;
+
 private:
 
     SerNodeInfo _info;
@@ -332,7 +335,7 @@ public:
     }
 
     /**
-     * Returns the identifier chain of the parents.
+     * Returns the parents identifier chain.
      */
     string parentIdentifiersChain()
     {
@@ -359,7 +362,7 @@ public:
     }
 
     /**
-     * Returns the child node whose info.name matches name.
+     * Returns the child node whose info.name matches to name.
      */
     IstNode findChildren(in char[] name)
     {
@@ -594,13 +597,13 @@ enum SerializationFormat : ubyte
 {
     /// native binary format
     izbin,
-    /// native readable text format
+    /// native text format
     iztxt,
     /// JSON chunks
     json
 }
 
-/// Propotype of a function that writes an IstNode representation in a Stream.
+/// Propotype of a function that writes an IstNode representation to a Stream.
 alias SerializationWriter = void function(IstNode istNode, Stream stream);
 
 /// Propotype of a function that reads an IstNode representation from a Stream.
@@ -939,18 +942,27 @@ alias WantObjectEvent = void delegate(IstNode node, ref Object obj, out bool fro
 //TODO-cfeature: Serializer error handling (using isDamaged + format readers errors).
 
 /**
- * Native serializer.
- *
- * A Serializer is specialized to store and restore a structure of Objects.
+ * The Serializer class is specialized to store and restore the members of
+ * an Object.
  *
  * PropertyPublisher:
  * A Serializer serializes trees of classes that implements the
  * PropertyPublisher interface. Their publications define what is saved or
- * restored. Object descriptors define the structure. Basics types and array
- * of basic types are handled. Special cases exist to manage Stream properties,
- * delegates or objects that are stored in the ReferenceMan. It's even possible
- * to handle more complex types by using or writing custom PropertyPublishers,
- * such as those defined in iz.classes.
+ * restored. Object descriptors leading to an owned Object define the structure.
+ * Basics types and array of basic types are handled. Special cases exist to
+ * manage Stream properties, delegates or objects that are stored in the ReferenceMan.
+ * It's even possible to handle more complex types by using or writing custom
+ * PropertyPublishers, such as those defined in iz.classes.
+ *
+ * Ownership:
+ * Sub objects can be fully serialized or not. This is determined by the ownership.
+ * A sub object is considered as owned when its member 'declarator' matches to
+ * to the member 'declarator' of the descriptor that returns this sub object.
+ * When not owned, the sub object publications are not stored, instead, the
+ * serializer writes its unique identifier, as found in the ReferenceMan.
+ * When deserializing, the opposite process happens: the serializer tries to
+ * restore the reference using the ReferenceMan. Ownership is automatically set
+ * by the $(D PropertyPubliserImpl) analyzers.
  *
  * Representation:
  * The serializer uses an intermediate serialization tree (IST) that ensures a 
@@ -977,11 +989,11 @@ private:
 
     /// the IST root
     IstNode _rootNode;
-    /// the current parent node, always representing a Serializable
+    /// the current parent node, always represents a PropertyPublisher
     IstNode _parentNode;
     /// the last created node 
     IstNode _previousNode; 
-    /// the Serializable linked to _rootNode
+    /// the PropertyPublisher linked to _rootNode
     Object  _rootPublisher;
 
     Object  _declarator;
@@ -1055,11 +1067,6 @@ private:
         _parentNode.setDescriptor(objDescr);
         if (_mustWrite)
             writeFormat(_format)(_parentNode, _stream);
-
-        // only store the properties if the object is not a reference.
-        // an object is not a reference when ...
-
-        //TODO-cddoc: formulate clearly why an object is a reference or an owned thing.
 
         // reference: if not a PropDescriptorCollection
         if(!publisher)
@@ -1168,7 +1175,7 @@ public:
 
     /**
      * Builds the IST from a PropertyPublisher and stores each publication
-     * found in the publisher in a stream.
+     * of the publisher in a stream.
      *
      * Storage is performed just after a publication is detected.
      *
@@ -1196,8 +1203,7 @@ public:
     /**
      * Builds the IST from a PropertyPublisher.
      */
-    void publisherToIst(T)(T root)
-    if (is(T==class) || is(T == struct))
+    void publisherToIst(Object root)
     {
         _mustWrite = false;
         _rootNode.deleteChildren;
@@ -1213,13 +1219,19 @@ public:
 //---- deserialization --------------------------------------------------------+
 
     /**
-     * Fully Restores the IST. Can be called after streamToIst().
-     * The root must be structured as a tree of PropertyPublisher.
-     * For each IST node the function tries to find the matching node in the
-     * property collection of the current object. If not possible then the
-     * onWantDescriptor or the onWantObject events are called.
+     * Restores the IST to a PropertyPublisher.
+     *
+     * Can be called after $(D streamToIst), which builds the IST without defining
+     * the $(D PropDescriptor) that match to each node. The descriptors are
+     * dynamically set using the publications of the root. If the procedure doesn't
+     * detect the descriptor that matches to an IST node, and if assigned,
+     * then the events $(D onWantObject) and $(D onWantDescriptor) are called.
+     *
+     * Params:
+     *      root = The Object from where the restoreation starts. It has to be
+     *      a PropPublisher.
      */
-    void istToPublisher(PropertyPublisher publisher)
+    void istToPublisher(Object root)
     {
         void restoreFrom(IstNode node, PropertyPublisher target)
         {
@@ -1274,20 +1286,26 @@ public:
                 }
             }
         }
-        restoreFrom(_rootNode, publisher);
+        if (auto pub = cast(PropertyPublisher) root)
+            restoreFrom(_rootNode, pub);
     }
 
     /**
      * Builds the IST from a Stream and restores from root.
      *
-     * This method actually call successively streamToIst() then
-     * istToPublisher().
+     * This method actually call successively $(D streamToIst()) then
+     * $(D istToPublisher()).
+     *
+     * Params:
+     *      inputStream: The Stream that contains the data previously serialized.
+     *      root = The Object from where the restoreation starts. It has to be
+     *      a PropPublisher.
      */
     void streamToPublisher(Stream inputStream, Object root,
         SerializationFormat format = defaultFormat)
     {
         streamToIst(inputStream, format);
-        istToPublisher(cast(PropertyPublisher)root);
+        istToPublisher(root);
     }
 
     /**
@@ -1348,13 +1366,14 @@ public:
     }
 
     /**
-     * Finds the tree node matching to a property names chain.
+     * Finds the tree node matching to a name chain.
+     *
      * Params:
-     *      cache = Set to true to activate the internal IST node cache.
-     *      Should only be set to true when performing many queries.
-     *      descriptorName = The property names chain which identifies the node.
+     *      cache = Set to true to activate the internal IST node caching.
+     *      This should only be set to true when performing many queries.
+     *      descriptorName = The name chain that identifies the node.
      * Returns:
-     *      A reference to the node that matches the property or nulll.
+     *      A reference to the node that matches to the property or nulll.
      */ 
     IstNode findNode(bool cache = false)(in char[] descriptorName)
     {
@@ -1401,8 +1420,8 @@ public:
      * for example after a call to streamToIst().
      *
      * Params:
-     *      node = The IST node from where the restoration begins.
-     *      It can be determined by a call to findNode().
+     *      node = The IST node from where the restoration starts.
+     *      It can be determined by a call to $(D findNode()).
      *      recursive = When set to true the restoration is recursive.
      */  
     void nodeToPublisher(IstNode node, bool recursive = false)
@@ -1412,7 +1431,7 @@ public:
             bool result = true;
             if (current.info.descriptor && current.info.name ==
                 (cast(PropDescriptor!byte*)current.info.descriptor).name)
-                nodeInfo2Declarator(current.info);
+                    nodeInfo2Declarator(current.info);
             else
             {
                 bool stop;
