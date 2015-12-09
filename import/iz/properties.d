@@ -1246,7 +1246,7 @@ in
 }
 body
 {
-    return (source.name == target.name) & (source.rtti == target.rtti);
+    return source.name == target.name && source.rtti == target.rtti;
 }
 ///
 unittest

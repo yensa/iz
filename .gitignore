@@ -11,6 +11,10 @@ thumbs.db
 *.a
 *.exe
 
+#DUB
+.dub
+dub.selections.json
+
 # nix module unittests, ignore all in import/ except sources
 import/*
 !import/*.d

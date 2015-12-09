@@ -1,0 +1,17 @@
+﻿{
+  "name" : "iz",
+  "sourcePaths" : [
+    "import"
+  ],
+  "licence" : "MIT",
+  "targetType" : "staticLibrary",
+  "targetName" : "iz",
+  "targetPath" : "lib",
+  "importPaths" : [
+    "import"
+  ],
+  "authors" : [
+    "Basile B."
+  ],
+  "description" : "streams, property descriptor, serializer, binder, etc."
+}
