@@ -12,12 +12,12 @@ Setup
 
 - using [Coedit](https://github.com/BBasile/Coedit): open the file _iz.coedit_ in the _project_ menu, item _open_.
 - using DUB, description is included.
-- using shell script, see the _scripts_ folder.
+- using shell scripts, see the _scripts_ folder.
 
 Info
 ----
 - [![CI Status](https://travis-ci.org/BBasile/iz.svg)](https://travis-ci.org/BBasile/iz)
 - v0.5.0: even if stable:
-    - the may could change, slightly.
+    - the API could change, slightly.
     - the serialization formats may change without backward compatibility.
 - MIT licensed.
