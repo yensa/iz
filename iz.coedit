@@ -6,7 +6,7 @@ object _1: TCENativeProject
       messagesOptions.additionalWarnings = True
       outputOptions.binaryKind = staticlib
       outputOptions.inlining = True
-      outputOptions.boundsCheck = onAlways
+      outputOptions.boundsCheck = offAlways
       outputOptions.optimizations = True
       outputOptions.release = True
       pathsOptions.outputFilename = 'lib/iz'

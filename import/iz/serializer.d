@@ -1563,9 +1563,9 @@ void publisherToFile(Object pub, in char[] filename,
 {
     MemoryStream str = construct!MemoryStream;
     Serializer ser = construct!Serializer;
-    scope(exit) destruct(str, ser, format);
+    scope(exit) destruct(str, ser);
     //
-    ser.publisherToStream(pub, str);
+    ser.publisherToStream(pub, str, format);
     str.saveToFile(filename);
 }
 
