@@ -81,10 +81,10 @@ public:
     final void deleteItem(T)(T t)
     if (isIntegral!T || is(Unqual!T == ItemClass))
     {
-        long index;
+        ptrdiff_t index;
         static if(is(Unqual!T == ItemClass))
             index = _items.countUntil(t);
-        else index = t;
+        else index = cast(ptrdiff_t)t;
 
         if (_items.count == 0 || index > _items.count-1 || index < 0)
             return;
