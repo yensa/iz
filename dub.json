@@ -3,7 +3,6 @@
   "sourcePaths" : [
     "import"
   ],
-  "licence" : "MIT",
   "targetType" : "staticLibrary",
   "targetName" : "iz",
   "targetPath" : "lib",
@@ -13,5 +12,6 @@
   "authors" : [
     "Basile B."
   ],
-  "description" : "streams, property descriptor, serializer, binder, etc."
+  "description" : "streams, property descriptor, serializer, binder, etc.",
+  "license" : "MIT"
 }
