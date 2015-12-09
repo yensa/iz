@@ -11,7 +11,7 @@ Setup
 -----
 
 - using [Coedit](https://github.com/BBasile/Coedit): open the file _iz.coedit_ in the _project_ menu, item _open_.
-- using DUB, desxription is included.
+- using DUB, description is included.
 - using shell script, see the _scripts_ folder.
 
 Info
