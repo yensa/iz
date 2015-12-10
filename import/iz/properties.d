@@ -1010,7 +1010,7 @@ unittest
         this(uint value){collectPublications!Bug;}
         @SetGet uint _a;
     }
-    // test that the 'static if things' related to 'interface inheritence'
+    // test that the 'static if things' related to 'interface inheritance'
     // dont interfere when mixed in struct
     Bug bug = Bug(0);
     assert(bug.publicationCount == 1);
@@ -1258,7 +1258,7 @@ unittest
     PropDescriptor!int bDescriptor = PropDescriptor!int(&b, "a");
     assert(areBindable(&aDescriptor, &bDescriptor));
 
-    // it also works with different types because of RTTI
+    // it also works with different static types because of RTTI
     auto cDescriptor = cast(PropDescriptor!float*) &aDescriptor;
     assert(areBindable(cDescriptor, &bDescriptor));
 }
@@ -1266,76 +1266,79 @@ unittest
 /**
  * Binds two property publishers.
  *
- * After the call, each property published in target that has a matching property
- * in source has the same value as the source.
+ * After the call, each property published in source and target that have the
+ * same runtime type and the same name share the same value.
  *
  * Params:
  *      recursive = Indicates if the process is recursive.
- *      source = The aggregate from where the properties values are copied. Either
- *          a class or a struct that's mixed with PropertyPublisherImpl
+ *      source = The aggregate from where the properties values are copied.
+ *          Either a class or a struct that's mixed with PropertyPublisherImpl
  *          or a PropertyPublisher.
- *      target = The aggregate where the propertues values are copied.
- *          As for the Target type, same requirment as the source.
+ *      target = The aggregate where the properties values are copied.
+ *          As for the Target type, same requirement as the source.
  */
 void bindPublications(bool recursive = false, Source, Target)(Source source, Target target)
 if (isPropertyPublisher!Source && isPropertyPublisher!Target)
 {
-    PropDescriptor!int* sourceProp, targetProp;
+    GenericDescriptor* srcP, trgP;
     foreach(immutable i; 0 .. source.publicationCount)
     {
-        sourceProp = cast(PropDescriptor!int*) source.publicationFromIndex(i);
-        targetProp = cast(PropDescriptor!int*) target.publicationFromName(sourceProp.name);
+        srcP = cast(GenericDescriptor*) source.publicationFromIndex(i);
+        trgP = cast(GenericDescriptor*) target.publicationFromName(srcP.name);
 
-        if (!targetProp) continue;
-        if (sourceProp.rtti != targetProp.rtti) continue;
+        if (!trgP) continue;
+        if (srcP.rtti != trgP.rtti) continue;
 
-        if (sourceProp.rtti.type != RuntimeType._object)
+        void set(T)()
         {
-            // note: ABI magic, this works whatever is the property type
-            // but it would be safer to cast properly the PropDescriptor according to its rtti
-            
-            void set8bytes()
-            {
-                if (!sourceProp.rtti.array)
-                    (cast(PropDescriptor!long*)targetProp).set
-                        ((cast(PropDescriptor!long*)sourceProp).get);            
-                else
-                    (cast(PropDescriptor!(long[])*)targetProp).set
-                        ((cast(PropDescriptor!(long[])*)sourceProp).get);
-            }
-            void setUpTo4bytes()
-            {
-                if (!sourceProp.rtti.array)
-                    targetProp.set(sourceProp.get);
-                else
-                    (cast(PropDescriptor!(int[])*)targetProp)
-                        .set((cast(PropDescriptor!(int[])*)sourceProp).get);            
-            }
-            
-            if (targetProp.rtti.type == RuntimeType._ulong ||
-                targetProp.rtti.type == RuntimeType._long ||
-                targetProp.rtti.type == RuntimeType._double)
-                set8bytes(); 
-            else setUpTo4bytes;
-                
-            
-
+            alias PT0 = PropDescriptor!T*;
+            alias PT1 = PropDescriptor!(T[])*;
+            if (srcP.rtti.array)
+                (cast(PT1) trgP).set((cast(PT1) srcP).get());
+            else
+                (cast(PT0) trgP).set((cast(PT0) srcP).get());
         }
-        else
+
+        void setObject()
         {
             // reference
-            if (sourceProp.declarator !is source.declarator
-                && targetProp.declarator !is target.declarator)
-                    targetProp.set(sourceProp.get);
+            if (srcP.declarator !is source.declarator
+                && trgP.declarator !is target.declarator)
+                    set!Object;
             // sub object
             else static if (recursive)
             {
                 bindPublications!true(
-                    (cast(PropDescriptor!Object*) sourceProp).get(),
-                    (cast(PropDescriptor!Object*) targetProp).get()
+                    (cast(PropDescriptor!Object*) srcP).get(),
+                    (cast(PropDescriptor!Object*) trgP).get()
                 );
-                continue;
             }
+        }
+
+        import iz.streams: Stream;
+
+        with(RuntimeType) final switch (srcP.rtti.type)
+        {
+            case _void, _struct: break;
+            case _bool:  set!bool; break;
+            case _ubyte: set!ubyte; break;
+            case _byte:  set!byte; break;
+            case _ushort:set!ushort; break;
+            case _short: set!short; break;
+            case _uint:  set!uint; break;
+            case _int:   set!int; break;
+            case _ulong: set!ulong; break;
+            case _long:  set!long; break;
+            case _float: set!float; break;
+            case _double:set!double; break;
+            case _real:  set!real; break;
+            case _char:  set!char; break;
+            case _wchar: set!wchar; break;
+            case _dchar: set!dchar; break;
+            case _stream: set!Stream; break;
+            case _delegate: set!GenericDelegate; break;
+            case _function: set!GenericFunction; break;
+            case _object: setObject; break;
         }
     }
 }
@@ -1350,18 +1353,24 @@ void bindPublications(bool recursive = false)(Object from, Object to)
 
 unittest
 {
+    import iz.streams: Stream, MemoryStream;
     class Foo(bool Nested) : PropertyPublisher
     {
         mixin PropertyPublisherImpl;
         this()
         {
-            static if (Nested)
-                _sub = new Foo!false;
+            static if (Nested) _sub = new Foo!false;
+            str = new MemoryStream;
             collectPublications!Foo;
         }
         @SetGet uint _a;
         @SetGet ulong _b;
         @SetGet string _c;
+        MemoryStream str;
+
+        @Set void stream(Stream s)
+        {str.loadFromStream(s);}
+        @Get Stream stream(){return str;}
 
         static if (Nested)
         {
@@ -1373,6 +1382,8 @@ unittest
     Foo!true target = new Foo!true;
     source._a = 8; source._b = ulong.max; source._c = "123";
     source._sub._a = 8; source._sub._b = ulong.max; source._sub._c = "123";
+    source.str.writeInt(1);source.str.writeInt(2);source.str.writeInt(3);
+    source._sub.str.writeInt(1);source._sub.str.writeInt(2);source._sub.str.writeInt(3);
     bindPublications!true(source, target);
 
     assert(target._a == source._a);
@@ -1381,6 +1392,15 @@ unittest
     assert(target._sub._a == source._sub._a);
     assert(target._sub._b == source._sub._b);
     assert(target._sub._c == source._sub._c);
+    target.str.position = 0;
+    assert(target.str.readInt == 1);
+    assert(target.str.readInt == 2);
+    assert(target.str.readInt == 3);
+    target._sub.str.position = 0;
+    assert(target._sub.str.readInt == 1);
+    assert(target._sub.str.readInt == 2);
+    assert(target._sub.str.readInt == 3);
+
 }
 
 /**
