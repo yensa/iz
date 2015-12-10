@@ -1320,25 +1320,27 @@ if (isPropertyPublisher!Source && isPropertyPublisher!Target)
         with(RuntimeType) final switch (srcP.rtti.type)
         {
             case _void, _struct: break;
-            case _bool:  set!bool; break;
-            case _ubyte: set!ubyte; break;
-            case _byte:  set!byte; break;
-            case _ushort:set!ushort; break;
-            case _short: set!short; break;
-            case _uint:  set!uint; break;
-            case _int:   set!int; break;
-            case _ulong: set!ulong; break;
-            case _long:  set!long; break;
-            case _float: set!float; break;
-            case _double:set!double; break;
-            case _real:  set!real; break;
-            case _char:  set!char; break;
-            case _wchar: set!wchar; break;
-            case _dchar: set!dchar; break;
-            case _stream: set!Stream; break;
+            case _bool:     set!bool; break;
+            case _ubyte:    set!ubyte; break;
+            case _byte:     set!byte; break;
+            case _ushort:   set!ushort; break;
+            case _short:    set!short; break;
+            case _uint:     set!uint; break;
+            case _int:      set!int; break;
+            case _ulong:    set!ulong; break;
+            case _long:     set!long; break;
+            case _float:    set!float; break;
+            case _double:   set!double; break;
+            case _real:     set!real; break;
+            case _char:     set!char; break;
+            case _wchar:    set!wchar; break;
+            case _dchar:    set!dchar; break;
+            case _string:   set!string; break;
+            case _wstring:  set!wstring; break;
+            case _stream:   set!Stream; break;
             case _delegate: set!GenericDelegate; break;
             case _function: set!GenericFunction; break;
-            case _object: setObject; break;
+            case _object:   setObject; break;
         }
     }
 }

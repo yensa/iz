@@ -64,7 +64,7 @@ enum RuntimeType : ubyte
     _void   = 0,
     _bool   = 0x01, _byte, _ubyte, _short, _ushort, _int, _uint, _long, _ulong,
     _float  = 0x10, _double, _real,
-    _char   = 0x20, _wchar, _dchar,
+    _char   = 0x20, _wchar, _dchar, _string, _wstring,
     _object = 0x30,
     _stream = 0x38,
     _struct = 0x40,
@@ -118,6 +118,9 @@ auto runtimeTypeInfo(T)()
         else static if (is(TT == char))  type = _char;
         else static if (is(TT == wchar)) type = _wchar;
         else static if (is(TT == dchar)) type = _dchar;
+
+        else static if (is(TT == string))type = _string;
+        else static if (is(TT == wstring))type = _wstring;
 
         else static if (is(TT : Stream)) type = _stream;
 
@@ -223,13 +226,13 @@ template isMultiDimensionalArray(T)
     {
         import std.range.primitives: hasLength;
         alias DT = typeof(T.init[0]);
-        enum isMultiDimensionalArray = hasLength!DT || isNarrowString!DT;
+        enum isMultiDimensionalArray = hasLength!DT;
     }
 }
 ///
 unittest
 {
-    static assert(isMultiDimensionalArray!(string[]) );
+    static assert(!isMultiDimensionalArray!(string[]) );
     static assert(isMultiDimensionalArray!(int[][]) );
     static assert(!isMultiDimensionalArray!(int[]) );
     static assert(!isMultiDimensionalArray!(int) );
@@ -254,6 +257,7 @@ if (isArray!T)
 ///
 unittest
 {
+    static assert(dimensionCount!(string[]) == 1);
     static assert(dimensionCount!(int[]) == 1);
     static assert(dimensionCount!(int[][]) == 2);
     static assert(dimensionCount!(int[][][]) == 3);

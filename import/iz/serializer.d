@@ -126,7 +126,7 @@ enum SerializableType
     _invalid= 0,
     _bool   = 0x01, _byte, _ubyte, _short, _ushort, _int, _uint, _long, _ulong,
     _float  = 0x10, _double,
-    _char   = 0x20, _wchar, _dchar,
+    _char   = 0x20, _wchar, _dchar, _string, _wstring,
     _object = 0x30,
     _stream = 0x38,
     _delegate = 0x50, _function
@@ -139,7 +139,7 @@ private alias SerializableTypes = AliasSeq!(
     InvalidSerType, 
     bool, byte, ubyte, short, ushort, int, uint, long, ulong,
     float, double,
-    char, wchar, dchar,
+    char, wchar, dchar, string, wstring,
     Object,
     Stream,
     GenericDelegate, GenericFunction,
@@ -178,7 +178,7 @@ package bool isSerObjectType(SerializableType type)
 
 package bool isSerSimpleType(T)()
 {
-    static if (isArray!T) return false;
+    static if (isArray!T && !isNarrowString!T) return false;
     else static if (is(T : GenericDelegate)) return false;
     else static if (isSerObjectType!T) return false;
     else static if (staticIndexOf!(T, SerializableTypes) == -1) return false;
@@ -194,6 +194,7 @@ package bool isSerArrayType(T)()
     {
         alias TT = typeof(T.init[0]);
         static if (isSomeFunction!TT) return false;
+        else static if (isNarrowString!TT) return true;
         else static if (isSerObjectType!TT) return true;
         else static if (staticIndexOf!(TT, SerializableTypes) == -1) return false;
         else return true;
@@ -389,8 +390,8 @@ char[] value2text(const SerNodeInfo* nodeInfo)
     //
     with (SerializableType) final switch(nodeInfo.type)
     {
-        case _invalid: return invalidText;
-        case _object: return cast(char[])(nodeInfo.value);
+        case _invalid:  return invalidText;
+        case _object:   return cast(char[])(nodeInfo.value);
         case _bool:     return v2t!bool;
         case _ubyte:    return v2t!ubyte;
         case _byte:     return v2t!byte;
@@ -404,6 +405,8 @@ char[] value2text(const SerNodeInfo* nodeInfo)
         case _double:   return v2t!double;
         case _char:     return v2t!char;
         case _wchar:    return v2t!wchar;
+        case _string:   return v2t!string;
+        case _wstring:  return v2t!wstring;
         case _dchar:    return v2t!dchar;
         case _stream:   return to!(char[])(nodeInfo.value[]);
         case _delegate: return v2t_2!char;
@@ -446,6 +449,8 @@ ubyte[] text2value(char[] text, const SerNodeInfo* nodeInfo)
         case _char:     return t2v!char;
         case _wchar:    return t2v_2!wchar;
         case _dchar:    return t2v!dchar;
+        case _string:   return t2v!string;
+        case _wstring:  return t2v!wstring;
         case _stream:   return t2v_2!ubyte;
         case _object, _delegate, _function: return cast(ubyte[]) text;
     }
@@ -472,20 +477,22 @@ void nodeInfo2Declarator(const SerNodeInfo* nodeInfo)
     with (SerializableType) final switch(nodeInfo.type)
     {
         case _invalid, _object: break;
-        case _bool: toDecl!bool; break;
-        case _byte: toDecl!byte; break;
-        case _ubyte: toDecl!ubyte; break;
-        case _short: toDecl!short; break;
-        case _ushort: toDecl!ushort; break;
-        case _int: toDecl!int; break;
-        case _uint: toDecl!uint; break;
-        case _long: toDecl!long; break;
-        case _ulong: toDecl!ulong; break;
-        case _float: toDecl!float; break;
-        case _double: toDecl!double; break;
-        case _char: toDecl!char; break;
-        case _wchar: toDecl!wchar; break;
-        case _dchar: toDecl!dchar; break;
+        case _bool:     toDecl!bool; break;
+        case _byte:     toDecl!byte; break;
+        case _ubyte:    toDecl!ubyte; break;
+        case _short:    toDecl!short; break;
+        case _ushort:   toDecl!ushort; break;
+        case _int:      toDecl!int; break;
+        case _uint:     toDecl!uint; break;
+        case _long:     toDecl!long; break;
+        case _ulong:    toDecl!ulong; break;
+        case _float:    toDecl!float; break;
+        case _double:   toDecl!double; break;
+        case _char:     toDecl!char; break;
+        case _wchar:    toDecl!wchar; break;
+        case _dchar:    toDecl!dchar; break;
+        case _string:   toDecl!string; break;
+        case _wstring:  toDecl!wstring; break;
         case _stream:
             MemoryStream str = construct!MemoryStream;
             scope(exit) destruct(str);
@@ -1109,6 +1116,8 @@ private:
                 case _char:   addValueProp!char; break;
                 case _wchar:  addValueProp!wchar; break;
                 case _dchar:  addValueProp!dchar; break;
+                case _string: addValueProp!string; break;
+                case _wstring:addValueProp!wstring; break;
                 case _object:
                     auto _oldParentNode = _parentNode;
                     addPropertyPublisher(descr.typedAs!Object);
