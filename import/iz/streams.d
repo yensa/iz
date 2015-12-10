@@ -600,7 +600,7 @@ void readArray(bool ReadLength = true, T)(Stream str, auto ref T t)
 if (isArray!T && !isMultiDimensionalArray!T)
 {
     static if (ReadLength)
-        t.length = str.readUlong;
+        t.length = cast(uint)str.readUlong;
     str.read(t.ptr, t.length * typeof(T.init[0]).sizeof);
 }
 
@@ -1064,7 +1064,7 @@ class MemoryStream: Stream, StreamPersist, FilePersist8
         {
             static if (size_t.sizeof == 4)
             {
-                if (value > 2^^31)
+                if (value > int.max)
                     throw new Exception("cannot allocate more than 2^31 bytes");
             }
             size(cast(int) value);

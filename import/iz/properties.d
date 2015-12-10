@@ -1293,11 +1293,33 @@ if (isPropertyPublisher!Source && isPropertyPublisher!Target)
         {
             // note: ABI magic, this works whatever is the property type
             // but it would be safer to cast properly the PropDescriptor according to its rtti
-            if (!sourceProp.rtti.array)
-                targetProp.set(sourceProp.get);
-            else
-                (cast(PropDescriptor!(int[])*)targetProp)
-                    .set((cast(PropDescriptor!(int[])*)sourceProp).get);
+            
+            void set8bytes()
+            {
+                if (!sourceProp.rtti.array)
+                    (cast(PropDescriptor!long*)targetProp).set
+                        ((cast(PropDescriptor!long*)sourceProp).get);            
+                else
+                    (cast(PropDescriptor!(long[])*)targetProp).set
+                        ((cast(PropDescriptor!(long[])*)sourceProp).get);
+            }
+            void setUpTo4bytes()
+            {
+                if (!sourceProp.rtti.array)
+                    targetProp.set(sourceProp.get);
+                else
+                    (cast(PropDescriptor!(int[])*)targetProp)
+                        .set((cast(PropDescriptor!(int[])*)sourceProp).get);            
+            }
+            
+            if (targetProp.rtti.type == RuntimeType._ulong ||
+                targetProp.rtti.type == RuntimeType._long ||
+                targetProp.rtti.type == RuntimeType._double)
+                set8bytes(); 
+            else setUpTo4bytes;
+                
+            
+
         }
         else
         {
