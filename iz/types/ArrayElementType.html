@@ -4,7 +4,7 @@
 <meta charset="utf-8"/>
 <link rel="stylesheet" type="text/css" href="../../style.css"/>
 <script src="../../highlight.pack.js"></script>
-<title>RuntimeType</title>
+<title>ArrayElementType</title>
 <base href="../../"/>
 <script src="search.js"></script>
 <script src="show_hide.js"></script>
@@ -14,7 +14,7 @@
 <div class="breadcrumbs">
 <table id="results"></table>
 <a href="index.html" class="home">⌂</a><input type="search" id="search" placeholder="Search" onkeyup="searchSubmit(this.value, event)"/>
-<small>iz.<a href=iz/types.html>types</a>.</small><span class="highlight">RuntimeType</span>
+<small>iz.<a href=iz/types.html>types</a>.</small><span class="highlight">ArrayElementType</span>
 </div>
 <div class="sidebar">
 <a href="iz/types.html#hide-toc" class="hide" id="hide-toc">&#171;</a>
@@ -42,21 +42,52 @@
 </ul>
 </div></div>
 <div class="content">
-<div class="aggregate-symbol"><div class="description"><pre><code>public enum RuntimeType : <a href="http://dlang.org/type.html#basic-data-types">ubyte</a>
+<div class="aggregate-symbol"><div class="description"><pre><code>public template ArrayElementType(T)
+if(isArray!T)
 </code></pre>
 <div class="section"><h2></h2>
-<p>Enumerates the values a RuntimeTypeInfo.type can have.
+<p>Indicates the array element type of an array.
 </p>
 
 
 </div>
 <div class="section"><h2></h2>
+<p>Contrary to <code class="d_inlinecode">ElementType</code>, dchar is not returned for narrow strings.
+The template is aware of multi-dimensional arrays.
+</p>
 
 
 </div>
-</div><div class="section members"><h2>Values</h2><table><tr><td>_void</td><td></td><td></td></tr><tr><td>_bool</td><td></td><td></td></tr><tr><td>_byte</td><td></td><td></td></tr><tr><td>_ubyte</td><td></td><td></td></tr><tr><td>_short</td><td></td><td></td></tr><tr><td>_ushort</td><td></td><td></td></tr><tr><td>_int</td><td></td><td></td></tr><tr><td>_uint</td><td></td><td></td></tr><tr><td>_long</td><td></td><td></td></tr><tr><td>_ulong</td><td></td><td></td></tr><tr><td>_float</td><td></td><td></td></tr><tr><td>_double</td><td></td><td></td></tr><tr><td>_real</td><td></td><td></td></tr><tr><td>_char</td><td></td><td></td></tr><tr><td>_wchar</td><td></td><td></td></tr><tr><td>_dchar</td><td></td><td></td></tr><tr><td>_string</td><td></td><td></td></tr><tr><td>_wstring</td><td></td><td></td></tr><tr><td>_object</td><td></td><td></td></tr><tr><td>_stream</td><td></td><td></td></tr><tr><td>_struct</td><td></td><td></td></tr><tr><td>_delegate</td><td></td><td></td></tr><tr><td>_function</td><td></td><td></td></tr></table>
+<div class="section"><h2>Parameters</h2>
+<table class="params">
+<tr class="param"><td class="paramName">T</td><td class="paramDoc"><p>type to be tested.
+</p>
+</td></tr>
+</table>
 </div>
-</div><script>hljs.initHighlightingOnLoad();</script>
+<div class="section"><h2>Returns</h2>
+<p>T element type.
+</p>
+
+
+</div>
+<div class="section "><h2>Example</h2>
+<div class="section"><h2></h2>
+
+
+</div>
+<div class="section"><h2></h2>
+
+
+</div>
+<pre><code>static assert(is(<a href="iz/types/ArrayElementType.html">ArrayElementType</a>!(int[][]) == int));
+static assert(is(<a href="iz/types/ArrayElementType.html">ArrayElementType</a>!(char[][][][][]) == char));
+static assert(is(<a href="iz/types/ArrayElementType.html">ArrayElementType</a>!(wchar[]) == wchar));
+
+</code></pre>
+
+</div>
+</div></div><script>hljs.initHighlightingOnLoad();</script>
 
 </div>
 <footer>

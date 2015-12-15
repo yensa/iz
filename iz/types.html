@@ -137,13 +137,17 @@
 </div>
 <pre><code>byte b;
 <a href="iz/types/RuntimeTypeInfo.html">RuntimeTypeInfo</a> b_rtti = <a href="iz/types.html#runtimeTypeInfo">runtimeTypeInfo</a>(b);
-assert(!b_rtti.array);
+assert(!b_rtti.arrayDimensions);
 assert(b_rtti.type == <a href="iz/types/RuntimeType.html#_byte">RuntimeType._byte</a>);
 char[] c;
 <a href="iz/types/RuntimeTypeInfo.html">RuntimeTypeInfo</a> c_rtti = <a href="iz/types.html#runtimeTypeInfo">runtimeTypeInfo</a>(c);
-assert(c_rtti.array);
+assert(c_rtti.arrayDimensions);
 assert(c_rtti.type == <a href="iz/types/RuntimeType.html#_char">RuntimeType._char</a>);
 assert(b_rtti == <a href="iz/types.html#runtimeTypeInfo">runtimeTypeInfo</a>!byte);
+int[][] d;
+<a href="iz/types/RuntimeTypeInfo.html">RuntimeTypeInfo</a> d_rtti = <a href="iz/types.html#runtimeTypeInfo">runtimeTypeInfo</a>(d);
+assert(d_rtti.arrayDimensions == 2);
+assert(d_rtti.type == <a href="iz/types/RuntimeType.html#_int">RuntimeType._int</a>);
 
 </code></pre>
 
@@ -207,7 +211,9 @@ Contains also the functions related to the iz RTTI system.
 </code></pre>
 </td><td></td></tr></table><h2>Functions</h2><table><tr><td><a href="iz/types.html#isFixedSize">isFixedSize</a><span class="extrainfo"></span></td><td></td><td></td></tr><tr><td><span class="extrainfo"><span class="attribs"><span class="attr-auto">auto</span></span></span><a href="iz/types.html#runtimeTypeInfo">runtimeTypeInfo</a><span class="extrainfo"></span></td><td></td><td></td></tr><tr><td><span class="extrainfo"><span class="attribs"><span class="attr-auto">auto</span></span></span><a href="iz/types.html#runtimeTypeInfo">runtimeTypeInfo</a><span class="extrainfo"></span></td><td></td><td></td></tr><tr><td><a href="iz/types.html#className">className</a><span class="extrainfo"></span></td><td></td><td></td></tr></table><h2>Structs</h2><table><tr><td><a href="iz/types/RuntimeTypeInfo.html">RuntimeTypeInfo</a></td><td></td><td></td></tr></table><h2>Templates</h2><table><tr><td><a href="iz/types/ScopedReachability.html">ScopedReachability</a></td><td></td><td></td></tr><tr><td><a href="iz/types/isMultiDimensionalArray.html">isMultiDimensionalArray</a></td><td></td><td>Returns: <p>true if T is a multi dimensional array
 </p>
-</td></tr><tr><td><a href="iz/types/dimensionCount.html">dimensionCount</a></td><td></td><td></td></tr></table>
+</td></tr><tr><td><a href="iz/types/dimensionCount.html">dimensionCount</a></td><td></td><td></td></tr><tr><td><a href="iz/types/ArrayElementType.html">ArrayElementType</a></td><td></td><td>Returns: <p>T element type.
+</p>
+</td></tr></table>
 </div>
 </div><script>hljs.initHighlightingOnLoad();</script>
 

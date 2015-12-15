@@ -43,7 +43,6 @@
 </div></div>
 <div class="content">
 <div class="aggregate-symbol"><div class="description"><pre><code>public template dimensionCount(T)
-if(isArray!T)
 </code></pre>
 <div class="section"><h2></h2>
 <p>Returns the dimension count of a <code class="d_inlinecode">array</code>.
@@ -64,7 +63,9 @@ if(isArray!T)
 
 
 </div>
-<pre><code>static assert(<a href="iz/types/dimensionCount.html">dimensionCount</a>!(int[]) == 1);
+<pre><code>static assert(<a href="iz/types/dimensionCount.html">dimensionCount</a>!char == 0);
+static assert(<a href="iz/types/dimensionCount.html">dimensionCount</a>!(string[]) == 1);
+static assert(<a href="iz/types/dimensionCount.html">dimensionCount</a>!(int[]) == 1);
 static assert(<a href="iz/types/dimensionCount.html">dimensionCount</a>!(int[][]) == 2);
 static assert(<a href="iz/types/dimensionCount.html">dimensionCount</a>!(int[][][]) == 3);
 
