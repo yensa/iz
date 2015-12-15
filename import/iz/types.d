@@ -84,8 +84,8 @@ struct RuntimeTypeInfo
 {
     /// Unqualified type
     RuntimeType type;
-    /// As array
-    bool array;
+    /// Array dimension count.
+    ubyte arrayDimensions;
 }
 
 /**
@@ -93,11 +93,16 @@ struct RuntimeTypeInfo
  */
 auto runtimeTypeInfo(T)()
 {
-    enum array = isArray!T;
+    import std.range;
+    enum arrayDimension = dimensionCount!T;
     RuntimeType type;
+
+    static assert(arrayDimension <= ubyte.max,"RTTI: too much array dimensions");
     
-    static if (isArray!T) alias TT = Unqual!(typeof(T.init[0]));
-    else alias TT = Unqual!T;
+    static if (arrayDimension != 0)
+        alias TT = Unqual!(ArrayElementType!T);
+    else
+        alias TT = Unqual!T;
 
     with (RuntimeType)
     {
@@ -130,7 +135,7 @@ auto runtimeTypeInfo(T)()
         else static if (is(TT == delegate))type = _delegate;
         else static if (is(TT == function))type = _function;
     }     
-    return RuntimeTypeInfo(type, array);
+    return RuntimeTypeInfo(type, arrayDimension);
 }
 
 ///ditto
@@ -143,13 +148,17 @@ unittest
 {
     byte b;
     RuntimeTypeInfo b_rtti = runtimeTypeInfo(b);
-    assert(!b_rtti.array);
+    assert(!b_rtti.arrayDimensions);
     assert(b_rtti.type == RuntimeType._byte);
     char[] c;
     RuntimeTypeInfo c_rtti = runtimeTypeInfo(c);
-    assert(c_rtti.array);
+    assert(c_rtti.arrayDimensions);
     assert(c_rtti.type == RuntimeType._char);
     assert(b_rtti == runtimeTypeInfo!byte);
+    int[][] d;
+    RuntimeTypeInfo d_rtti = runtimeTypeInfo(d);
+    assert(d_rtti.arrayDimensions == 2);
+    assert(d_rtti.type == RuntimeType._int);
 }
 
 /**
@@ -245,21 +254,54 @@ unittest
  * Returns the dimension count of a $(D array).
  */
 template dimensionCount(T)
-if (isArray!T)
 {
-    static if (isMultiDimensionalArray!T)
+    static if (isArray!T)
     {
-        alias DT = typeof(T.init[0]);
-        enum dimensionCount = dimensionCount!DT + 1;
+        static if (isMultiDimensionalArray!T)
+        {
+            alias DT = typeof(T.init[0]);
+            enum dimensionCount = dimensionCount!DT + 1;
+        }
+        else enum dimensionCount = 1;
     }
-    else enum dimensionCount = 1;
+    else enum dimensionCount = 0;
 }
 ///
 unittest
 {
+    static assert(dimensionCount!char == 0);
     static assert(dimensionCount!(string[]) == 1);
     static assert(dimensionCount!(int[]) == 1);
     static assert(dimensionCount!(int[][]) == 2);
     static assert(dimensionCount!(int[][][]) == 3);
+}
+
+
+/**
+ * Indicates the array element type of an array.
+ *
+ * Contrary to $(D ElementType), dchar is not returned for narrow strings.
+ * The template is aware of multi-dimensional arrays.
+ *
+ * Params:
+ *      T = type to be tested.
+ *
+ * Returns:
+ *      T element type.
+ */
+template ArrayElementType(T)
+if (isArray!T)
+{
+    static if (isArray!(typeof(T.init[0])))
+        alias ArrayElementType = ArrayElementType!(typeof(T.init[0]));
+    else
+        alias ArrayElementType = typeof(T.init[0]);
+}
+///
+unittest
+{
+    static assert(is(ArrayElementType!(int[][]) == int));
+    static assert(is(ArrayElementType!(char[][][][][]) == char));
+    static assert(is(ArrayElementType!(wchar[]) == wchar));
 }
 

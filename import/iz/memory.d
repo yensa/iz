@@ -141,7 +141,7 @@ if (is(T == class) || (isPointer!T && is(PointerTarget!T == struct))
 /**
  * Destructs the object from where an interface has been extracted.
  *
- * The function retrieve the Object and call the other $(destruct I)
+ * The function retrieve the Object and call the other $(D destruct)
  * overload. When passed as reference, the instance is null after the
  * call.
  *

@@ -1106,73 +1106,6 @@ unittest
 }
 
 /**
- * Helper union that avoid to cast a generic PropDescriptor.
- *
- * iz.properties often declares a "generic" PropDescriptor as a PropDescriptor!int
- * but such a descriptor as to be casted later according to its rtti value.
- */
-union PropDescriptorUnion
-{
-    import iz.streams: Stream;
-
-    PropDescriptor!bool*    boolProp;
-    PropDescriptor!byte*    byteProp;
-    PropDescriptor!ubyte*   ubyteProp;
-    PropDescriptor!short*   shortProp;
-    PropDescriptor!ushort*  ushortProp;
-    PropDescriptor!int*     intProp;
-    PropDescriptor!uint*    uintProp;
-    PropDescriptor!long*    longProp;
-    PropDescriptor!ulong*   ulongProp;
-    PropDescriptor!float*   floatProp;
-    PropDescriptor!double*  doubleProp;
-    PropDescriptor!double*  realProp;
-    PropDescriptor!char*    charProp;
-    PropDescriptor!wchar*   wcharProp;
-    PropDescriptor!dchar*   dcharProp;
-    PropDescriptor!Object*  objectProp;
-    PropDescriptor!Stream*  streamProp;
-    PropDescriptor!GenericDelegate* delegateProp;
-    PropDescriptor!GenericFunction* functionProp;
-    //
-    PropDescriptor!(bool[])*    boolarrayProp;
-    PropDescriptor!(byte[])*    bytearrayProp;
-    PropDescriptor!(ubyte[])*   ubytearrayProp;
-    PropDescriptor!(short[])*   shortarrayProp;
-    PropDescriptor!(ushort[])*  ushortarrayProp;
-    PropDescriptor!(int[])*     intarrayProp;
-    PropDescriptor!(uint[])*    uintarrayProp;
-    PropDescriptor!(long[])*    longarrayProp;
-    PropDescriptor!(ulong[])*   ulongarrayProp;
-    PropDescriptor!(float[])*   floatarrayProp;
-    PropDescriptor!(double[])*  doublearrayProp;
-    PropDescriptor!(double[])*  realarrayProp;
-    PropDescriptor!(char[])*    chararrayProp;
-    PropDescriptor!(wchar[])*   wchararrayProp;
-    PropDescriptor!(dchar[])*   dchararrayProp;
-}
-/// ditto
-struct AnyPropDescriptor
-{
-    auto type() {return any.byteProp.rtti.type;}
-    PropDescriptorUnion any;
-    alias any this;
-}
-
-unittest
-{
-    byte a;
-    ubyte b;
-    PropDescriptor!byte pda = PropDescriptor!byte(&a, "a");
-    PropDescriptor!ubyte pdb = PropDescriptor!ubyte(&b, "b");
-
-    PropDescriptorUnion u = {ubyteProp : &pdb};
-    assert(u.byteProp.rtti.type == RuntimeType._ubyte);
-
-    AnyPropDescriptor apd = AnyPropDescriptor(u);
-}
-
-/**
  * Returns true if the target of a PropDescriptor!Object is owned by another
  * object.
  *
@@ -1293,7 +1226,7 @@ if (isPropertyPublisher!Source && isPropertyPublisher!Target)
         {
             alias PT0 = PropDescriptor!T*;
             alias PT1 = PropDescriptor!(T[])*;
-            if (srcP.rtti.array)
+            if (srcP.rtti.arrayDimensions)
                 (cast(PT1) trgP).set((cast(PT1) srcP).get());
             else
                 (cast(PT0) trgP).set((cast(PT0) srcP).get());
@@ -1368,6 +1301,8 @@ unittest
         @SetGet uint _a;
         @SetGet ulong _b;
         @SetGet string _c;
+        @SetGet int[][] _d;
+        @SetGet int[][][] _e;
         MemoryStream str;
 
         @Set void stream(Stream s)
@@ -1383,6 +1318,8 @@ unittest
     Foo!true source = new Foo!true;
     Foo!true target = new Foo!true;
     source._a = 8; source._b = ulong.max; source._c = "123";
+    source._d = [[0,1,2,3],[4,5,6,7]];
+    source._e = [[[0,1],[2,3]],[[4,5],[6,7]],[[8,9],[10,11]]];
     source._sub._a = 8; source._sub._b = ulong.max; source._sub._c = "123";
     source.str.writeInt(1);source.str.writeInt(2);source.str.writeInt(3);
     source._sub.str.writeInt(1);source._sub.str.writeInt(2);source._sub.str.writeInt(3);
@@ -1391,6 +1328,8 @@ unittest
     assert(target._a == source._a);
     assert(target._b == source._b);
     assert(target._c == source._c);
+    assert(target._d == source._d);
+    assert(target._e == source._e);
     assert(target._sub._a == source._sub._a);
     assert(target._sub._b == source._sub._b);
     assert(target._sub._c == source._sub._c);
@@ -1402,7 +1341,6 @@ unittest
     assert(target._sub.str.readInt == 1);
     assert(target._sub.str.readInt == 2);
     assert(target._sub.str.readInt == 3);
-
 }
 
 /**

@@ -232,8 +232,7 @@ unittest
 private string getElemStringOf(T)()
 if (isArray!T)
 {
-    // Not ElementType: on string and wstring it always returns  dchar.
-    return typeof(T.init[0]).stringof;
+    return (ArrayElementType!T).stringof;
 }
 
 unittest
@@ -342,7 +341,6 @@ public:
     {
         if (!level) return "";
         //
-        import std.algorithm: joiner;
         string[] items;
         IstNode curr = cast(IstNode) parent;
         while (curr)
@@ -365,7 +363,7 @@ public:
     /**
      * Returns the child node whose info.name matches to name.
      */
-    IstNode findChildren(in char[] name)
+    IstNode findChild(in char[] name)
     {
         if (!_cached) updateCache;
         if (auto r = name in _cache)
@@ -1096,7 +1094,7 @@ private:
             //
             void addValueProp(T)()
             {
-                if (!rtti.array) addIstNodeForDescriptor(descr.typedAs!T);
+                if (!rtti.arrayDimensions) addIstNodeForDescriptor(descr.typedAs!T);
                 else addIstNodeForDescriptor(descr.typedAs!(T[]));
             }
             with(RuntimeType) final switch(rtti.type)
@@ -1252,7 +1250,7 @@ public:
                 if (void* t0 = target.publicationFromName(childNode.info.name))
                 {
                     PropDescriptor!int* t1 = cast(PropDescriptor!int*)t0;
-                    if (t1.rtti.array == childNode.info.isArray && 
+                    if (t1.rtti.arrayDimensions == childNode.info.isArray &&
                     t1.rtti.type == childNode.info.type)
                     {
                         childNode.info.descriptor = t1;
