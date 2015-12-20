@@ -365,14 +365,14 @@ if (isInputRange!Range && isSomeChar!(ElementType!Range) && isCharTester!T)
 {
     alias UT = Unqual!T; 
     CharType!Range[] result;
-    CharType!Range current = void;
+    dchar current = void;
 
     static if (is(UT == CharRange) || is(UT == CharMap) || isAssociativeArray!T)
     {
         while (true)
         {
             if (range.empty) break;
-            current = cast(CharType!Range) range.front;
+            current = range.front;
             
             static if (until)
             {
@@ -399,7 +399,7 @@ if (isInputRange!Range && isSomeChar!(ElementType!Range) && isCharTester!T)
         while (true)
         {
             if (range.empty) break;
-            current = cast(CharType!Range) range.front;
+            current = range.front;
             
             static if (until)
             {
@@ -426,7 +426,7 @@ if (isInputRange!Range && isSomeChar!(ElementType!Range) && isCharTester!T)
         while (true)
         {
             if (range.empty) break;
-            current = cast(CharType!Range) range.front;
+            current = range.front;
 
             static if (until)
             {
@@ -453,7 +453,7 @@ if (isInputRange!Range && isSomeChar!(ElementType!Range) && isCharTester!T)
         while (true)
         {
             if (range.empty) break;
-            current = cast(CharType!Range) range.front;
+            current = range.front;
 
             static if (until)
             {
@@ -1053,9 +1053,9 @@ auto nextSeparated(Range, Separators, bool strip = true)(ref Range range, Separa
 unittest
 {
     auto seps = CharMap[',', '\n'];
-    auto text = "name, age \n Douglas, 27 \n Sophia 26";
+    auto text = "name, âge \n Douglas, 27 \n Sophia 26";
     assert(text.nextSeparated(seps) == "name");
-    assert(text.nextSeparated(seps) == "age");
+    assert(text.nextSeparated(seps) == "âge");
     assert(text.nextSeparated(seps) == "Douglas");
     assert(text.nextSeparated(seps) == "27");
 }
