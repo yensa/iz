@@ -608,6 +608,8 @@ mixin template PropertyPublisherImpl()
     protected GenericDescriptor* publicationFromIndex(size_t index)
     {return cast(GenericDescriptor*) _publishedDescriptors[index];}
 
+    import iz.types: RuntimeTypeInfo;
+
     /// see PropertyPublisher
     static if (!__traits(hasMember, ToT, "publicationType") || Base)
     protected const(RuntimeTypeInfo) publicationType(size_t index)
