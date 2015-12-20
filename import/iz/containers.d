@@ -1613,6 +1613,8 @@ mixin template TreeItem()
 
 protected:
 
+    import iz.memory: construct, destruct;
+
     enum isStruct = is(typeof(this) == struct);
     static if (isStruct)
         alias TreeItemType = typeof(this)*;
